@@ -1,8 +1,6 @@
 #include <Movement.h>
 #include <BasicEncoder.h>
-//#include "Odometry.h"
 #include <TimerOne.h>
-#include <FastPID.h>
 #define PIN_INPUT     A0
 #define PIN_SETPOINT  A1
 #define PIN_OUTPUT    9
@@ -24,16 +22,15 @@ byte leftEncoderB = 1;
 
 
 Movement move = Movement(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, leftDirectionA, leftDirectionB);
-//Odometry odom = Odometry(rightEncoderA, rightEncoderB, leftEncoderA, leftEncoderB); // Consider using this if we see an overflow as the updates will clear it
 BasicEncoder leftEncoder(leftEncoderA,leftEncoderB);
 BasicEncoder rightEncoder(rightEncoderA,rightEncoderB);
 
 void timer_service() {
   leftEncoder.service();
   rightEncoder.service();
-  Serial.print(leftEncoder.get_count());
+  Serial.print(leftEncoder.get_change());
   Serial.print(" ");
-  Serial.println(rightEncoder.get_count());
+  Serial.println(rightEncoder.get_change());
  }
 
 void setup(){
