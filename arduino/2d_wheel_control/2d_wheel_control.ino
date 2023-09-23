@@ -19,7 +19,8 @@ byte rightEncoderA = 7;
 byte rightEncoderB = 8;
 byte leftEncoderA = 0;
 byte leftEncoderB = 1;
-
+unsigned int serviced = 0;
+unsigned int serviced_limit = 10;
 
 Movement move = Movement(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, leftDirectionA, leftDirectionB);
 BasicEncoder leftEncoder(leftEncoderA,leftEncoderB);
@@ -28,10 +29,13 @@ BasicEncoder rightEncoder(rightEncoderA,rightEncoderB);
 void timer_service() {
   leftEncoder.service();
   rightEncoder.service();
-  Serial.print(leftEncoder.get_change());
-  Serial.print(" ");
-  Serial.println(rightEncoder.get_change());
- }
+  serviced++;
+  if (serviced > serviced_limit){
+    serviced=0;
+    Serial.print(leftEncoder.get_change());
+    Serial.print(" ");
+    Serial.println(rightEncoder.get_change());
+ }}
 
 void setup(){
   Serial.begin(115200);
