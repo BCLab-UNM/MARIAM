@@ -1,0 +1,121 @@
+#!/usr/bin/python3
+import serial
+import threading
+import math
+import time
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Int32, Float32
+from sensor_msgs.msg import Joy
+import serial
+import threading
+import math
+import time
+import rclpy
+import math
+import tf2_ros
+from rclpy.node import Node
+from sensor_msgs.msg import Joy
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Int32, Float32
+from tf2_ros import TransformBroadcaster
+from tf_transformations import quaternion_from_euler
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
+
+
+class WheelOdomMoveNode(Node):
+    def __init__(self):
+        super().__init__('odom_node')
+        self.port = serial.Serial("/dev/ttyACM0", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+                                  stopbits=serial.STOPBITS_ONE)
+        # self.motor_ticks_right_publisher = self.create_publisher(Int32, 'motor_ticks_right', 10)
+        # self.motor_ticks_left_publisher = self.create_publisher(Int32, 'motor_ticks_left', 10)
+
+        # Parameters
+        self.wheel_circumference_left = 0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
+        self.wheel_circumference_right = 0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
+        self.ticks_per_rotation = 8400.0
+        self.wheel_base = 0.278
+
+        self.x = 0.0
+        self.y = 0.0
+        self.th = 0.0
+        self.joy_enabled = True  # get the param
+        if self.joy_enabled:
+            self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
+
+        # Publishers and subscribers
+        self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
+        self.broadcaster = TransformBroadcaster(self)
+
+    def joy_callback(self, msg):
+        # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
+        self.port.write((str(int((msg.axes[4] - msg.axes[3]) * 100)) + " " + str(
+            int((msg.axes[4] + msg.axes[3]) * 100)) + "\t").encode())
+
+    def read_serial_data(self):
+        while True:  # ok is not working here
+            try:
+                data = self.port.readline().decode().strip().split()  # Read a line from the serial port & Decode and split the received data
+                # self.get_logger().info(str(data))
+                if len(data) == 2:
+                    try:
+                        # self.motor_ticks_left_publisher.publish(Int32(data=int(data[0])))
+                        # self.motor_ticks_right_publisher.publish(Int32(data=int(data[1])))
+                        self.compute_odometry(int(data[0]), int(data[1]))
+                    except ValueError:
+                        print("Error parsing serial data:", data)
+            except serial.SerialException:
+                print("Error reading from serial port")
+            except UnicodeDecodeError:
+                print("Error decoding serial data:", data)
+
+    def compute_odometry(self, ticks_left, ticks_right):
+        dleft = ticks_left / self.ticks_per_rotation * self.wheel_circumference_left * 4.0  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
+        dright = ticks_right / self.ticks_per_rotation * self.wheel_circumference_right * 4.0  # @TODO Need figure out where this is coming from I double checked the gear ratio not there
+
+        dcenter = (dleft + dright) / 2.0
+        dtheta = (dright - dleft) / self.wheel_base
+
+        dx = dcenter * math.cos(self.th)
+        dy = dcenter * math.sin(self.th)
+
+        self.x += dx
+        self.y += dy
+        self.th += dtheta
+
+        odom = Odometry()
+        odom.header.stamp = self.get_clock().now().to_msg()
+        odom.header.frame_id = "odom"
+        odom.child_frame_id = "base_link"
+        odom.pose.pose = Pose(position=Point(x=self.x, y=self.y, z=0.0), orientation=self.get_rotation())
+        odom.twist.twist = Twist(linear=Vector3(x=dx, y=dy, z=0.0), angular=Vector3(x=0.0, y=0.0, z=dtheta))
+
+        self.odom_pub.publish(odom)
+
+        transform = tf2_ros.TransformStamped()
+        transform.header.stamp = self.get_clock().now().to_msg()
+        transform.header.frame_id = "odom"
+        transform.child_frame_id = "base_link"
+        transform.transform.translation.x = self.x
+        transform.transform.translation.y = self.y
+        transform.transform.rotation = self.get_rotation()
+        self.broadcaster.sendTransform(transform)
+
+    def get_rotation(self):
+        q = quaternion_from_euler(0, 0, self.th)
+        return Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = WheelOdomMoveNode()
+    serial_thread = threading.Thread(target=node.read_serial_data)
+    serial_thread.start()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
