@@ -32,10 +32,11 @@ class WheelOdomMoveNode(Node):
         # self.motor_ticks_left_publisher = self.create_publisher(Int32, 'motor_ticks_left', 10)
 
         # Parameters
+        # Unloaded no robot 0.3925986m https://www.robotshop.com/products/28-talon-tires-pair
         self.wheel_circumference_left = 0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
         self.wheel_circumference_right = 0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
         self.ticks_per_rotation = 8400.0
-        self.wheel_base = 0.278
+        self.wheel_base = 0.278 #  Front/Back 0.18668, left/right 0.2794m
 
         self.x = 0.0
         self.y = 0.0
@@ -51,13 +52,12 @@ class WheelOdomMoveNode(Node):
     def joy_callback(self, msg):
         # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
         self.port.write((str(int((msg.axes[4] - msg.axes[3]) * 100)) + " " + str(
-            int((msg.axes[4] + msg.axes[3]) * 100)) + "\t").encode())
+            int((msg.axes[4] + msg.axes[3]) * 100)) + " \n").encode())
 
     def read_serial_data(self):
         while True:  # ok is not working here
             try:
                 data = self.port.readline().decode().strip().split()  # Read a line from the serial port & Decode and split the received data
-                # self.get_logger().info(str(data))
                 if len(data) == 2:
                     try:
                         # self.motor_ticks_left_publisher.publish(Int32(data=int(data[0])))
@@ -71,8 +71,8 @@ class WheelOdomMoveNode(Node):
                 print("Error decoding serial data:", data)
 
     def compute_odometry(self, ticks_left, ticks_right):
-        dleft = ticks_left / self.ticks_per_rotation * self.wheel_circumference_left * 4.0  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
-        dright = ticks_right / self.ticks_per_rotation * self.wheel_circumference_right * 4.0  # @TODO Need figure out where this is coming from I double checked the gear ratio not there
+        dleft = ticks_left / self.ticks_per_rotation * self.wheel_circumference_left * 3.925  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
+        dright = ticks_right / self.ticks_per_rotation * self.wheel_circumference_right * 3.925  # @TODO Need figure out where this is coming from I double checked the gear ratio not there
 
         dcenter = (dleft + dright) / 2.0
         dtheta = (dright - dleft) / self.wheel_base
