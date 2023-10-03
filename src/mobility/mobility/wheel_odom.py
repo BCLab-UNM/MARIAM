@@ -35,7 +35,7 @@ class WheelOdomMoveNode(Node):
         # Unloaded no robot 0.3925986m https://www.robotshop.com/products/28-talon-tires-pair
         self.wheel_circumference_left = 0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
         self.wheel_circumference_right = 0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
-        self.ticks_per_rotation = 8400.0 / 3.925  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
+        self.ticks_per_rotation = 2094.4     # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
         self.wheel_base = 0.278  # Front/Back 0.18668, left/right 0.2794m
 
         self.x = 0.0
