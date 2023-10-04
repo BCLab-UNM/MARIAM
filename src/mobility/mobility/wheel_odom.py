@@ -15,10 +15,10 @@ import rclpy
 import math
 import tf2_ros
 from rclpy.node import Node
-from sensor_msgs.msg import Joy
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Int32, Float32
 from tf2_ros import TransformBroadcaster
+from sensor_msgs.msg import Joy, JointState
 from tf_transformations import quaternion_from_euler
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
 
@@ -30,14 +30,17 @@ class WheelOdomMoveNode(Node):
                                   stopbits=serial.STOPBITS_ONE)
         # self.motor_ticks_right_publisher = self.create_publisher(Int32, 'motor_ticks_right', 10)
         # self.motor_ticks_left_publisher = self.create_publisher(Int32, 'motor_ticks_left', 10)
+        self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_callback, 10)
+        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
 
         # Parameters
         # Unloaded no robot 0.3925986m https://www.robotshop.com/products/28-talon-tires-pair
         self.wheel_circumference_left = 0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
         self.wheel_circumference_right = 0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
-        self.ticks_per_rotation = 2094.625     # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
+        self.ticks_per_rotation = 2094.625  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
         self.wheel_base = 0.278  # Front/Back 0.18668, left/right 0.2794m
-
+        self.left_ticks = 0
+        self.right_ticks = 0
         self.x = 0.0
         self.y = 0.0
         self.th = 0.0
@@ -53,6 +56,12 @@ class WheelOdomMoveNode(Node):
         # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
         self.port.write((str(int((msg.axes[4] - msg.axes[3]) * 100)) + " " + str(
             int((msg.axes[4] + msg.axes[3]) * 100)) + " \n").encode())
+
+    def cmd_vel_callback(self, msg):
+        yaw = msg.angular.z
+        v_left = msg.linear.x - yaw * self.wheel_base / 2.0
+        v_right = msg.linear.x + yaw * self.wheel_base / 2.0
+        self.port.write((str(int(v_left * 100)) + " " + str(int(v_right * 100)) + " \n").encode())
 
     def read_serial_data(self):
         while True:  # ok is not working here
@@ -70,7 +79,18 @@ class WheelOdomMoveNode(Node):
             except UnicodeDecodeError:
                 print("Error decoding serial data:", data)
 
+    def publish_joint_states(self):
+        js = JointState()
+        js.header.stamp = self.get_clock().now().to_msg()
+        js.name = ["left_wheel_joint", "right_wheel_joint"]
+        js.position = [(self.left_ticks / self.ticks_per_revolution) * 2 * math.pi,
+                       (self.right_ticks / self.ticks_per_revolution) * 2 * math.pi]
+        self.publisher.publish(js)
+
     def compute_odometry(self, ticks_left, ticks_right):
+        self.left_ticks += ticks_left
+        self.right_ticks += ticks_right
+        self.publish_joint_states()
         dleft = ticks_left / self.ticks_per_rotation * self.wheel_circumference_left
         dright = ticks_right / self.ticks_per_rotation * self.wheel_circumference_right
 
