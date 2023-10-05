@@ -83,8 +83,8 @@ class WheelOdomMoveNode(Node):
         js = JointState()
         js.header.stamp = self.get_clock().now().to_msg()
         js.name = ["left_wheel_joint", "right_wheel_joint"]
-        js.position = [(self.left_ticks / self.ticks_per_revolution) * 2 * math.pi,
-                       (self.right_ticks / self.ticks_per_revolution) * 2 * math.pi]
+        js.position = [(self.left_ticks / self.ticks_per_rotation) * 2 * math.pi,
+                       (self.right_ticks / self.ticks_per_rotation) * 2 * math.pi]
         self.publisher.publish(js)
 
     def compute_odometry(self, ticks_left, ticks_right):
