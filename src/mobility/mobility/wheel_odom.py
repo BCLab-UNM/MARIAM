@@ -39,7 +39,7 @@ class WheelOdomMoveNode(Node):
         self.wheel_circumference_left = 0.3381375 #0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
         self.wheel_circumference_right = 0.3386666666582 #0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
         self.ticks_per_rotation = 2094.625  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
-        self.wheel_base = 0.278  # Front/Back 0.18668, left/right 0.2794m
+        self.wheel_base = 0.3397  # Front/Back 0.18668, left/right 0.2794m # left/right inside 0.2096 meters, left/right outside 0.3397 meters
         self.left_ticks = 0
         self.right_ticks = 0
         self.x = 0.0
@@ -86,7 +86,7 @@ class WheelOdomMoveNode(Node):
         js.name = ["left_wheel_joint", "right_wheel_joint"]
         js.position = [(self.left_ticks / self.ticks_per_rotation) * 2 * math.pi,
                        (self.right_ticks / self.ticks_per_rotation) * 2 * math.pi]
-        #self.publisher.publish(js)
+        self.joint_state_pub.publish(js)
 
     def compute_odometry(self, ticks_left, ticks_right):
         self.left_ticks += ticks_left
