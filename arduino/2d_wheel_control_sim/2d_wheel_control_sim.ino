@@ -46,10 +46,7 @@ void loop() {
             buffer[bufferIndex] = '\0';  // null-terminate the C string
             if (sscanf(buffer, "%d %d", &speedL, &speedR) == 2) {
               if (speedL == 0 && speedR == 0) { moving = false; }
-              if (speedL >= 0 && speedR >= 0) { moving = true; }
-              else if (speedL <= 0 && speedR <= 0) { moving = true; speedL*=-1; speedR*=-1; }
-              else if (speedL <= 0 && speedR >= 0) { moving = true; speedL*=-1; }
-              else { moving = true; speedR*=-1; }
+              else { moving = true; }
             } //emd got 2 ints
             bufferIndex = 0;  // reset the buffer
         } else if (bufferIndex < bufferSize - 1) {  // Ensure we don't overflow the buffer
