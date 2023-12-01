@@ -28,9 +28,11 @@ class pos_control_moveit_interface : public rclcpp::Node
       //this->declare_parameter("robot_description", "/home/calvinjs/MARIAM/install/interbotix_xsarm_descriptions/share/interbotix_xsarm_descriptions/urdf/px100.urdf.xacro");
       //this->declare_parameter("robot_description_semantic", "/home/calvinjs/MARIAM/install/interbotix_xsarm_moveit/share/interbotix_xsarm_moveit/config/srdf/px100.srdf.xacro");
 
+      std::string my_namespace = this->get_namespace();
+      RCLCPP_INFO(this->get_logger(), "Using namespace: %s'}", my_namespace.c_str());
+
       // 10 is the depth of the message queue
-      subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>("/arm_cmd", 10, std::bind(&pos_control_moveit_interface::arm_cmd_callback, this, _1));
-      timer_ = this->create_wall_timer(5s, std::bind(&pos_control_moveit_interface::timer_callback, this));
+      subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>("arm_cmd", 10, std::bind(&pos_control_moveit_interface::arm_cmd_callback, this, _1));
     }
     ~pos_control_moveit_interface() 
     {
@@ -42,7 +44,6 @@ class pos_control_moveit_interface : public rclcpp::Node
   // member variables
   MoveGroupInterface *move_group_interface = nullptr;
   geometry_msgs::msg::Pose pose_cmd;
-  rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
   rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr subscriber_;
   
@@ -51,11 +52,9 @@ class pos_control_moveit_interface : public rclcpp::Node
     // Create a MoveGroupInterface once
     if (move_group_interface == nullptr) move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
 
+    // Example cmd: ros2 topic pub --once /arm_cmd geometry_msgs/msg/Pose "{position: {x: 0.0, y: 0.0, z: 0.2}, orientation: {x: 0.1, y: 0.0, z: 0.0, w: 1.0}}"
     pose_cmd = *msg;
     RCLCPP_INFO(this->get_logger(), "Received pose {x:'%f', y:'%f', z:'%f'}", msg->position.x, msg->position.y, msg->position.z);
-
-    //auto move_group_interface = MoveGroupInterface(shared_from_this(), "interbotix_arm");
-    
     move_group_interface->setPoseTarget(*msg);
 
     // Create a plan to that target pose
@@ -73,50 +72,12 @@ class pos_control_moveit_interface : public rclcpp::Node
       RCLCPP_ERROR(this->get_logger(), "Planning failed!");
     }
   }
-  
-  void timer_callback()
-  {
-    // auto message = std_msgs::msg::String();
-    // message.data = "MoveIt Interface Node Operating";
 
-    // auto move_group_interface = MoveGroupInterface(shared_from_this(), "interbotix_arm");
-
-    // // geometry_msgs::msg::Pose target_pose;
-    // // target_pose.orientation.w = 1.0;
-    // // target_pose.position.x = x_cmd;
-    // // target_pose.position.y = 0;
-    // // target_pose.position.z = 0.23;
-    
-    // move_group_interface.setPoseTarget(pose_cmd);
-
-    // // Create a plan to that target pose
-    // auto const [success, plan] = [&move_group_interface]{
-    //   moveit::planning_interface::MoveGroupInterface::Plan msg;
-    //   auto const ok = static_cast<bool>(move_group_interface.plan(msg));
-    //   return std::make_pair(ok, msg);
-    // }();
-
-    // // Execute the plan
-    // if(success) {
-    //   move_group_interface.execute(plan);
-    //   RCLCPP_ERROR(this->get_logger(), "Planning successful!");
-    // } else {
-    //   RCLCPP_ERROR(this->get_logger(), "Planning failed!");
-    // }
-  }
 };
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  // auto const node = std::make_shared<rclcpp::Node>(
-  //   "pos_control_moveit_interface",
-  //   rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true)
-  // );
-  //auto move_group_interface = MoveGroupInterface(node, "interbotix_arm");
-  //node->move_group_interface = NULL
-  //node->move_group_interface = MoveGroupInterface(node, "interbotix_arm");
-  //rclcpp::spin(node);
   rclcpp::spin(std::make_shared<pos_control_moveit_interface>());
   rclcpp::shutdown();
   return 0;

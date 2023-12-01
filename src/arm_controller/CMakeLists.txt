@@ -16,19 +16,35 @@ find_package(std_msgs REQUIRED)
 # find_package(interbotix_xs_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 
-# For executable pos_control_moveit_interface
-add_executable(pos_control_moveit_interface src/pos_control_moveit_interface.cpp)
-target_include_directories(pos_control_moveit_interface PUBLIC
+# For executable pose_listener_moveit
+add_executable(pose_listener_moveit src/pose_listener_moveit.cpp)
+target_include_directories(pose_listener_moveit PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(pos_control_moveit_interface PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(pose_listener_moveit PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  pos_control_moveit_interface
+  pose_listener_moveit
   "moveit_ros_planning_interface"
   "rclcpp"
   "std_msgs"
 )
-install(TARGETS pos_control_moveit_interface
+install(TARGETS pose_listener_moveit
+  DESTINATION lib/${PROJECT_NAME}
+) 
+
+# For executable box_pickup_listener_moveit
+add_executable(box_pickup_listener_moveit src/box_pickup_listener_moveit.cpp)
+target_include_directories(box_pickup_listener_moveit PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(box_pickup_listener_moveit PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  box_pickup_listener_moveit
+  "moveit_ros_planning_interface"
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS box_pickup_listener_moveit
   DESTINATION lib/${PROJECT_NAME}
 ) 
 
