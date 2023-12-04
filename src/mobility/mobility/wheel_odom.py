@@ -55,8 +55,8 @@ class WheelOdomMoveNode(Node):
 
     def joy_callback(self, msg):
         # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
-        self.port.write((str(int((msg.axes[4] - msg.axes[3]) * 100)) + " " + str(
-            int((msg.axes[4] + msg.axes[3]) * 100)) + " \n").encode())
+        self.port.write((str(int((msg.axes[2] - msg.axes[5]) * 100)) + " " + str(
+            int((msg.axes[2] + msg.axes[5]) * 100)) + " \n").encode())
 
     def cmd_vel_callback(self, msg):
         yaw = msg.angular.z
