@@ -124,8 +124,8 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         xsarm_control_launch,
-        joy_node,
-        xsarm_joy_node,
+        # joy_node,
+        # xsarm_joy_node,
         xsarm_robot_node,
     ]
 
