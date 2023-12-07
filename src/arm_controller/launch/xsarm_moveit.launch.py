@@ -85,6 +85,8 @@ def launch_setup(context, *args, **kwargs):
     hardware_type_launch_arg = LaunchConfiguration('hardware_type')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
 
+    all_namespace = robot_name_launch_arg
+
     # sets use_sim_time parameter to 'true' if using gazebo hardware
     use_sim_time_param = determine_use_sim_time_param(
         context=context,
@@ -187,10 +189,10 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     # Custom node
-    pose_subscriber_moveit_node = Node(
+    pose_listener_moveit_node = Node(
     	package='arm_controller',
-    	executable='pose_subscriber_moveit',
-    	name='pose_subscriber_moveit',
+    	executable='pose_listener_moveit',
+    	name='pose_listener_moveit',
         remappings=remappings,
         parameters=[
             robot_description,
@@ -202,7 +204,7 @@ def launch_setup(context, *args, **kwargs):
     move_group_node = Node(
         package='moveit_ros_move_group',
         executable='move_group',
-        # namespace=robot_name_launch_arg,
+        #namespace=robot_name_launch_arg,
         parameters=[
             {
                 'planning_scene_monitor_options': {
@@ -313,7 +315,7 @@ def launch_setup(context, *args, **kwargs):
         moveit_rviz_node,
         xsarm_ros_control_launch_include,
         xsarm_gz_classic_launch_include,
-        pose_subscriber_moveit_node
+        pose_listener_moveit_node
     ]
 
 
