@@ -1,0 +1,41 @@
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, LogInfo
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument(
+            'video_device',
+            default_value='/dev/video4',
+            description='Path to the video device (e.g., /dev/video0).'
+        ),
+        Node(
+            package='usb_cam',
+            executable='usb_cam_node_exe',
+            name='usb_cam',
+            namespace='',
+            output='screen',
+            parameters=[{
+                'video_device': LaunchConfiguration('video_device'),
+                'image_width': 1920,
+                'image_height': 1080,
+                'framerate': 30.0,
+                'pixel_format': 'mjpeg'
+
+            }]
+        ),
+        Node(
+            package='apriltag_ros',
+            executable='apriltag_node',
+            name='apriltag_node',
+            namespace='',
+            output='screen',
+            parameters=[{
+                'image_rect': '/image_raw' ,
+                'camera_info': '/camera_info',
+                'params-file': '/home/carter/MARIAM/src/demos/apriltag.yaml'
+            }]
+        )
+    ])
+
