@@ -15,7 +15,11 @@ find_package(std_msgs REQUIRED)
 # find_package(interbotix_moveit_interface_msgs REQUIRED)
 # find_package(interbotix_xs_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
+find_package(joy REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
+#
+#
 # For executable pose_listener_moveit
 add_executable(pose_listener_moveit src/pose_listener_moveit.cpp)
 target_include_directories(pose_listener_moveit PUBLIC
@@ -32,6 +36,8 @@ install(TARGETS pose_listener_moveit
   DESTINATION lib/${PROJECT_NAME}
 ) 
 
+#
+#
 # For executable box_pickup_listener_moveit
 add_executable(box_pickup_listener_moveit src/box_pickup_listener_moveit.cpp)
 target_include_directories(box_pickup_listener_moveit PUBLIC
@@ -43,8 +49,28 @@ ament_target_dependencies(
   "moveit_ros_planning_interface"
   "rclcpp"
   "std_msgs"
+  "geometry_msgs"
+  "joy"
 )
 install(TARGETS box_pickup_listener_moveit
+  DESTINATION lib/${PROJECT_NAME}
+) 
+
+#
+#
+# For executable joy_moveit.cpp
+add_executable(joy_moveit src/joy_moveit.cpp)
+target_include_directories(joy_moveit PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(joy_moveit PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  joy_moveit
+  "moveit_ros_planning_interface"
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS joy_moveit
   DESTINATION lib/${PROJECT_NAME}
 ) 
 

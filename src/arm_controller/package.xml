@@ -12,6 +12,8 @@
   <depend>moveit_ros_planning_interface</depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
+  <depend>joy</depend>
+  <depend>geometry_msgs</depend>
   <depend>interbotix_moveit_interface</depend>
   <depend>interbotix_moveit_interface_msgs</depend>
   <depend>interbotix_xs_msgs</depend>

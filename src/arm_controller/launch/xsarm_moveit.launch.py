@@ -189,10 +189,22 @@ def launch_setup(context, *args, **kwargs):
     ]
 
     # Custom node
-    pose_listener_moveit_node = Node(
+    # pose_listener_moveit_node = Node(
+    # 	package='arm_controller',
+    # 	executable='pose_listener_moveit',
+    # 	name='pose_listener_moveit',
+    #     remappings=remappings,
+    #     parameters=[
+    #         robot_description,
+    #         robot_description_semantic,
+    #     ],
+    #     output='screen',
+    # )
+
+    joy_moveit_node = Node(
     	package='arm_controller',
-    	executable='pose_listener_moveit',
-    	name='pose_listener_moveit',
+    	executable='joy_moveit',
+    	name='joy_moveit',
         remappings=remappings,
         parameters=[
             robot_description,
@@ -204,7 +216,7 @@ def launch_setup(context, *args, **kwargs):
     move_group_node = Node(
         package='moveit_ros_move_group',
         executable='move_group',
-        #namespace=robot_name_launch_arg,
+        # namespace=robot_name_launch_arg,
         parameters=[
             {
                 'planning_scene_monitor_options': {
@@ -315,7 +327,8 @@ def launch_setup(context, *args, **kwargs):
         moveit_rviz_node,
         xsarm_ros_control_launch_include,
         xsarm_gz_classic_launch_include,
-        pose_listener_moveit_node
+        #pose_listener_moveit_node,
+        joy_moveit_node
     ]
 
 
