@@ -1,0 +1,1 @@
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="082d", ENV{ID_V4L_CAPABILITIES}==":capture:", SYMLINK+="video_ceiling"
