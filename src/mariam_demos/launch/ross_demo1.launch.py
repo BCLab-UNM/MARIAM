@@ -41,7 +41,7 @@ def generate_launch_description():
     )
 
     # Python script execution
-    python_script_path = os.path.expanduser('~/MARIAM/src/demos/DelayJoy.py')
+    python_script_path = os.path.expanduser('~/MARIAM/src/mariam_demos/DelayJoy.py')
     run_python_script = ExecuteProcess(
         cmd=['python3', python_script_path]
     )
