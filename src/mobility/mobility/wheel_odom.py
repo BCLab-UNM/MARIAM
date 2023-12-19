@@ -21,23 +21,30 @@ from tf2_ros import TransformBroadcaster
 from sensor_msgs.msg import Joy, JointState
 from tf_transformations import quaternion_from_euler
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist, Vector3
-
+import socket
 
 class WheelOdomMoveNode(Node):
     def __init__(self):
         super().__init__('odom_node')
-        self.port = serial.Serial("/dev/ttyACM0", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+        namespace = self.get_namespace()
+        if namespace == '/':
+            namespace = '/' + socket.gethostname() + '/' # If not set then use the robots hostname
+        self.port = serial.Serial("/dev/arduino", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                                   stopbits=serial.STOPBITS_ONE)
         # self.motor_ticks_right_publisher = self.create_publisher(Int32, 'motor_ticks_right', 10)
         # self.motor_ticks_left_publisher = self.create_publisher(Int32, 'motor_ticks_left', 10)
-        self.cmd_vel_sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_vel_callback, 10)
-        self.joint_state_pub = self.create_publisher(JointState, 'joint_states', 10)
+        
+        
+        self.cmd_vel_sub = self.create_subscription(Twist, namespace+'cmd_vel', self.cmd_vel_callback, 10)
+        self.cmd_sub = self.create_subscription(Float32, namespace+'cmd', self.cmd_callback, 10)
+        self.joint_state_pub = self.create_publisher(JointState, namespace+'joint_states', 10)
+        
 
         # Parameters
         # Unloaded no robot 0.3925986m https://www.robotshop.com/products/28-talon-tires-pair
         # wheel_circumference calculated with arm folded up and camera mast at 15 3/8 in(from plastic to plastic), with solar mounts still installed
-        self.wheel_circumference_left = 0.3381375 #0.3651  # @TODO check this with arm folded up and with it extended with 50g weight
-        self.wheel_circumference_right = 0.3386666666582 #0.3662  # @TODO check this with arm folded up and with it extended with 50g weight
+        self.wheel_circumference_left = 0.3613
+        self.wheel_circumference_right = 0.3613
         self.ticks_per_rotation = 2094.625  # @TODO Need figure out where this  ~4 is coming from I double checked the gear ratio not there
         self.wheel_base = 0.3397  # Front/Back 0.18668, left/right 0.2794m # left/right inside 0.2096 meters, left/right outside 0.3397 meters
         self.left_ticks = 0
@@ -47,16 +54,19 @@ class WheelOdomMoveNode(Node):
         self.th = 0.0
         self.joy_enabled = True  # get the param
         if self.joy_enabled:
-            self.joy_sub = self.create_subscription(Joy, 'joy', self.joy_callback, 10)
+            self.joy_sub = self.create_subscription(Joy, namespace+'joy', self.joy_callback, 10)
 
         # Publishers and subscribers
         self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
         self.broadcaster = TransformBroadcaster(self)
 
     def joy_callback(self, msg):
-        # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
         self.port.write((str(int((msg.axes[2] - msg.axes[5]) * 100)) + " " + str(
             int((msg.axes[2] + msg.axes[5]) * 100)) + " \n").encode())
+            
+    def cmd_callback(self, msg):
+        # self.get_logger().info(str(msg.axes[3])+":"+str(msg.axes[4]))
+        self.port.write((str(int((msg.data))) + " " + str(int(msg.data)) + " \n").encode())
 
     def cmd_vel_callback(self, msg):
         yaw = msg.angular.z
