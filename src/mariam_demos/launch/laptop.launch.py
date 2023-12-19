@@ -3,6 +3,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.actions import ExecuteProcess
+from launch.substitutions import FindExecutable
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
@@ -58,7 +60,8 @@ def generate_launch_description():
         name='apriltagRealSence',
         remappings=[
             ('camera_info', '/camera/color/camera_info'),
-            ('image_rect', '/camera/color/image_raw')
+            ('image_rect', '/camera/color/image_raw'),
+            #('tf', 'tf_realsence')
         ],
         parameters=[apriltag_config]
     )
@@ -87,13 +90,19 @@ def generate_launch_description():
     realsense_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(realsense_launch_file)
     )
+    
+    distance_node = ExecuteProcess( #@TODO fix this node something is wrong with the ros2 run
+            cmd=["python3", "/home/carter/MARIAM/src/mariam_demos/src/distance.py"],
+            shell=True
+    )
 
 
     return LaunchDescription([
         realsense_launch,
         usb_cam_node,
         apriltag_node_1,
-        apriltag_node_2,
-        joy_node
+        #apriltag_node_2,
+        joy_node,
+        distance_node
     ])
 
