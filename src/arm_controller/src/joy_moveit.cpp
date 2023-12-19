@@ -18,7 +18,9 @@
 // A synchronized callback with have multiple placeholders
 using std::placeholders::_1;
 
-// Run launch file: ros2 launch arm_controller xsarm_moveit.launch.py robot_model:=px100 robot_name:=monica_arm hardware_type:=actual
+// Run launch file(s): 
+// ros2 run joy joy_node
+// ros2 launch arm_controller xsarm_moveit.launch.py robot_model:=px100 robot_name:=monica_arm hardware_type:=actual
 
 using namespace std::chrono_literals;
 using moveit::planning_interface::MoveGroupInterface;
@@ -33,13 +35,13 @@ class joy_moveit : public rclcpp::Node
       //this->declare_parameter("robot_description_semantic", "/home/calvinjs/MARIAM/install/interbotix_xsarm_moveit/share/interbotix_xsarm_moveit/config/srdf/px100.srdf.xacro");
 
       // Set custom home pose
-      pose_experiment_home.position.x = 0.285;
+      pose_experiment_home.position.x = 0.28;
       pose_experiment_home.position.y = 0.0;
-      pose_experiment_home.position.z = 0.064;
-      pose_experiment_home.orientation.x = 0.0;
-      pose_experiment_home.orientation.y = 0.0;
-      pose_experiment_home.orientation.z = 0.0;
-      pose_experiment_home.orientation.w = 1.0;
+      pose_experiment_home.position.z = 0.100;
+      pose_experiment_home.orientation.x = -0.000;
+      pose_experiment_home.orientation.y = -0.179;
+      pose_experiment_home.orientation.z =  0.000;
+      pose_experiment_home.orientation.w =  0.984;
 
       std::string my_namespace = this->get_namespace();
       RCLCPP_INFO(this->get_logger(), "Using namespace: %s'}", my_namespace.c_str());
@@ -47,7 +49,7 @@ class joy_moveit : public rclcpp::Node
       // 10 is the depth of the message queue
       joy_subscriber_     = this->create_subscription<sensor_msgs::msg::Joy>(
         "joy", 10, std::bind(&joy_moveit::joy_callback, this, std::placeholders::_1));
-      pose_marker_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("goal_pose_marker", 10);
+      goal_pose_joy_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("goal_pose_joy", 10);
     }
     ~joy_moveit() 
     {
@@ -60,8 +62,7 @@ class joy_moveit : public rclcpp::Node
       if (move_group_interface == nullptr) move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
 
       // Create collision object for the robot to avoid
-      auto const collision_object = [frame_id =
-                                      move_group_interface->getPlanningFrame()] {
+      auto const collision_object = [frame_id = move_group_interface->getPlanningFrame()] {
         moveit_msgs::msg::CollisionObject collision_object;
         collision_object.header.frame_id = frame_id;
         collision_object.id = "ground";
@@ -101,7 +102,7 @@ class joy_moveit : public rclcpp::Node
   geometry_msgs::msg::Pose pose_goal_initial;
   geometry_msgs::msg::Pose pose_goal;
   geometry_msgs::msg::Pose pose_experiment_home;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_marker_publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr goal_pose_joy_publisher_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
 
   void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg) {
@@ -124,8 +125,16 @@ class joy_moveit : public rclcpp::Node
 
       // Print updated pose
       if (pose_goal_initial != pose_goal) {
-        RCLCPP_INFO(this->get_logger(), "Updated Pose: x = %f, y = %f, z = %f", 
-          pose_goal.position.x, pose_goal.position.y, pose_goal.position.z);
+        RCLCPP_INFO(
+          this->get_logger(), 
+          "Updated \n Pose: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
+          pose_goal.position.x, 
+          pose_goal.position.y, 
+          pose_goal.position.z,
+          pose_goal.orientation.x, 
+          pose_goal.orientation.y, 
+          pose_goal.orientation.z,
+          pose_goal.orientation.w);
       }
       // Publish updated pose (optional)
       // pose_publisher_->publish(pose_goal);
@@ -145,7 +154,7 @@ class joy_moveit : public rclcpp::Node
       marker.color.g = 1.0;
       marker.color.b = 0.0;
       marker.pose = pose_goal;
-      pose_marker_publisher_->publish(marker);
+      goal_pose_joy_publisher_->publish(marker);
 
       if (msg->buttons[2] == 1) { // X button pressed
         // Example cmd: ros2 topic pub --once /arm_cmd geometry_msgs/msg/Pose "{position: {x: 0.0, y: 0.0, z: 0.2}, orientation: {x: 0.1, y: 0.0, z: 0.0, w: 1.0}}"
@@ -163,7 +172,7 @@ class joy_moveit : public rclcpp::Node
         // Execute the plan
         if(success) {
           move_group_interface->execute(plan);
-          RCLCPP_ERROR(this->get_logger(), "Planning successful!");
+          RCLCPP_INFO(this->get_logger(), "Planning successful!");
         } else {
           RCLCPP_ERROR(this->get_logger(), "Planning failed!");
         }

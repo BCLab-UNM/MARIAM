@@ -3,6 +3,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
+
     # First joy_node with remapping
     joy_node_drive = Node(
         package='joy',
@@ -17,7 +18,7 @@ def generate_launch_description():
         package='joy',
         executable='joy_node',
         name='joy_node_monica',
-        remappings=[('joy', '/monica/commands/joy_raw')],
+        #remappings=[('joy', '/px100/commands/joy_raw')],
         output='screen'
     )
 
