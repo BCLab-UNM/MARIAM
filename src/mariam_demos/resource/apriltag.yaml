@@ -3,24 +3,51 @@ apriltag:                 # node name
     # setup (defaults)
     image_transport: raw  # image format: "raw" or "compressed"
     family: 36h11         # tag family name: 16h5, 25h9, 36h11
-    size: 0.135 #0.2032             # default tag edge size in meter
+    size: 0.166 #0.2032             # default tag edge size in meter
     profile: false        # print profiling information to stdout
-    image_rect: /image_raw 
-    camera_info: /camera_info
+    publish_tag_detections_image: true
+
 
     # tuning of detection (defaults)
-    max_hamming: 3        # maximum allowed hamming distance (corrected bits)
+    max_hamming: 2        # Maximum allowed Hamming distance (corrected bits). Lowering this makes the detector more robust to noise but may miss some detections.
     detector:
-      threads: 3          # number of threads
-      decimate: 2.0       # decimate resolution for quad detection
-      blur: 0.0           # sigma of Gaussian blur for quad detection
-      refine: 1           # snap to strong gradients
-      sharpening: 0.25    # sharpening of decoded images
-      debug: 0            # write additional debugging images to current working directory
+      threads: 4          # Number of threads for running the detector. More threads can improve performance on multi-core systems.
+      decimate: 1.0       # Decimate resolution for quad detection. Lower values improve detection accuracy but reduce performance.
+      blur: 1.0           # Sigma of Gaussian blur for quad detection. A slight blur can help smooth out image noise.
+      refine: 1           # Enables refinement to snap to strong gradients, improving accuracy at the cost of performance.
+      sharpening: 0.25    # Sharpening of decoded images. Helps in making tag borders more distinct, but too much can introduce noise.
+      debug: 0            # Enables writing of additional debugging images to the current working directory. Useful for understanding detection issues.
 
     # (optional) list of tags
     # If defined, 'frames' and 'sizes' must have the same length as 'ids'.
     tag:
-      ids:    [7, 5, 6 ]        # tag IDs for which to publish transform
-      frames: [Ground, Monica, Ross]   # frame names
-      sizes:  [0.17145, 0.135, 0.135]     # tag-specific edge size, overrides the default 'size'
+      ids:    [7, 6, 8, 10]        # tag IDs for which to publish transform
+      frames: [Ground, Monica, Ross, Payload]   # frame names
+      sizes:  [0.17145, 0.166, 0.166, 0.166]     # tag-specific edge size, overrides the default 'size'
+      
+apriltagRealSence:                 # node name
+  ros__parameters:
+    # setup (defaults)
+    image_transport: raw  # image format: "raw" or "compressed"
+    family: 36h11         # tag family name: 16h5, 25h9, 36h11
+    size: 0.166 #0.2032             # default tag edge size in meter
+    profile: false        # print profiling information to stdout
+    publish_tag_detections_image: true
+
+
+    # tuning of detection (defaults)
+    max_hamming: 2        # Maximum allowed Hamming distance (corrected bits). Lowering this makes the detector more robust to noise but may miss some detections.
+    detector:
+      threads: 4          # Number of threads for running the detector. More threads can improve performance on multi-core systems.
+      decimate: 1.0       # Decimate resolution for quad detection. Lower values improve detection accuracy but reduce performance.
+      blur: 1.0           # Sigma of Gaussian blur for quad detection. A slight blur can help smooth out image noise.
+      refine: 1           # Enables refinement to snap to strong gradients, improving accuracy at the cost of performance.
+      sharpening: 0.25    # Sharpening of decoded images. Helps in making tag borders more distinct, but too much can introduce noise.
+      debug: 0            # Enables writing of additional debugging images to the current working directory. Useful for understanding detection issues.
+
+    # (optional) list of tags
+    # If defined, 'frames' and 'sizes' must have the same length as 'ids'.
+    tag:
+      ids:    [7, 6, 8, 10]        # tag IDs for which to publish transform
+      frames: [Ground, Monica, Ross, Payload]   # frame names
+      sizes:  [0.17145, 0.166, 0.166, 0.166]     # tag-specific edge size, overrides the default 'size'
