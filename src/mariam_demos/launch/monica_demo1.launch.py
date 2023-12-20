@@ -20,7 +20,7 @@ import os
 def generate_launch_description():
     # Define configurations
     robot_model = LaunchConfiguration('robot_model', default='px100')
-    use_rviz = LaunchConfiguration('use_rviz', default='true')
+    use_rviz = LaunchConfiguration('use_rviz', default='false')
     use_joy = LaunchConfiguration('use_joy', default='false')
     hardware_type = LaunchConfiguration('hardware_type', default='actual')
     
