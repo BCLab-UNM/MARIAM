@@ -14,7 +14,7 @@ import time
 
 class DelayedJoyMoveBase(Node):
     def __init__(self):
-        super().__init__('delayed_joy_move_base')
+        super().__init__('delayed_joy_move_base_invert')
         self.subscription = self.create_subscription(
             Joy,
             '/joy',
