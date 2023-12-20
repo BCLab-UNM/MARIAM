@@ -17,7 +17,7 @@ class DelayedJoyMoveBase(Node):
         super().__init__('delayed_joy_move_base')
         self.subscription = self.create_subscription(
             Joy,
-            '/joy_drive',
+            '/joy',
             self.joy_callback,
             10)
         self.leader_motor_publisher = self.create_publisher(Int32, 'motor', 10)
@@ -44,8 +44,8 @@ class DelayedJoyMoveBase(Node):
             time.sleep(wait_time_sec)
 
         #self.get_logger().info("Got: " + str(msg.axes[3]) + ":" + str(msg.axes[4]))
-        left = ((-1)**msg.buttons[4]) * int((msg.axes[4] - msg.axes[3]) * 50)
-        right = ((-1)**msg.buttons[4]) * int((msg.axes[4] + msg.axes[3]) * 50)
+        left = ((-1)**msg.buttons[5]) * int((msg.axes[4] - msg.axes[3]) * 50)
+        right = ((-1)**msg.buttons[5]) * int((msg.axes[4] + msg.axes[3]) * 50)
         self.port.write((str(left) + " " + str(right) + "\n").encode())
 
     def read_serial_data(self):

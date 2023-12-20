@@ -17,7 +17,7 @@ class DelayedJoyMoveBase(Node):
         super().__init__('delayed_joy_move_base')
         self.subscription = self.create_subscription(
             Joy,
-            '/joy_drive',
+            '/joy',
             self.joy_callback,
             10)
         self.leader_motor_publisher = self.create_publisher(Int32, 'motor', 10)
