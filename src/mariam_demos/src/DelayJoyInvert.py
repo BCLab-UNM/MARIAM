@@ -21,7 +21,7 @@ class DelayedJoyMoveBase(Node):
             self.joy_callback,
             10)
         self.leader_motor_publisher = self.create_publisher(Int32, 'motor', 10)
-        self.port = serial.Serial("/dev/ttyACM0", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+        self.port = serial.Serial("/dev/arduino", baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                                   stopbits=serial.STOPBITS_ONE)
         # self.publisher = self.create_publisher(Float64MultiArray, 'left', 10)
         self.motor_ticks_right_publisher = self.create_publisher(Int32, 'motor_ticks_right', 10)
