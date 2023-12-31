@@ -3,7 +3,7 @@
 #define LEFT_TICKS_TOPIC_NAME NAMESPACE "/left_ticks"
 #define RIGHT_TICKS_TOPIC_NAME NAMESPACE "/right_ticks"
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
-#define ODOM_TOPIC_NAME NAMESPACE "/odom"
+#define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
 
 
 /* NOTES https://www.pololu.com/product/2502#lightbox-picture0J3752
@@ -16,6 +16,17 @@ DualVNH5019MotorShield md;
 md.init();
 md.setM1Speed(l);
 md.setM2Speed(r);
+*/
+
+/* Prior pid tuneing 
+Kp=0.0075
+Ki=0.15
+Kd=0.002
+db=0.0
+st=0.0
+wu=3.0
+ff_l=0.0095
+ff_r=0.012
 */
 
 /*
@@ -58,6 +69,28 @@ PID leftPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 #include <Movement.h>
 
+//Movement (VNH5019 Motor Driver Carrier)
+byte rightDirectionB = A9; //"counterclockwise" input
+byte rightDirectionA = A8; //"clockwise" input
+byte rightSpeedPin = 3; //PWM input
+byte leftDirectionB = A7; //"counterclockwise" input
+byte leftDirectionA = A6; //"clockwise" input
+byte leftSpeedPin = 4; //PWM input
+
+//Odometry (8400 CPR Encoder)
+byte rightEncoderA = 7;
+byte rightEncoderB = 6;
+byte leftEncoderA = 12;
+byte leftEncoderB = 11;
+Movement move = Movement(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, leftDirectionA, leftDirectionB);
+//BasicEncoder leftEncoder(leftEncoderA,leftEncoderB);
+//BasicEncoder rightEncoder(rightEncoderA,rightEncoderB);
+
+const double wheelBase = 0.3397; // OLD:0.278; //distance between left and right wheels (in M)
+const double leftWheelCircumference = 0.3613; // Hardwheels in meters
+const double rightWheelCircumference = 0.3613; // Hardwheels in meters
+const int cpr = 8400; //"cycles per revolution" -- number of encoder increments per one wheel revolution or 2094.625?
+
 rcl_subscription_t subscriber;
 geometry_msgs__msg__Twist msg;
 rclc_executor_t executor;
@@ -92,6 +125,34 @@ void error_loop(){
   }
 }
 
+double leftTicksToMeters(double leftTicks_arg) {
+  return (leftWheelCircumference * leftTicks_arg) / cpr;
+}
+
+double rightTicksToMeters(double rightTicks_arg) {
+  return (rightWheelCircumference * rightTicks_arg) / cpr;
+}
+
+double metersToTicks(double meters) {
+  return (meters * cpr) / ((leftWheelCircumference + rightWheelCircumference) / 2);
+}
+
+double leftMetersToTicks(double meters) {
+  return (meters * cpr) / leftWheelCircumference;
+}
+
+double rightMetersToTicks(double meters) {
+  return (meters * cpr) / rightWheelCircumference;
+}
+
+double diffToTheta(double right, double left) {
+  return (right - left) / wheelBase;
+}
+
+double thetaToDiff(double theta) {
+  return theta * wheelBase;
+}
+
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
 {  
   RCLC_UNUSED(last_call_time);
@@ -110,13 +171,34 @@ void subscription_callback(const void *msgin) {
   // if velocity in x direction is 0 turn off LED, if 1 turn on LED
   digitalWrite(LED_PIN, (msg->linear.x == 0) ? LOW : HIGH);
   //@TODO make a latch for left_ticks, right_ticks & odom?
-
+  
   //@TODO replace with encoder data
   // @TODO move this into a timer callback with odom & tf code
   double yaw = msg->angular.z;
+
+
+  double linear_sp = metersToTicks(msg->linear.x);
+  double angular_sp = metersToTicks(thetaToDiff(msg->angular.z));
+
+  double left_sp = leftMetersToTicks(msg->linear.x) - angular_sp;
+  double right_sp = rightMetersToTicks(msg->linear.x) + angular_sp;
+
+  int speedL = left_sp; //(left_pid.step(left_sp, leftTickVel));
+  int speedR = right_sp; //(right_pid.step(right_sp, rightTickVel));
+
+  // Feed forward
+  //speedL += ff_l * left_sp;
+  //speedR += ff_r * right_sp;
+  if (speedL == 0 && speedR == 0) { move.stop(); }
+  if (speedL >= 0 && speedR >= 0) { move.forward(speedL, speedR); }
+  else if (speedL <= 0 && speedR <= 0) { move.backward(speedL*-1, speedR*-1); }
+  else if (speedL <= 0 && speedR >= 0) { move.rotateLeft(speedL*-1, speedR); }
+  else { move.rotateRight(speedL, speedR*-1); }
+
   left_ticks.data = (msg->linear.x - yaw * wheel_base / 2.0) * 50;
   right_ticks.data = (msg->linear.x + yaw * wheel_base / 2.0) * 50;
   //@TODO add odom calcs here, and pid compute and sending to motors
+  
 }
   
 void setup() {
