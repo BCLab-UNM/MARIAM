@@ -68,6 +68,7 @@ PID leftPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 #include <geometry_msgs/msg/twist.h>
 
 #include <Movement.h>
+#include <Encoder.h> // @TODO Test with and without this above #define ENCODER_OPTIMIZE_INTERRUPTS
 
 //Movement (VNH5019 Motor Driver Carrier)
 byte rightDirectionB = A9; //"counterclockwise" input
@@ -83,8 +84,8 @@ byte rightEncoderB = 6;
 byte leftEncoderA = 12;
 byte leftEncoderB = 11;
 Movement move = Movement(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, leftDirectionA, leftDirectionB);
-//BasicEncoder leftEncoder(leftEncoderA,leftEncoderB);
-//BasicEncoder rightEncoder(rightEncoderA,rightEncoderB);
+Encoder leftEncoder(leftEncoderA,leftEncoderB);
+Encoder rightEncoder(rightEncoderA,rightEncoderB);
 
 const double wheelBase = 0.3397; // OLD:0.278; //distance between left and right wheels (in M)
 const double leftWheelCircumference = 0.3613; // Hardwheels in meters
@@ -109,8 +110,9 @@ rcl_timer_t timer;
 
 const double wheel_circumference_left = 0.3613;
 const double wheel_circumference_right = 0.3613;
-const double ticks_per_rotation = 2094.625;
+const double ticks_per_rotation = 8400; //2094.625;
 const double wheel_base = 0.3397;
+double theta_heading = 0;
 
 #define LED_PIN 13
 
@@ -153,11 +155,61 @@ double thetaToDiff(double theta) {
   return theta * wheelBase;
 }
 
-void timer_callback(rcl_timer_t * timer, int64_t last_call_time)
-{  
+
+const void update_rotation(float x, float y, float z) {
+    float c1 = cos((y*3.14/180.0)/2);
+    float c2 = cos((z*3.14/180.0)/2);
+    float c3 = cos((x*3.14/180.0)/2);
+
+    float s1 = sin((y*3.14/180.0)/2);
+    float s2 = sin((z*3.14/180.0)/2);
+    float s3 = sin((x*3.14/180.0)/2);
+
+    odom.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
+    odom.pose.pose.orientation.y = s1 * s2 * c3 + c1 * c2 * s3;
+    odom.pose.pose.orientation.x = s1 * c2 * c3 + c1 * s2 * s3;
+    odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3; 
+}
+
+/*
+def get_rotation(self):
+    q = quaternion_from_euler(0, 0, self.th)
+    return Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
+  */ 
+
+void update_odometry(int ticks_left, int ticks_right){
+  double dleft = ticks_left / ticks_per_rotation * wheel_circumference_left;
+  double dright = ticks_right / ticks_per_rotation * wheel_circumference_right;
+
+  double dcenter = (dleft + dright) / 2.0;
+  double dtheta = (dright - dleft) / wheel_base;
+
+  double dx = dcenter * cos(theta_heading);
+  double dy = dcenter * sin(theta_heading);
+
+  odom.pose.pose.position.x += dx;
+  odom.pose.pose.position.y += dy;
+  theta_heading += dtheta;
+
+  update_rotation(0, 0, theta_heading);
+  //odom.pose.pose.orientation = //get_rotation()
+
+  odom.twist.twist.linear.x = dx;
+  odom.twist.twist.linear.y = dy;
+  odom.twist.twist.angular.z = dtheta;
+
+  //odom.header.stamp = get_clock().now().to_msg();
+  //odom.pose.pose = Pose(position=Point(x=x, y=y, z=0.0), orientation=get_rotation());
+} //end update_odometry function
+
+void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
   RCLC_UNUSED(last_call_time);
   if (timer != NULL) {
-    //@TODO make a latch for left_ticks, right_ticks & odom?
+    //Read & Reset encoders
+    left_ticks.data = leftEncoder.readAndReset(); 
+    right_ticks.data = rightEncoder.readAndReset();
+    update_odometry(left_ticks.data, right_ticks.data);
+    
     RCSOFTCHECK(rcl_publish(&left_tick_publisher, &left_ticks, NULL));
     RCSOFTCHECK(rcl_publish(&right_tick_publisher, &right_ticks, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
@@ -189,16 +241,12 @@ void subscription_callback(const void *msgin) {
   // Feed forward
   //speedL += ff_l * left_sp;
   //speedR += ff_r * right_sp;
+
   if (speedL == 0 && speedR == 0) { move.stop(); }
   if (speedL >= 0 && speedR >= 0) { move.forward(speedL, speedR); }
   else if (speedL <= 0 && speedR <= 0) { move.backward(speedL*-1, speedR*-1); }
   else if (speedL <= 0 && speedR >= 0) { move.rotateLeft(speedL*-1, speedR); }
-  else { move.rotateRight(speedL, speedR*-1); }
-
-  left_ticks.data = (msg->linear.x - yaw * wheel_base / 2.0) * 50;
-  right_ticks.data = (msg->linear.x + yaw * wheel_base / 2.0) * 50;
-  //@TODO add odom calcs here, and pid compute and sending to motors
-  
+  else { move.rotateRight(speedL, speedR*-1); }  
 }
   
 void setup() {
@@ -206,7 +254,13 @@ void setup() {
   
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);  
-  
+
+  //Reset encoders
+  leftEncoder.write(0); 
+  rightEncoder.write(0);
+  odom.header.frame_id.data = "odom";
+  odom.child_frame_id.data = "base_link"; //@TODO add namespaces?
+
   delay(2000);
 
   allocator = rcl_get_default_allocator();
