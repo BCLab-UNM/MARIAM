@@ -156,19 +156,19 @@ double thetaToDiff(double theta) {
 }
 
 
-const void update_rotation(float x, float y, float z) {
-    float c1 = cos((y*3.14/180.0)/2);
-    float c2 = cos((z*3.14/180.0)/2);
-    float c3 = cos((x*3.14/180.0)/2);
+void update_rotation(float x, float y, float z) {
+    float c1 = cos(y);
+    float c2 = cos(z);
+    float c3 = cos(x);
 
-    float s1 = sin((y*3.14/180.0)/2);
-    float s2 = sin((z*3.14/180.0)/2);
-    float s3 = sin((x*3.14/180.0)/2);
+    float s1 = sin(y);
+    float s2 = sin(z);
+    float s3 = sin(x);
 
     odom.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
     odom.pose.pose.orientation.y = s1 * s2 * c3 + c1 * c2 * s3;
     odom.pose.pose.orientation.x = s1 * c2 * c3 + c1 * s2 * s3;
-    odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3; 
+    odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
 }
 
 /*
