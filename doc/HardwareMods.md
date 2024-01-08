@@ -1,5 +1,9 @@
 # MARIAM: Swarmie -> GiANT Hardware Modifications
 
+## Document TODO List
+- Rain/Shade cover removal
+- NUC removal to get to Arduino
+
 ## Wheels
 The [original swarmie wheels](http://www.robotshop.com/en/28-talon-tires-pair.html) were determined to be problematic as they can deflect depending on the load and orientation of the arm
 
