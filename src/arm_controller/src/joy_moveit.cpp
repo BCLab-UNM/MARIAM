@@ -115,8 +115,8 @@ class joy_moveit : public rclcpp::Node
       // Update pose
       // Z axis is forward and back
       // Y axis inverted up and down
-      pose_goal.position.x += -(0.01)*msg->axes[6]; // DPAD left (+) and right (-)
-      pose_goal.position.z += (0.01)*msg->axes[7]; // DPAD up (+) and down (-)
+      pose_goal.position.x += -(0.005)*msg->axes[6]; // DPAD left (+) and right (-)
+      pose_goal.position.z += (0.005)*msg->axes[7]; // DPAD up (+) and down (-)
 
       // Back button pressed
       if (msg->buttons[6] == 1) {
