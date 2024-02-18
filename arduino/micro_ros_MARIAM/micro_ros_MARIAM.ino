@@ -4,6 +4,7 @@
 #define RIGHT_TICKS_TOPIC_NAME NAMESPACE "/right_ticks"
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
+#define FORCE_TOPIC_NAME NAMESPACE "/force"
 #define DATA_TOPIC_NAME NAMESPACE "/data"
 
 
@@ -55,11 +56,13 @@ Encoder rightEncoder(rightEncoderA,rightEncoderB);
 rcl_publisher_t left_tick_publisher;
 rcl_publisher_t right_tick_publisher;
 rcl_publisher_t odom_publisher;
+rcl_publisher_t force_publisher;
 rcl_publisher_t data_publisher;
 std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 heading;
+std_msgs__msg__Float32 force;
 double left_sp, right_sp, dleft, dright, speedL, speedR;
 double Kp=0.0075, Ki=0.0, Kd=0.02;//double Kp=0.0075, Ki=0.15, Kd=0.002; //double Kp=2, Ki=5, Kd=1;
 PID left_PID(&left_current_speed, &speedL, &left_sp, Kp, Ki, Kd, DIRECT);
@@ -185,7 +188,11 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     right_current_speed = rightTicksToMeters(right_ticks.data);
     update_odometry(left_ticks.data, -right_ticks.data);
     std_msgs__msg__Float32 publish_me; publish_me.data = speedL ; //@********************* just general data around
+    force.data = analogRead(A5)* (5.0 / 1023.0); // @TODO check the pin, this should be a scaler for the voltage
+    //@TODO need to then scal or apply the function to convert the voltage to force
+
     RCSOFTCHECK(rcl_publish(&data_publisher, &publish_me, NULL)); 
+    RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
     RCSOFTCHECK(rcl_publish(&left_tick_publisher, &left_ticks, NULL));
     RCSOFTCHECK(rcl_publish(&right_tick_publisher, &right_ticks, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
@@ -263,6 +270,12 @@ void setup() {
     &data_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), DATA_TOPIC_NAME));
+
+  RCCHECK(rclc_publisher_init_default(
+    &force_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), FORCE_TOPIC_NAME));
+
 
 
   RCCHECK(rclc_publisher_init_default(
