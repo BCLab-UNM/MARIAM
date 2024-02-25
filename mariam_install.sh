@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 echo -e "\n\n"
 echo -e "${GRN}${BOLD}**********************************************${NORM}${OFF}"
 echo ""
@@ -35,6 +37,8 @@ rm                                                                              
     interbotix_ros_toolboxes/interbotix_rpi_toolbox/COLCON_IGNORE
 
 echo "Building MARIAM workspace..."
+sudo rosdep init
+rosdep update
 cd "$INSTALL_PATH"
 rosdep install --from-paths src --ignore-src -r -y
 if colcon build; then
