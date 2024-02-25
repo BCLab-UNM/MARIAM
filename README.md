@@ -14,7 +14,7 @@ git clone --recursive git@github.com:BCLab-UNM/MARIAM.git
 sudo rosdep init
 rosdep update
 chmod +x ~/MARIAM/mariam_install.sh
-sudo ./MARIAM/mariam_install.sh
+./MARIAM/mariam_install.sh
 ```
 
 ### Manual Install

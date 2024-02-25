@@ -22,7 +22,7 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
     ros-humble-moveit ros-humble-tf-transformations ros-humble-joint-trajectory-controller \
     python3-rosdep python3-colcon-common-extensions python3-colcon-clean ros-humble-apriltag \
     ros-humble-moveit-visual-tools python3-pip
-sudo pip3 install transforms3d modern_robotics
+pip3 install transforms3d modern_robotics
 
 echo "Copying UDEV rules..."
 cd ~/MARIAM/src/interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk
@@ -44,6 +44,8 @@ if colcon build; then
     echo "source ~/MARIAM/install/setup.bash" >> ~/.bashrc
     source ~/MARIAM/install/setup.bash
 else
+    failed "Failed to build Interbotix Arm ROS Packages."
+fi
 
 # Set up Environment Variables
 if [ -z "$ROS_IP" ]; then
@@ -55,3 +57,4 @@ else
 fi
 
 echo -e "${GRN}NOTE: Remember to reboot the computer before using the robot!${OFF}"
+
