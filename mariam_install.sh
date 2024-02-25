@@ -37,8 +37,6 @@ rm                                                                              
     interbotix_ros_toolboxes/interbotix_rpi_toolbox/COLCON_IGNORE
 
 echo "Building MARIAM workspace..."
-sudo rosdep init
-rosdep update
 cd "$INSTALL_PATH"
 rosdep install --from-paths src --ignore-src -r -y
 if colcon build; then
@@ -49,11 +47,11 @@ else
 
 # Set up Environment Variables
 if [ -z "$ROS_IP" ]; then
-echo "Setting up Environment Variables..."
-echo 'export ROS_IP=$(echo `hostname -I | cut -d" " -f1`)' >> ~/.bashrc
-echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
+    echo "Setting up Environment Variables..."
+    echo 'export ROS_IP=$(echo `hostname -I | cut -d" " -f1`)' >> ~/.bashrc
+    echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
 else
-echo "Environment variables already set!"
+    echo "Environment variables already set!"
 fi
 
 echo -e "${GRN}NOTE: Remember to reboot the computer before using the robot!${OFF}"
