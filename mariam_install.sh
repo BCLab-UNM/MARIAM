@@ -25,24 +25,24 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
 sudo pip3 install transforms3d modern_robotics
 
 echo "Copying UDEV rules..."
-cd $INSTALL_PATH/src/interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk
+cd ~/MARIAM/src/interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk
 sudo cp 99-interbotix-udev.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
 echo "Remove COLON ignore..."
-cd $INSTALL_PATH/src
+cd ~/MARIAM/src
 rm                                                                                                  \
     interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface/COLCON_IGNORE      \
     interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface_msgs/COLCON_IGNORE \
     interbotix_ros_toolboxes/interbotix_rpi_toolbox/COLCON_IGNORE
 
 echo "Building MARIAM workspace..."
-cd "$INSTALL_PATH"
+cd ~/MARIAM
 rosdep install --from-paths src --ignore-src -r -y
 if colcon build; then
     echo -e "${GRN}${BOLD}Interbotix Arm ROS Packages built successfully!${NORM}${OFF}"
-    echo "source $INSTALL_PATH/install/setup.bash" >> ~/.bashrc
-    source "$INSTALL_PATH"/install/setup.bash
+    echo "source ~/MARIAM/install/setup.bash" >> ~/.bashrc
+    source ~/MARIAM/install/setup.bash
 else
 
 # Set up Environment Variables
