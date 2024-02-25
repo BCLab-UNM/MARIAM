@@ -29,12 +29,12 @@ cd ~/MARIAM/src/interbotix_ros_core/interbotix_ros_xseries/interbotix_xs_sdk
 sudo cp 99-interbotix-udev.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 
-echo "Remove COLON ignore..."
-cd ~/MARIAM/src
-rm                                                                                                  \
-    interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface/COLCON_IGNORE      \
-    interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface_msgs/COLCON_IGNORE \
-    interbotix_ros_toolboxes/interbotix_rpi_toolbox/COLCON_IGNORE
+# echo "Remove COLON ignore..."
+# cd ~/MARIAM/src
+# rm                                                                                                  \
+#     interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface/COLCON_IGNORE      \
+#     interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface_msgs/COLCON_IGNORE \
+#     interbotix_ros_toolboxes/interbotix_rpi_toolbox/COLCON_IGNORE
 
 echo "Building MARIAM workspace..."
 cd ~/MARIAM
@@ -44,7 +44,7 @@ if colcon build; then
     echo "source ~/MARIAM/install/setup.bash" >> ~/.bashrc
     source ~/MARIAM/install/setup.bash
 else
-    failed "Failed to build Interbotix Arm ROS Packages."
+    echo "Failed to build Interbotix Arm ROS Packages."
 fi
 
 # Set up Environment Variables
