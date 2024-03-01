@@ -4,5 +4,5 @@
     - name: Insert px100 base tranlsation in to URDF
       lineinfile:
         path: ~/MARIAM/src/interbotix_ros_manipulators/interbotix_ros_xsarms/interbotix_xsarm_descriptions/urdf/px100.urdf.xacro
-        line: '      <origin rpy="-${pi/2} 0 -${pi/2}" xyz="0.0 0.0 0.06"/>'
+        line: '      <origin rpy="0 0 -${pi/2}" xyz="0.0 0.0 0.095"/>'
         insertafter: '<joint name="fixed" type="fixed">'
