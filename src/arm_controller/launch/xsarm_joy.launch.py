@@ -26,6 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# Example:
+# ros2 launch
+
 from typing import List
 
 from interbotix_xs_modules.xs_common import (

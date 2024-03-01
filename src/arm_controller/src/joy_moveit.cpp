@@ -57,15 +57,14 @@ class joy_moveit : public rclcpp::Node
     }
 
     void initilize_moveit() {
-      
       // Create a MoveGroupInterface object
       if (move_group_interface == nullptr) move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
 
       // Create collision object for the robot to avoid
-      auto const collision_object = [frame_id = move_group_interface->getPlanningFrame()] {
-        moveit_msgs::msg::CollisionObject collision_object;
-        collision_object.header.frame_id = frame_id;
-        collision_object.id = "ground";
+      auto const collision_object_ground = [frame_id = move_group_interface->getPlanningFrame()] {
+        moveit_msgs::msg::CollisionObject collision_object_ground;
+        collision_object_ground.header.frame_id = frame_id;
+        collision_object_ground.id = "ground";
         shape_msgs::msg::SolidPrimitive primitive;
 
         // Define the size of the box in meters
@@ -82,16 +81,63 @@ class joy_moveit : public rclcpp::Node
         box_pose.position.y = 0.0;
         box_pose.position.z = -0.005;
 
-        collision_object.primitives.push_back(primitive);
-        collision_object.primitive_poses.push_back(box_pose);
-        collision_object.operation = collision_object.ADD;
+        collision_object_ground.primitives.push_back(primitive);
+        collision_object_ground.primitive_poses.push_back(box_pose);
+        collision_object_ground.operation = collision_object_ground.ADD;
 
-        return collision_object;
+        return collision_object_ground;
+      }();
+
+
+      // Create collision object the mobile base
+      // TODO: Make urdf instead
+      auto const collision_object_base = [frame_id = move_group_interface->getPlanningFrame()] {
+        moveit_msgs::msg::CollisionObject collision_object_base;
+        collision_object_base.header.frame_id = frame_id;
+        collision_object_base.id = "ground";
+        shape_msgs::msg::SolidPrimitive primitive;
+        primitive.type = primitive.BOX;
+        primitive.dimensions.resize(3);
+        primitive.dimensions[primitive.BOX_X] = 0.2;
+        primitive.dimensions[primitive.BOX_Y] = 0.2;
+        primitive.dimensions[primitive.BOX_Z] = 0.4;
+        geometry_msgs::msg::Pose box_pose;
+        box_pose.orientation.w = 1.0;
+        box_pose.position.x = 0;
+        box_pose.position.y = -0.17;
+        box_pose.position.z = 0.2;
+        collision_object_base.primitives.push_back(primitive);
+        collision_object_base.primitive_poses.push_back(box_pose);
+        collision_object_base.operation = collision_object_base.ADD;
+        return collision_object_base;
+      }();
+
+      auto const collision_object_wheels = [frame_id = move_group_interface->getPlanningFrame()] {
+        moveit_msgs::msg::CollisionObject collision_object_wheels;
+        collision_object_wheels.header.frame_id = frame_id;
+        collision_object_wheels.id = "ground";
+        shape_msgs::msg::SolidPrimitive primitive;
+        primitive.type = primitive.BOX;
+        primitive.dimensions.resize(3);
+        primitive.dimensions[primitive.BOX_X] = 0.07;
+        primitive.dimensions[primitive.BOX_Y] = 0.25;
+        primitive.dimensions[primitive.BOX_Z] = 0.12;
+        geometry_msgs::msg::Pose box_pose;
+        box_pose.orientation.w = 1.0;
+        box_pose.position.x = 0.235;
+        box_pose.position.y = -0.15;
+        box_pose.position.z = 0.06;
+        collision_object_wheels.primitives.push_back(primitive);
+        collision_object_wheels.primitive_poses.push_back(box_pose);
+        collision_object_wheels.operation = collision_object_wheels.ADD;
+        return collision_object_wheels;
       }();
 
       // Add the collision object to the scene
       moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
-      planning_scene_interface.applyCollisionObject(collision_object);
+      // std::vector<moveit_msgs::msg::CollisionObject> collision_objects{collision_object_ground, collision_object_base, collision_object_wheels};
+      // planning_scene_interface.applyCollisionObjects(collision_objects);
+      planning_scene_interface.applyCollisionObject(collision_object_base);
 
     }
 

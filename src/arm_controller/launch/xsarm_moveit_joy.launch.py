@@ -26,6 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# How to launch:
+# ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=true
+
 import os
 
 from ament_index_python.packages import get_package_share_directory
