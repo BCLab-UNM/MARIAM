@@ -35,13 +35,13 @@ class joy_moveit : public rclcpp::Node
       //this->declare_parameter("robot_description_semantic", "/home/calvinjs/MARIAM/install/interbotix_xsarm_moveit/share/interbotix_xsarm_moveit/config/srdf/px100.srdf.xacro");
 
       // Set custom home pose
-      pose_experiment_home.position.x = 0.28;
-      pose_experiment_home.position.y = 0.0;
-      pose_experiment_home.position.z = 0.100;
-      pose_experiment_home.orientation.x = -0.000;
-      pose_experiment_home.orientation.y = -0.179;
-      pose_experiment_home.orientation.z =  0.000;
-      pose_experiment_home.orientation.w =  0.984;
+      pose_experiment_home.position.x = 0.0;
+      pose_experiment_home.position.y = 0.223;
+      pose_experiment_home.position.z = 0.098;
+      pose_experiment_home.orientation.x =  0.000;
+      pose_experiment_home.orientation.y =  0.000;
+      pose_experiment_home.orientation.z =  0.707;
+      pose_experiment_home.orientation.w =  0.707;
 
       std::string my_namespace = this->get_namespace();
       RCLCPP_INFO(this->get_logger(), "Using namespace: %s'}", my_namespace.c_str());
@@ -161,8 +161,8 @@ class joy_moveit : public rclcpp::Node
       // Update pose
       // Z axis is forward and back
       // Y axis inverted up and down
-      pose_goal.position.x += -(0.005)*msg->axes[6]; // DPAD left (+) and right (-)
-      pose_goal.position.z += (0.005)*msg->axes[7]; // DPAD up (+) and down (-)
+      pose_goal.position.y += -(0.005)*msg->axes[6]; // DPAD left (+) and right (-)
+      pose_goal.position.z +=  (0.005)*msg->axes[7]; // DPAD up (+) and down (-)
 
       // Back button pressed
       if (msg->buttons[6] == 1) {
