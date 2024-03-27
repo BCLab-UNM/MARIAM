@@ -20,20 +20,16 @@ def generate_launch_description():
           'wait_imu_to_init':True}]
     
     remappings=[
-          ('imu', '/imu/data'),
-          ('rgb/image', '/camera/color/image_raw'),
-          ('rgb/camera_info', '/camera/color/camera_info'),
-          ('depth/image', '/camera/realigned_depth_to_color/image_raw')]
-    
+            ('imu', '/imu/data'),
+            ('rgb/image', '/camera/color/image_raw'),
+            ('rgb/camera_info', '/camera/color/camera_info'),
+            ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
+            ('odom','odom_slam')]
+
     return LaunchDescription([
         # Nodes to launch    
         Node(
-            package='rtabmap_odom', executable='rgbd_odometry', output='screen',
-            parameters=parameters,
-            remappings=remappings),
-
-        Node(
-            package='rtabmap_viz', executable='rtabmap_viz', output='screen',
-            parameters=parameters,
-            remappings=remappings)
+            package='rtabmap_viz', executable='rtabmap_viz', name='comp_viz', output='screen',
+            parameters=parameters),
+#            remappings=remappings)
     ])
