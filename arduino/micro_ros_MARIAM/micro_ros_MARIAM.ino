@@ -5,7 +5,6 @@
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
 #define FORCE_TOPIC_NAME NAMESPACE "/force"
-#define DATA_TOPIC_NAME NAMESPACE "/data"
 #define LEFT_CURRENT_SPEED_TOPIC_NAME NAMESPACE "/pid_left_current_speed"
 #define SPEEDL_TOPIC_NAME NAMESPACE "/pid_speedL"
 #define LEFT_SP_TOPIC_NAME NAMESPACE "/pid_left_sp"
@@ -245,6 +244,8 @@ void subscription_callback(const void *msgin) {
   right_sp = msg->linear.x + angular_sp;
   if((msg->linear.x==0) && (msg->angular.z==0)) { move.stop();}
 }
+
+//@TODO make a subscription_callback that calls SetTunings(double Kp, double Ki, double Kd, int POn) so I don't have to rebuild per a tune
   
 void setup() {
   set_microros_transports();
@@ -279,12 +280,6 @@ void setup() {
     &right_tick_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RIGHT_TICKS_TOPIC_NAME));
-    /*
-  RCCHECK(rclc_publisher_init_default(
-    &data_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), DATA_TOPIC_NAME));
-    */
 
   RCCHECK(rclc_publisher_init_default(
       &left_current_speed_publisher,
