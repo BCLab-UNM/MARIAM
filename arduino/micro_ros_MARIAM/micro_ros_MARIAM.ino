@@ -192,8 +192,21 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     // Meter/Nanosecond ->Meter/second
     left_current_speed = leftTicksToMeters(left_ticks.data)*last_call_time/1000000000; //leftTicksToMeters(left_ticks.data);
     right_current_speed = rightTicksToMeters(right_ticks.data)*last_call_time/1000000000; //rightTicksToMeters(right_ticks.data);
+    
+    left_PID.Compute();
+    right_PID.Compute();
+    //speedL = left_sp * 50;
+    //speedR = right_sp * 50;
+    // Feed forward
+    //speedL += ff_l * speedL;
+    //speedR += ff_r * speedL;
+    if (speedL == 0 && speedR == 0) { move.stop(); }
+    if (speedL >= 0 && speedR >= 0) { move.forward(speedL, speedR); }
+    else if (speedL <= 0 && speedR <= 0) { move.backward(speedL*-1, speedR*-1); }
+    else if (speedL <= 0 && speedR >= 0) { move.rotateLeft(speedL*-1, speedR); }
+    else { move.rotateRight(speedL, speedR*-1); }  
+
     update_odometry(left_ticks.data, right_ticks.data);
-    std_msgs__msg__Float32 publish_me; publish_me.data = last_call_time ; //@********************* just general data around
     force.data = analogRead(A5)* (5.0 / 1023.0); // @TODO check the pin, this should be a scaler for the voltage
     //@TODO need to then scal or apply the function to convert the voltage to force
 
@@ -203,7 +216,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     RCSOFTCHECK(rcl_publish(&right_tick_publisher, &right_ticks, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
     
-    std_msgs__msg__Float32 left_current_speed_to_publish; left_current_speed_to_publish.data = left_ticks.data;
+    std_msgs__msg__Float32 left_current_speed_to_publish; left_current_speed_to_publish.data = left_current_speed;
     RCSOFTCHECK(rcl_publish(&left_current_speed_publisher, &left_current_speed_to_publish, NULL)); 
     std_msgs__msg__Float32 speedl_to_publish; speedl_to_publish.data = speedL;
     RCSOFTCHECK(rcl_publish(&speedl_publisher, &speedl_to_publish, NULL));
@@ -230,19 +243,7 @@ void subscription_callback(const void *msgin) {
   double angular_sp = thetaToDiff(msg->angular.z);
   left_sp = msg->linear.x - angular_sp;
   right_sp = msg->linear.x + angular_sp;
-
-  left_PID.Compute();
-  right_PID.Compute();
-  //speedL = left_sp * 50;
-  //speedR = right_sp * 50;
-  // Feed forward
-  //speedL += ff_l * speedL;
-  //speedR += ff_r * speedL;
-  if ((speedL == 0 && speedR == 0)||((msg->linear.x==0) && (msg->angular.z==0))) { move.stop(); }
-  if (speedL >= 0 && speedR >= 0) { move.forward(speedL, speedR); }
-  else if (speedL <= 0 && speedR <= 0) { move.backward(speedL*-1, speedR*-1); }
-  else if (speedL <= 0 && speedR >= 0) { move.rotateLeft(speedL*-1, speedR); }
-  else { move.rotateRight(speedL, speedR*-1); }  
+  if((msg->linear.x==0) && (msg->angular.z==0)) { move.stop();}
 }
   
 void setup() {
