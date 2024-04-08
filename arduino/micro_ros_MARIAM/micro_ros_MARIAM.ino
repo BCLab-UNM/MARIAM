@@ -1,4 +1,5 @@
-#define NAMESPACE "Monica"
+#define NAMESPACE "monica"
+//#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
