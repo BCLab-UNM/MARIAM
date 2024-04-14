@@ -16,13 +16,17 @@ class JoyToCmdVelNode(Node):
             '/joy',
             self.joy_callback,
             10)
-        self.publisher = self.create_publisher(Twist, '/'+hostname+'monica/cmd_vel', 10)
+        self.monica = self.create_publisher(Twist, '/'+'monica/cmd_vel', 10)
+        self.ross = self.create_publisher(Twist, '/'+'ross/cmd_vel', 10)
 
     def joy_callback(self, msg):
         twist = Twist()
         twist.linear.x = msg.axes[1]/8
         twist.angular.z = msg.axes[0]/8
-        self.publisher.publish(twist)
+        self.monica.publish(twist)
+        twist.linear.x =  ((-1)**msg.buttons[5])*msg.axes[1]/8
+        twist.angular.z = ((-1)**msg.buttons[5])*msg.axes[0]/8
+        self.ross.publish(twist)
 
 def main(args=None):
     rclpy.init(args=args)
