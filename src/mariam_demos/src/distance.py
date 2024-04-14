@@ -15,13 +15,19 @@ class DistanceCalculatorNode(Node):
         self.publisher_monica_to_ross = self.create_publisher(Float64, 'MonicaToRoss', 10)
         self.publisher_payload_to_monica = self.create_publisher(Float64, 'PayloadToMonica', 10)
         self.publisher_payload_to_ross = self.create_publisher(Float64, 'PayloadToRoss', 10)
-
+        self.publisher_payload_hight = self.create_publisher(Float64, 'PayloadHight', 10)
         self.timer = self.create_timer(0.1, self.calculate_and_publish_distances)
+            
 
     def calculate_and_publish_distances(self):
         self.publish_distance('Monica', 'Ross', self.publisher_monica_to_ross)
         self.publish_distance('Payload', 'Monica', self.publisher_payload_to_monica)
         self.publish_distance('Payload', 'Ross', self.publisher_payload_to_ross)
+        
+        try:
+            self.publisher_payload_hight.publish(Float64(data=self.tf_buffer.lookup_transform('Ground', 'Payload', rclpy.time.Time()).transform.translation.z))
+        except Exception as e:
+            self.get_logger().error('No Payload Hight')
 
     def publish_distance(self, frame1, frame2, publisher):
         try:
