@@ -1,0 +1,12 @@
+name: experiment_1_bridge
+topics:
+
+  joy:  # Send joy commands from laptop to monica
+    type: sensor_msgs/msg/Joy
+    from_domain: 0
+    to_domain: 1
+
+  joy:  # Send joy commands from laptop to ross
+    type: sensor_msgs/msg/Joy
+    from_domain: 0
+    to_domain: 2
