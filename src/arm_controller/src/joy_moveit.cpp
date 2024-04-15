@@ -147,7 +147,9 @@ class joy_moveit : public rclcpp::Node
   MoveGroupInterface *move_group_interface = nullptr;
   geometry_msgs::msg::Pose pose_goal_initial;
   geometry_msgs::msg::Pose pose_goal;
+  std::string pose_goal_named = "None";
   geometry_msgs::msg::Pose pose_experiment_home;
+  geometry_msgs::msg::Pose pose_experiment_rest;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr goal_pose_joy_publisher_;
   rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
 
@@ -167,6 +169,11 @@ class joy_moveit : public rclcpp::Node
       // Back button pressed
       if (msg->buttons[6] == 1) {
         pose_goal = pose_experiment_home;
+      }
+      // Home button pressed
+      if (msg->buttons[7] == 1) {
+        pose_goal_named = "Sleep";
+        RCLCPP_INFO(this->get_logger(), "Updated pose to 'Sleep' position"); 
       }
 
       // Print updated pose
@@ -207,6 +214,9 @@ class joy_moveit : public rclcpp::Node
         //pose_goal = *msg;
         //RCLCPP_INFO(this->get_logger(), "Received pose {x:'%f', y:'%f', z:'%f'}", msg->position.x, msg->position.y, msg->position.z);
         move_group_interface->setPoseTarget(pose_goal);
+        if(pose_goal_named != "None") {
+          move_group_interface->setNamedTarget(pose_goal_named);
+        }
 
         // Create a plan to that target pose
         auto const [success, plan] = [this]{
@@ -218,6 +228,7 @@ class joy_moveit : public rclcpp::Node
         // Execute the plan
         if(success) {
           move_group_interface->execute(plan);
+          pose_goal_named = "None"; // Reset the initial pose
           RCLCPP_INFO(this->get_logger(), "Planning successful!");
         } else {
           RCLCPP_ERROR(this->get_logger(), "Planning failed!");
