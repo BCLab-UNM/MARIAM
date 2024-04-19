@@ -48,6 +48,33 @@ class experiment1: public rclcpp::Node
   
   void arm_cmd_callback() //const geometry_msgs::msg::Pose::SharedPtr msg
   {
+    auto node = rclcpp::Node::make_shared("experiment1");
+
+    // Initialize MoveIt
+    MoveGroupInterface *move_group = new MoveGroupInterface(node, "interbotix_arm");
+
+    // Specify the end effector link
+    std::string end_effector_link = "end_effector_link";
+
+    // Get the current robot
+    moveit::core::RobotStatePtr current_state = move_group->getCurrentState();
+
+    // Get the end effector pose
+    geometry_msgs::msg::PoseStamped end_effector_pose;
+    end_effector_pose = move_group->getCurrentPose(end_effector_link);
+
+    // Display the end effector pose
+    RCLCPP_INFO(node->get_logger(), "End Effector Pose:");
+    RCLCPP_INFO(node->get_logger(), "Position: %f %f %f", 
+      end_effector_pose.pose.position.x, 
+      end_effector_pose.pose.position.y, 
+      end_effector_pose.pose.position.z);
+    RCLCPP_INFO(node->get_logger(), "Orientation: %f %f %f %f", 
+      end_effector_pose.pose.orientation.x, 
+      end_effector_pose.pose.orientation.y, 
+      end_effector_pose.pose.orientation.z, 
+      end_effector_pose.pose.orientation.w);
+
     /*ros::init(argc, argv, "get_end_effector_pose");
     ros::NodeHandle node_handle;
 
@@ -128,34 +155,7 @@ class experiment1: public rclcpp::Node
 int main(int argc, char** argv)
 {
   rclcpp::init(argc, argv);
-
-  auto node = rclcpp::Node::make_shared("experiment1");
-
-  // Initialize MoveIt
-  MoveGroupInterface *move_group = new MoveGroupInterface(node, "interbotix_arm");
-
-  // Specify the end effector link
-  std::string end_effector_link = "end_effector_link";
-
-  // Get the current robot
-  moveit::core::RobotStatePtr current_state = move_group->getCurrentState();
-
-  // Get the end effector pose
-  geometry_msgs::msg::PoseStamped end_effector_pose;
-  end_effector_pose = move_group->getCurrentPose(end_effector_link);
-
-  // Display the end effector pose
-  RCLCPP_INFO(node->get_logger(), "End Effector Pose:");
-  RCLCPP_INFO(node->get_logger(), "Position: %f %f %f", 
-    end_effector_pose.pose.position.x, 
-    end_effector_pose.pose.position.y, 
-    end_effector_pose.pose.position.z);
-  RCLCPP_INFO(node->get_logger(), "Orientation: %f %f %f %f", 
-    end_effector_pose.pose.orientation.x, 
-    end_effector_pose.pose.orientation.y, 
-    end_effector_pose.pose.orientation.z, 
-    end_effector_pose.pose.orientation.w);
-
+  //rclcpp::spin(std::make_shared<experiment1_interface.cpp>());
   rclcpp::shutdown();
   return 0;
 

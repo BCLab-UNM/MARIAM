@@ -16,7 +16,8 @@ def slam_setup(context):
         ('imu', '/imu/data'),
         ('rgb/image', '/camera/color/image_raw'),
         ('rgb/camera_info', '/camera/color/camera_info'),
-        ('depth/image', '/camera/realigned_depth_to_color/image_raw')
+        ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
+        ('odom','odom_slam')
     ]
 
     return [
@@ -41,6 +42,8 @@ def realsense_setup(context):
     configurable_parameters = [
         {'name': 'camera_name', 'default': 'camera', 'description': 'camera unique name'},
         {'name': 'camera_namespace', 'default': 'camera', 'description': 'namespace for camera'},
+        {'name': 'log_level', 'default': 'info', 'description': 'log level for the camera node'},
+        {'name': 'output', 'default': 'screen', 'description': 'output for the camera node'},
         # Add more configurable parameters if needed
     ]
 
@@ -51,16 +54,18 @@ def realsense_setup(context):
         return dict([(param['name'], LaunchConfiguration(param['name'])) for param in parameters])
 
     def launch_setup(context, params):
+        _config_file = LaunchConfiguration('config_file' + param_name_suffix).perform(context)
+        params_from_file = {} if _config_file == "''" else yaml_to_dict(_config_file)
         return [
-            Node(
+            launch_ros.actions.Node(
                 package='realsense2_camera',
-                namespace=LaunchConfiguration('camera_namespace'),
-                name=LaunchConfiguration('camera_name'),
+                namespace=LaunchConfiguration('camera_namespace' + param_name_suffix),
+                name=LaunchConfiguration('camera_name' + param_name_suffix),
                 executable='realsense2_camera_node',
-                parameters=[params],
-                output=LaunchConfiguration('output'),
-                arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')],
-                emulate_tty=True
+                parameters=[params, params_from_file],
+                output=LaunchConfiguration('output' + param_name_suffix),
+                arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level' + param_name_suffix)],
+                emulate_tty=True,
             )
         ]
 
@@ -69,10 +74,9 @@ def realsense_setup(context):
     ]
 
 def generate_launch_description():
-    return LaunchDescription([
-        # SLAM setup
-        OpaqueFunction(function=slam_setup),
-
+    return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [
         # RealSense camera setup
-        OpaqueFunction(function=realsense_setup)
+        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)}),
+        # SLAM setup
+        OpaqueFunction(function=slam_setup)
     ])

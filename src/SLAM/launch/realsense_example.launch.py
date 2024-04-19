@@ -6,7 +6,6 @@
 #
 #   $ ros2 launch rtabmap_examples realsense_d435i_color.launch.py
 
-import os
 import yaml
 from launch import LaunchDescription
 import launch_ros.actions
@@ -48,7 +47,7 @@ configurable_parameters = [{'name': 'camera_name',                  'default': '
                            {'name': 'depth_module.gain.1',          'default': '16', 'description': 'Depth module first gain value. Used for hdr_merge filter'},
                            {'name': 'depth_module.exposure.2',      'default': '1', 'description': 'Depth module second exposure value. Used for hdr_merge filter'},
                            {'name': 'depth_module.gain.2',          'default': '16', 'description': 'Depth module second gain value. Used for hdr_merge filter'},
-                           {'name': 'enable_sync',                  'default': 'false', 'description': "'enable sync mode'"},
+                           {'name': 'enable_sync',                  'default': 'true', 'description': "'enable sync mode'"},
                            {'name': 'enable_rgbd',                  'default': 'false', 'description': "'enable rgbd topic'"},
                            {'name': 'enable_gyro',                  'default': 'true', 'description': "'enable gyro stream'"},
                            {'name': 'enable_accel',                 'default': 'true', 'description': "'enable accel stream'"},
@@ -104,15 +103,63 @@ def launch_setup(context, params, param_name_suffix=''):
             emulate_tty=True,
             )
     ]
-# -------------- CAMERA ------------------------ #
 
 def generate_launch_description():
+    parameters=[{
+          'frame_id':'camera_link',
+          'subscribe_depth':True,
+          'subscribe_odom_info':True,
+          'approx_sync':False,
+          'wait_imu_to_init':True}]
 
-    return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
+    remappings=[
+          ('imu', '/imu/data'),
+          ('rgb/image', '/camera/color/image_raw'),
+          ('rgb/camera_info', '/camera/color/camera_info'),
+          ('depth/image', '/camera/realigned_depth_to_color/image_raw')]
+
+    return LaunchDescription(
+        declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
         OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})]  +
         
-        [        # Nodes to launch       
+        [
+        # Nodes to launch       
+        Node(
+            package='rtabmap_odom', executable='rgbd_odometry', output='screen',
+            parameters=parameters,
+            remappings=remappings),
+
+        Node(
+            package='rtabmap_slam', executable='rtabmap', output='screen',
+            parameters=parameters,
+            remappings=remappings,
+            arguments=['-d']),
+
+        Node(
+            package='rtabmap_viz', executable='rtabmap_viz', output='screen',
+            parameters=parameters,
+            remappings=remappings),
+        
+        # Because of this issue: https://github.com/IntelRealSense/realsense-ros/issues/2564
+        # Generate point cloud from not aligned depth
+        Node(
+            package='rtabmap_util', executable='point_cloud_xyz', output='screen',
+            parameters=[{'approx_sync':False}],
+            remappings=[('depth/image',       '/camera/depth/image_rect_raw'),
+                        ('depth/camera_info', '/camera/depth/camera_info'),
+                        ('cloud',             '/camera/cloud_from_depth')]),
+        
+        # Generate aligned depth to color camera from the point cloud above       
+        Node(
+            package='rtabmap_util', executable='pointcloud_to_depthimage', output='screen',
+            parameters=[{ 'decimation':2,
+                          'fixed_frame_id':'camera_link',
+                          'fill_holes_size':1}],
+            remappings=[('camera_info', '/camera/color/camera_info'),
+                        ('cloud',       '/camera/cloud_from_depth'),
+                        ('image_raw',   '/camera/realigned_depth_to_color/image_raw')]),
+        
         # Compute quaternion of the IMU
         Node(
             package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
@@ -124,5 +171,5 @@ def generate_launch_description():
         # The IMU frame is missing in TF tree, add it:
         Node(
             package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),        
+            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),
     ])
