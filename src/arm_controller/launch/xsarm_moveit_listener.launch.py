@@ -201,6 +201,31 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
+    experiment1_node = Node(
+    	package='arm_controller',
+    	executable='experiment1',
+    	name='experiment1',
+        remappings=remappings,
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+        ],
+        output='screen',
+    )
+
+    # Custom node
+    #pose_subscriber_moveit_node = Node(
+    #	package='arm_controller',
+    #	executable='pose_subscriber_moveit',
+    #	name='pose_subscriber_moveit',
+    #   remappings=remappings,
+    #    parameters=[
+    #        robot_description,
+    #        robot_description_semantic,
+    #    ],
+    #    output='screen',
+    #)
+
     move_group_node = Node(
         package='moveit_ros_move_group',
         executable='move_group',

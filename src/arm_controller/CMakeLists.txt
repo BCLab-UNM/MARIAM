@@ -54,7 +54,7 @@ ament_target_dependencies(
 )
 install(TARGETS box_pickup_listener_moveit
   DESTINATION lib/${PROJECT_NAME}
-) 
+)
 
 #
 #
