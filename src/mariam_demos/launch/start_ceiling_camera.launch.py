@@ -20,7 +20,9 @@ def generate_launch_description():
                 'camera_frame_id': 'ceiling_camera'
             }],
             name='ceiling_camera',
-            output='screen'
+            output='screen', 
+            respawn=True,
+            respawn_delay=1
         ),
         Node(
             package='apriltag_ros',
