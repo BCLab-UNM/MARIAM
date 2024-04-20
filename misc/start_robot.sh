@@ -13,8 +13,8 @@ ros2 launch mariam_demos staticTFs.launch.py &
 
 if [ $HOSTNAME == "monica" ]
 then
-	ROS_DOMAIN_ID=1 ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
+    export ROS_DOMAIN_ID=1
 else
-	do ROS_DOMAIN_ID=2 ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
+    export ROS_DOMAIN_ID=2
 fi
-
+ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
