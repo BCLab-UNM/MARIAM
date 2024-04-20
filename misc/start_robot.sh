@@ -1,15 +1,28 @@
-cd /home/swarmie/MARIAM && git pull
+source /opt/ros/humble/setup.bash
 
-source /opt/ros/humble/setup.bash 
-colcon build --symlink-install --packages-select mariam_demos arm_controller
+if [ ! -d /home/swarmie/MARIAM/install/interbotix_ros_xsarms ]; then
+  echo "Missing interbotix_ros_xsarms build."
+  echo "Pulling and building everything"
+  cd /home/swarmie/MARIAM && git pull
+  cd /home/swarmie/MARIAM && colcon build --symlink-install
+fi
+
+if [ $1 ]
+then
+    cd /home/swarmie/MARIAM && git pull
+    cd /home/swarmie/MARIAM && colcon build --symlink-install --packages-select mariam_demos arm_controller
+fi
+#@NOTE might need to run `colcon clean workspace -y` if people are not building with symlinks
+# Also assuming that all the  interbotix packages are alredy built
+
 source /home/swarmie/microros_ws/install/setup.bash
 source /home/swarmie/MARIAM/install/setup.bash
-
-touch /tmp/robot_running_$BASHPID
 
 ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0 &
 
 ros2 launch mariam_demos staticTFs.launch.py &
+
+#@TODO start onboard cameras here
 
 if [ $HOSTNAME == "monica" ]
 then
