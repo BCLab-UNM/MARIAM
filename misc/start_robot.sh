@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+# can start up like 
+#`ssh swarmie@monica.local  /home/swarmie/MARIAM/misc/start_robot.sh`
+
 source /opt/ros/humble/setup.bash
 
 if [ ! -d /home/swarmie/MARIAM/install/interbotix_ros_xsarms ]; then
@@ -7,18 +11,16 @@ if [ ! -d /home/swarmie/MARIAM/install/interbotix_ros_xsarms ]; then
   cd /home/swarmie/MARIAM && colcon build --symlink-install
 fi
 
+# If you give any arguments it will pull and build the mariam_demos arm_controller packages
 if [ $1 ]
 then
     cd /home/swarmie/MARIAM && git pull
     cd /home/swarmie/MARIAM && colcon build --symlink-install --packages-select mariam_demos arm_controller
 fi
-#@NOTE might need to run `colcon clean workspace -y` if people are not building with symlinks
+#@NOTE might need to run `colcon clean workspace -y ` if people are not building with symlinks
 # Also assuming that all the  interbotix packages are alredy built
 
-source /home/swarmie/microros_ws/install/setup.bash
 source /home/swarmie/MARIAM/install/setup.bash
-
-ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyACM0 &
 
 ros2 launch mariam_demos staticTFs.launch.py &
 
