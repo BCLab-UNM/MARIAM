@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import launch
 from launch_ros.actions import Node
 
