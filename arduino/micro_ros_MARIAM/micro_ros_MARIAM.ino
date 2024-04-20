@@ -115,7 +115,7 @@ void error_loop(){
   delay(100);
   digitalWrite(LED_PIN, !digitalRead(LED_PIN));
   delay(100);
-  asm volatile("ldr pc, =0x00000000");
+  asm volatile("ldr pc, =0x00000000"); //resets the program counter to the begining like a hardware reset
 
   while(1){
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
