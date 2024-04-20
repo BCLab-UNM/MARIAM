@@ -109,6 +109,14 @@ bool estop = true;
 
 
 void error_loop(){
+  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  delay(100);
+  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  delay(100);
+  digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+  delay(100);
+  asm volatile("ldr pc, =0x00000000");
+
   while(1){
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     delay(100);
