@@ -1,6 +1,7 @@
 /**:
   ros__parameters:
     camera_name: "ceiling_camera"
+    frame_id:  "ceiling_camera"
     image_width: 800
     image_height: 448
     frame_rate: 30.0

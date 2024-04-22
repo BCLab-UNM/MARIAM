@@ -10,6 +10,7 @@ def generate_launch_description():
             parameters=[{
                 'camera_name': 'ceiling_camera',
                 'device': '/dev/video_ceiling',
+                'frame_id':  "ceiling_camera",
                 'video_device': '/dev/video4',
                 'image_width': 800,
                 'image_height': 448,
