@@ -12,7 +12,7 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='mast_link_base_link',
             arguments=[
-                '0.2032', '0.0', '-0.4826', '0', '0', '0.7071068', '0.707106',
+                '-0.2032', '0.0', '-0.4826', '0', '0', '1', '0',
                 f'{hostname}/mast_link', f'{hostname}/base_link'  
             ],
         ),
@@ -21,8 +21,17 @@ def generate_launch_description():
             executable='static_transform_publisher',
             name='top_link_base_link',
             arguments=[
-                '0.0', '0.0', '-0.09', '0', '0', '0.7071068', '0.707106',
+                '0.0', '0.0', '-0.09', '0', '0', '1', '0',
                 f'{hostname}/top_link', f'{hostname}/base_link'  
+            ],
+        ),
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_link_top_link',
+            arguments=[
+                '0.0', '0.0', '0.09', '0', '0', '-1', '0',
+                f'{hostname}/base_link', f'{hostname}/top_link'  
             ],
         ),
         Node(
