@@ -29,3 +29,14 @@ xlabel('Measured Voltage [V]')
 ylabel('Force [N]')
 legend('Data','Estimated')
 axis([0 5 0 5])
+
+
+%CURVE FITTING LOG RELATIONSHIP DATA
+%plot the exponential of the input and the output
+figure 
+plot(x,F)
+%open up tools tab-->basic fitting tool
+%select 5th order polynomial for the curve fit. This gives us R^1 = 1
+%copy and paste coefficeints (what's done to create the formula in line 20)
+%note that the input to 20, is the exponenent of the voltage that's
+%measured. 
