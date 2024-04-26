@@ -13,6 +13,8 @@
 // MoveIt Headers
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <moveit_msgs/msg/constraints.hpp>
+#include <moveit_msgs/msg/orientation_constraint.hpp>
 
 // Placeholders are un speicifed objects "_1" "_3" "_2" etc. that represent parameteres used by the function returned from bind
 // A synchronized callback with have multiple placeholders
@@ -42,6 +44,18 @@ class joy_moveit : public rclcpp::Node
       pose_experiment_home.orientation.y =  0.000;
       pose_experiment_home.orientation.z =  0.707;
       pose_experiment_home.orientation.w =  0.707;
+
+      // Set path constraint
+      ocm.link_name = "px100/ee_arm_link";  // Replace with your actual link name
+      ocm.header.frame_id = "px100/base_link";        // The reference frame for the constraint
+      ocm.orientation.x =  0.000;
+      ocm.orientation.y =  0.000;
+      ocm.orientation.z =  0.707;
+      ocm.orientation.w =  0.707;                // Specify the desired orientation (as a quaternion)
+      ocm.absolute_x_axis_tolerance = 0.3;      // Tolerances for the constraint
+      ocm.absolute_y_axis_tolerance = 0.3;
+      ocm.absolute_z_axis_tolerance = 0.3;
+      ocm.weight = 0.8;                         // The importance of this constraint (1.0 is highest)
 
       std::string my_namespace = this->get_namespace();
       RCLCPP_INFO(this->get_logger(), "Using namespace: %s'}", my_namespace.c_str());
@@ -145,6 +159,8 @@ class joy_moveit : public rclcpp::Node
 
   // member variables
   MoveGroupInterface *move_group_interface = nullptr;
+  moveit_msgs::msg::OrientationConstraint ocm;
+  bool allow_constraint = false;
   geometry_msgs::msg::Pose pose_goal_initial;
   geometry_msgs::msg::Pose pose_goal;
   std::string pose_goal_named = "None";
@@ -169,11 +185,13 @@ class joy_moveit : public rclcpp::Node
       // Back button pressed
       if (msg->buttons[6] == 1) {
         pose_goal = pose_experiment_home;
+        allow_constraint = false;
       }
       // Home button pressed
       if (msg->buttons[7] == 1) {
         pose_goal_named = "Sleep";
         RCLCPP_INFO(this->get_logger(), "Updated pose to 'Sleep' position"); 
+        allow_constraint = false;
       }
 
       // Print updated pose
@@ -209,13 +227,24 @@ class joy_moveit : public rclcpp::Node
       marker.pose = pose_goal;
       goal_pose_joy_publisher_->publish(marker);
 
+      // Attempt execute movement
       if (msg->buttons[2] == 1) { // X button pressed
+
+        // Apply path constraints only if the arm is facing foward
+        if (false) {
+          moveit_msgs::msg::Constraints test_constraints;
+          test_constraints.orientation_constraints.push_back(ocm);
+          move_group_interface->setPathConstraints(test_constraints);
+        }
+
         // Example cmd: ros2 topic pub --once /arm_cmd geometry_msgs/msg/Pose "{position: {x: 0.0, y: 0.0, z: 0.2}, orientation: {x: 0.1, y: 0.0, z: 0.0, w: 1.0}}"
         //pose_goal = *msg;
         //RCLCPP_INFO(this->get_logger(), "Received pose {x:'%f', y:'%f', z:'%f'}", msg->position.x, msg->position.y, msg->position.z);
-        move_group_interface->setPoseTarget(pose_goal);
         if(pose_goal_named != "None") {
           move_group_interface->setNamedTarget(pose_goal_named);
+        }
+        else {
+          move_group_interface->setPoseTarget(pose_goal);
         }
 
         // Create a plan to that target pose
@@ -230,10 +259,17 @@ class joy_moveit : public rclcpp::Node
           move_group_interface->execute(plan);
           pose_goal_named = "None"; // Reset the initial pose
           RCLCPP_INFO(this->get_logger(), "Planning successful!");
+
+          allow_constraint = true;
+
         } else {
           RCLCPP_ERROR(this->get_logger(), "Planning failed!");
         }
       }
+
+      // TODO: Move to initilization so i don't clear it everytime
+      // After movement
+      move_group_interface->clearPathConstraints();
     }    
   }
 
