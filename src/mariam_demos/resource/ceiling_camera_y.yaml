@@ -1,6 +1,7 @@
 image_width: 800
 image_height: 448
 camera_name: ceiling_camera
+frame_id:  ceiling_camera
 camera_matrix:
   rows: 3
   cols: 3
