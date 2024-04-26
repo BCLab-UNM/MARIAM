@@ -25,7 +25,9 @@ setup(
         ('share/' + package_name + '/msg', ['msg/Int16Stamped.msg']),
         # Correctly specify the resource and launch files
         (os.path.join('share', package_name, 'resource'), get_package_files('resource')),
-        (os.path.join('share', package_name, 'launch'), get_package_files('launch'))
+        (os.path.join('share', package_name, 'launch'), get_package_files('launch')),
+        (os.path.join('share', package_name, 'src'), get_package_files('src'))
+        
     ],
     install_requires=['setuptools'],
     zip_safe=True,
