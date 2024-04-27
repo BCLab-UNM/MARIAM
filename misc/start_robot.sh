@@ -26,8 +26,8 @@ source /home/swarmie/MARIAM/install/setup.bash
 # Get the current hostname
 hostname=$(hostname)
 
-# Launch the arm controller
-ros2 launch interbotix_xsarm_joy xsarm_joy.launch.py robot_model:=px100 controller:=xbox360 robot_name:=$hostname
+# Launch the modern robotics arm controller
+# ros2 launch interbotix_xsarm_joy xsarm_joy.launch.py robot_model:=px100 controller:=xbox360 robot_name:=$hostname
 
 # Will add staticTF in post-processing
 # source /home/swarmie/MARIAM/install/setup.bash
@@ -36,10 +36,10 @@ ros2 launch interbotix_xsarm_joy xsarm_joy.launch.py robot_model:=px100 controll
 #@TODO start onboard cameras here
 
 # ROS Domains only needed for
-# if [ $HOSTNAME == "monica" ]
-# then
-#     export ROS_DOMAIN_ID=1
-# else
-#     export ROS_DOMAIN_ID=2
-# fi
-# ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
+if [ $HOSTNAME == "monica" ]
+then
+    export ROS_DOMAIN_ID=1
+else
+    export ROS_DOMAIN_ID=2
+fi
+ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
