@@ -48,7 +48,8 @@ setup(
             'offsetMoveBase = src.offsetMoveBase:main',
             'overlay = src.overlay:main',
             'SineMoveBase = src.SineMoveBase:main',
-            'Distance = src.distance:main'
+            'Distance = src.distance:main',
+            'JoyToCmdVel = src.JoyToCmdVel:main'
         ],
     },
 )
