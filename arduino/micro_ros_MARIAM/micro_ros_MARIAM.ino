@@ -75,7 +75,7 @@ std_msgs__msg__Float32 heading;
 std_msgs__msg__Float32 force;
 double left_sp, right_sp, dleft, dright, speedL, speedR;
 // double Kp=750.0, Ki=0.0, Kd=0.0;
-double Kp=0.0, Ki=0.0, Kd=0.0;//double Kp=0.0075, Ki=0.15, Kd=0.002; //double Kp=2, Ki=5, Kd=1;
+double Kp=500.0, Ki=2000.0, Kd=0.0;//double Kp=0.0075, Ki=0.15, Kd=0.002; //double Kp=2, Ki=5, Kd=1;
 PID left_PID(&left_current_speed, &speedL, &left_sp, Kp, Ki, Kd, DIRECT);
 PID right_PID(&right_current_speed, &speedR, &right_sp, Kp, Ki, Kd, DIRECT);
 
@@ -219,8 +219,11 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     else { move.rotateRight(speedL, speedR*-1); }  
 
     update_odometry(left_ticks.data, right_ticks.data);
-    force.data = analogRead(A5)* (5.0 / 1023.0); // @TODO check the pin, this should be a scaler for the voltage
-    //@TODO need to then scal or apply the function to convert the voltage to force
+    force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
+    force.data = exp(force.data); 
+    force.data = -0.00000008099*pow(force.data, 5) + 0.000013687*pow(force.data, 4) 
+                 - 0.00068314*pow(force.data, 3) + 0.011707*pow(force.data, 2) 
+                 - 0.0081636*force.data + 0.0098014; // to force
 
     RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
