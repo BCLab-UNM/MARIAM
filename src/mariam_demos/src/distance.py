@@ -20,9 +20,9 @@ class DistanceCalculatorNode(Node):
             
 
     def calculate_and_publish_distances(self):
-        self.publish_distance('Monica', 'Ross', self.publisher_monica_to_ross)
-        self.publish_distance('Payload', 'Monica', self.publisher_payload_to_monica)
-        self.publish_distance('Payload', 'Ross', self.publisher_payload_to_ross)
+        self.publish_distance('monica/mast_link', 'ross/mast_link', self.publisher_monica_to_ross)
+        self.publish_distance('payload', 'monica/mast_link', self.publisher_payload_to_monica)
+        self.publish_distance('payload', 'ross/mast_link', self.publisher_payload_to_ross)
         
         try:
             self.publisher_payload_hight.publish(Float64(data=self.tf_buffer.lookup_transform('Ground', 'Payload', rclpy.time.Time()).transform.translation.z))
