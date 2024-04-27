@@ -10,3 +10,27 @@ topics:
     type: sensor_msgs/msg/Joy
     from_domain: 0
     to_domain: 2
+  
+  goal_pose_joy: 
+    type: visualization_msgs/msg/Marker
+    from_domain: 1
+    to_domain: 0
+    remap: monica/goal_pose_joy
+
+  goal_pose_joy: 
+    type: visualization_msgs/msg/Marker
+    from_domain: 2
+    to_domain: 0
+    remap: ross/goal_pose_joy
+
+  px100/joint_states:
+    type: sensor_msgs/msg/JointState
+    from_domain: 1
+    to_domain: 0
+    remap: monica/joint_states
+
+  px100/joint_states:
+    type: sensor_msgs/msg/JointState
+    from_domain: 2
+    to_domain: 0
+    remap: monica/joint_states
