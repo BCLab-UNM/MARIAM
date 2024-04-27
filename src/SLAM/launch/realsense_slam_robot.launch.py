@@ -122,7 +122,8 @@ def generate_launch_description():
             ('rgb/image', '/{}/camera/color/image_raw'.format(host)),
             ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
             ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
-            ('odom','/{}/odom_slam'.format(host))]
+            ('odom','/{}/odom_slam'.format(host)),
+            ('imu/data_raw', '/{}/camera/imu'.format(host))]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
