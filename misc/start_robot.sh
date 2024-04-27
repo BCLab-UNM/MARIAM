@@ -20,6 +20,9 @@ fi
 #@NOTE might need to run `colcon clean workspace -y ` if people are not building with symlinks
 # Also assuming that all the  interbotix packages are alredy built
 
+# Source workspace
+source /home/swarmie/MARIAM/install/setup.bash
+
 # Get the current hostname
 hostname=$(hostname)
 
