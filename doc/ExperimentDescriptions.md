@@ -5,17 +5,21 @@ Document the goals and exact setup of each experiment here. Use as much detail a
 - Manual operation of the base and arms using a velocity controller
 
 ## Experiment 0.2 Naive Attempt
+![Alt text](images/Experiment_0_2_setup.jpg)
 ### Monica Setup
+Monica is running on ROS_DOMAIN_ID=1
 ```bash
 ssh swarmie@monica.local -t /home/swarmie/MARIAM/misc/start_micro_ros_agent.sh
 ssh swarmie@monica.local -t /home/swarmie/MARIAM/misc/start_robot.sh
 ```
 ### Ross Setup
+Ross is running on ROS_DOMAIN_ID=2
 ```bash
 ssh swarmie@ross.local -t /home/swarmie/MARIAM/misc/start_micro_ros_agent.sh
 ssh swarmie@ross.local -t /home/swarmie/MARIAM/misc/start_robot.sh
 ```
 ### Laptop Setup
+The home laptop is running on ROS_DOMAIN_ID=0 (default)
 ```bash
 ros2 launch mariam_demos laptop_demo1.launch.py 
 ros2 run domain_bridge domain_bridge ~/MARIAM/src/mariam_demos/domain_bridge_configs/experiment_1_bridge.yml 
