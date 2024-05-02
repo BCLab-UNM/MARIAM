@@ -33,4 +33,4 @@ topics:
     type: sensor_msgs/msg/JointState
     from_domain: 2
     to_domain: 0
-    remap: monica/joint_states
+    remap: ross/joint_states
