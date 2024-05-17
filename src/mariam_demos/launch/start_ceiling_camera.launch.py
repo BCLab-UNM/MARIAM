@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
@@ -11,7 +12,7 @@ def generate_launch_description():
                 'camera_name': 'ceiling_camera',
                 'device': '/dev/video_ceiling',
                 'frame_id':  "ceiling_camera",
-                'video_device': '/dev/video4',
+                'video_device': '/dev/video0',
                 'image_width': 800,
                 'image_height': 448,
                 'frame_rate': 30,
@@ -29,7 +30,7 @@ def generate_launch_description():
             package='apriltag_ros',
             executable='apriltag_node',
             #namespace='ceiling_camera', 
-            parameters=['/home/carter/MARIAM/src/mariam_demos/resource/apriltag.yaml'],
+            parameters=['/home/calvinjs/MARIAM/src/mariam_demos/resource/apriltag.yaml'],
             remappings=[
                 ('image_rect', '/ceiling_camera/image_raw'),
                 ('camera_info', '/ceiling_camera/camera_info')
