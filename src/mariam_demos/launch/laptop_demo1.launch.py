@@ -36,14 +36,15 @@ def generate_launch_description():
             name='joy_node'
         )
     )
-    ld.add_action(
-        Node(
-            package='domain_bridge',
-            executable='domain_bridge',
-            name='domain_bridge',
-            arguments=['~/MARIAM/src/mariam_demos/domain_bridge_configs/experiment_1_bridge.yml']
-        )
-    )
+#    ld.add_action(
+#        Node(
+#            package='domain_bridge',
+#            executable='domain_bridge',
+#            name='domain_bridge',
+#            # TODO: Find args in package
+#            arguments=['/MARIAM/src/mariam_demos/domain_bridge_configs/experiment_1_bridge.yml']
+#        )
+#   )
     ld.add_action(
         Node(
             package='mariam_demos',
