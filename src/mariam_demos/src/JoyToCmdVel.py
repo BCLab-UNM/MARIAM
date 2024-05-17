@@ -21,11 +21,11 @@ class JoyToCmdVelNode(Node):
 
     def joy_callback(self, msg):
         twist = Twist()
-        twist.linear.x = msg.axes[4]/8
-        twist.angular.z = msg.axes[3]/8
+        twist.linear.x = msg.axes[3]/12
+        twist.angular.z = 0.0 # msg.axes[4]/8
         self.monica.publish(twist)
-        twist.linear.x =  ((-1)**msg.buttons[0])*msg.axes[4]/8
-        twist.angular.z = ((-1)**msg.buttons[0])*msg.axes[3]/8
+        twist.linear.x =  ((-1)**msg.buttons[0])*msg.axes[3]/12
+        twist.angular.z = 0.0 # ((-1)**msg.buttons[0])*msg.axes[4]/8
         self.ross.publish(twist)
 
 def main(args=None):
