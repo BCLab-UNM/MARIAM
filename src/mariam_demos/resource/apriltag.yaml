@@ -16,8 +16,8 @@
 
         # optional list of tags
         tag:
-            ids:    [7, 6, 12, 8, 13, 10]        # tag IDs for which to publish transform
-            frames: [ground, monica/top_link, monica/mast_link, ross/top_link, ross/mast_link, payload]   # frame names
-            sizes:  [0.166, 0.166, 0.166, 0.166, 0.166, 0.166]     # tag-specific edge size, overrides the default 'size'
+            ids:    [7, 6, 12, 8, 13, 10, 15]        # tag IDs for which to publish transform
+            frames: [ground, monica/top_link, monica/mast_link, ross/top_link, ross/mast_link, payload, payload_2]   # frame names
+            sizes:  [0.166, 0.166, 0.166, 0.166, 0.166, 0.166, 0.112]     # tag-specific edge size, overrides the default 'size'
 
 
