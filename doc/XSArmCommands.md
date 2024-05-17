@@ -47,24 +47,5 @@ smart_reboot: true"
 ros2 topic pub /ross_arm/commands/joint_group interbotix_xs_msgs/msg/JointGroupCommand "{name: 'all', cmd: [0,-0.9,0,-0.7,0]}"
 ```
 
-
-## Experiment Setup
-### Experiment 1
-On leader:
-```bash
-cd MARIAM/src/demos
-python3 SineMoveBase.py
-```
-On follower:
-```bash
-cd MARIAM/src/demos
-python3 offsetMoveBase.py
-```
-
-### Experiment 2
-On leader:
-```bash
-```
-On follower:
 ```bash
 ```
