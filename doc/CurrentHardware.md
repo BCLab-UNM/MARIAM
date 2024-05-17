@@ -5,7 +5,7 @@ Current hardware on the MARIAM agents for reference
 - Nuc _
 - PincherX 100 Robot Arm (
     - https://www.trossenrobotics.com/pincherx-100-robot-arm.aspx
-- Realsense D_
+- Realsense D455f
 - BCLab PCB Board
 - Pololu Robotics & Electronics, Force-Sensing Resistor: 1.5″ Square
     - https://www.pololu.com/product/1645/resources
