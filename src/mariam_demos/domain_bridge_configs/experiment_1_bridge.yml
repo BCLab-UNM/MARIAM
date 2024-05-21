@@ -4,35 +4,35 @@ experiment_1_bridge:
       bridge_configs:
         - experiment_1_bridge
       domain_configs:
+        - laptop_domain
         - monica_domain
         - ross_domain
-        - laptop_domain
-      topics:
-        - name: joy_to_monica
-            type: sensor_msgs/msg/Joy
-            from_domain: 0
-            to_domain: 1
-        - name: joy_to_ross
-          type: sensor_msgs/msg/Joy
-          from_domain: 0
-          to_domain: 2
-        - name: goal_pose_joy_from_monica
-          type: visualization_msgs/msg/Marker
-          from_domain: 1
-          to_domain: 0
-          remap: monica/goal_pose_joy
-        - name: goal_pose_joy_from_ross
-          type: visualization_msgs/msg/Marker
-          from_domain: 2
-          to_domain: 0
-          remap: ross/goal_pose_joy
-        - name: px100_joint_states_from_monica
-          type: sensor_msgs/msg/JointState
-          from_domain: 1
-          to_domain: 0
-          remap: monica/joint_states
-        - name: px100_joint_states_from_ross
-          type: sensor_msgs/msg/JointState
-          from_domain: 2
-          to_domain: 0
-          remap: ross/joint_states
+  topics:
+    - name: joy_to_monica
+      type: sensor_msgs/msg/Joy
+      from_domain: 0
+      to_domain: 1
+    - name: joy_to_ross
+      type: sensor_msgs/msg/Joy
+      from_domain: 0
+      to_domain: 2
+    - name: goal_pose_joy_from_monica
+      type: visualization_msgs/msg/Marker
+      from_domain: 1
+      to_domain: 0
+      remap: monica/goal_pose_joy
+    - name: goal_pose_joy_from_ross
+      type: visualization_msgs/msg/Marker
+      from_domain: 2
+      to_domain: 0
+      remap: ross/goal_pose_joy
+    - name: px100_joint_states_from_monica
+      type: sensor_msgs/msg/JointState
+      from_domain: 1
+      to_domain: 0
+      remap: monica/joint_states
+    - name: px100_joint_states_from_ross
+      type: sensor_msgs/msg/JointState
+      from_domain: 2
+      to_domain: 0
+      remap: ross/joint_states
