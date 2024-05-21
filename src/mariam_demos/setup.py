@@ -26,7 +26,8 @@ setup(
         # Correctly specify the resource and launch files
         (os.path.join('share', package_name, 'resource'), get_package_files('resource')),
         (os.path.join('share', package_name, 'launch'), get_package_files('launch')),
-        (os.path.join('share', package_name, 'src'), get_package_files('src'))
+        (os.path.join('share', package_name, 'src'), get_package_files('src')),
+        (os.path.join('share', package_name, 'domain_bridge_configs'), get_package_files('domain_bridge_configs'))
         
     ],
     install_requires=['setuptools'],
