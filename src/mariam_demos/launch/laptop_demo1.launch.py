@@ -39,38 +39,23 @@ def generate_launch_description():
         )
     )
     # Get the path to the YAML file using the package name
-    package_name = 'mariam_demos'
     config_file_path = os.path.join(
-        get_package_share_directory(package_name),
+        mariam_demos_share,
         'domain_bridge_configs',
         'experiment_1_bridge.yml'
     )
 
-    # Declare launch arguments
-    declare_config_file_cmd = DeclareLaunchArgument(
-        'config_file',
-        default_value=config_file_path,
-        description='~/MARIAM/src/mariam_demos/domain_bridge_configs/experiment_1_bridge.yml'
-    )
     # Define the domain bridge node
-    domain_bridge_node = Node(
-        package='domain_bridge',
-        executable='domain_bridge',
-        name='domain_bridge',
-        output='screen',
-        parameters=[LaunchConfiguration('config_file')]
+    ld.add_action(
+        Node(
+            package='domain_bridge',
+            executable='domain_bridge',
+            name='domain_bridge',
+            output='screen',
+            parameters=[config_file_path]
+        )
     )
-    ld.add_action(declare_config_file_cmd)
-    ld.add_action(domain_bridge_node)
-    #ld.add_action(
-    #    Node(
-    #        package='domain_bridge',
-    #        executable='domain_bridge',
-    #        name='domain_bridge',
-    #        # TODO: Find args in package
-    #        arguments=['~/MARIAM/src/mariam_demos/domain_bridge_configs/experiment_1_bridge.yml']
-    #    )
-    #)
+
     ld.add_action(
         Node(
             package='mariam_demos',

@@ -9,9 +9,9 @@ experiment_1_bridge:
         - laptop_domain
       topics:
         - name: joy_to_monica
-          type: sensor_msgs/msg/Joy
-          from_domain: 0
-          to_domain: 1
+            type: sensor_msgs/msg/Joy
+            from_domain: 0
+            to_domain: 1
         - name: joy_to_ross
           type: sensor_msgs/msg/Joy
           from_domain: 0
