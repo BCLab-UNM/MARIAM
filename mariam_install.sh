@@ -39,7 +39,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 echo "Building MARIAM workspace..."
 cd ~/MARIAM
 rosdep install --from-paths src --ignore-src -r -y
-if colcon build; then
+if colcon build --symlink-install; then
     echo -e "${GRN}${BOLD}Interbotix Arm ROS Packages built successfully!${NORM}${OFF}"
     echo "source ~/MARIAM/install/setup.bash" >> ~/.bashrc
     source ~/MARIAM/install/setup.bash
