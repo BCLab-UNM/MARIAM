@@ -1,3 +1,12 @@
+ros__parameters:
+  domain_bridge:
+    bridge_configs:
+      - experiment_1_bridge
+    domain_configs:
+      - monica_domain
+      - ross_domain
+      - laptop_domain
+      
 name: experiment_1_bridge
 topics:
 
