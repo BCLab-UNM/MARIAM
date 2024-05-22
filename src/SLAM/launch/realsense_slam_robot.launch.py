@@ -98,7 +98,7 @@ def launch_setup(context, params, param_name_suffix=''):
     return [
         launch_ros.actions.Node(
             package='realsense2_camera',
-            namespace=LaunchConfiguration(host + param_name_suffix),
+            namespace=LaunchConfiguration('camera_namespace' + param_name_suffix),
             name=LaunchConfiguration('camera_name' + param_name_suffix),
             executable='realsense2_camera_node',
             parameters=[params, params_from_file],
@@ -123,7 +123,9 @@ def generate_launch_description():
             ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
             ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
             ('odom','/{}/odom_slam'.format(host)),
-            ('imu/data', '/{}/camera/imu'.format(host))]
+            ('imu/data', '/{}/camera/imu'.format(host)),
+            ('/camera/color/camera_info', '/{}/camera/color/camera_info'.format(host)),
+            ('/camera/cloud_from_depth', '/{}/camera_cloud_from_depth'.format(host))]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
