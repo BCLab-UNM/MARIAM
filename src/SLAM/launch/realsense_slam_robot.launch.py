@@ -127,7 +127,7 @@ def generate_launch_description():
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
-        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters), 'host_namespace': host})]  +
+        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})]  +
         
         [        # Nodes to launch       
         Node(
