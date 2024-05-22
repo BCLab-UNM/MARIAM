@@ -118,7 +118,7 @@ def generate_launch_description():
           'wait_imu_to_init':True}]
 
     remappings=[
-            ('imu', '/{}/imu/data'.format(host)),
+            ('imu', '/imu/data'),
             ('rgb/image', '/{}/camera/color/image_raw'.format(host)),
             ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
             ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
