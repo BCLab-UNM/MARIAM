@@ -166,7 +166,7 @@ def generate_launch_description():
             parameters=[{'use_mag': False, 
                          'world_frame':'enu', 
                          'publish_tf':False}],
-            remappings=[('imu/data_raw', '/{}/camera/imu'.format(host))]),
+            remappings=[('/{}/imu/data_raw'.format(host), '/{}/camera/imu'.format(host))]),
         
         # The IMU frame is missing in TF tree, add it:
         Node(
