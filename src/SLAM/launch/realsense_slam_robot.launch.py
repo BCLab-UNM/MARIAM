@@ -118,12 +118,12 @@ def generate_launch_description():
           'wait_imu_to_init':True}]
 
     remappings=[
-            ('imu', '/imu/data'),
+            ('/{}/imu'.format(host), '/imu/data'),
             ('rgb/image', '/camera/color/image_raw'),
             ('rgb/camera_info', '/camera/color/camera_info'),
             ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
             ('odom','/odom_slam'),
-            ('imu/data_raw', '/camera/imu')]
+            ('imu/data', '/camera/imu')]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
