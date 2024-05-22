@@ -105,7 +105,6 @@ def launch_setup(context, params, param_name_suffix=''):
             output=LaunchConfiguration('output' + param_name_suffix),
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level' + param_name_suffix)],
             emulate_tty=True,
-            namespace=host
             )
     ]
 # -------------- CAMERA ------------------------ #
