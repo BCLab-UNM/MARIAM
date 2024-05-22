@@ -119,11 +119,11 @@ def generate_launch_description():
 
     remappings=[
             ('imu', '/imu/data'),
-            ('rgb/image', '/{}/camera/color/image_raw'.format(host)),
-            ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
-            ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
-            ('odom','/{}/odom_slam'.format(host)),
-            ('imu/data_raw', '/{}/camera/imu'.format(host))]
+            ('rgb/image', '/camera/color/image_raw'),
+            ('rgb/camera_info', '/camera/color/camera_info'),
+            ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
+            ('odom','/odom_slam'),
+            ('imu/data_raw', '/camera/imu')]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
@@ -133,22 +133,24 @@ def generate_launch_description():
         Node(
             package='rtabmap_odom', executable='rgbd_odometry', output='screen',
             parameters=parameters,
-            remappings=remappings),
+            remappings=remappings,
+            namespace=host),
 
         Node(
             package='rtabmap_slam', executable='rtabmap', output='screen',
             parameters=parameters,
             remappings=remappings,
-            arguments=['-d']),
+            arguments=['-d'],
+            namespace=host),
         
         # Because of this issue: https://github.com/IntelRealSense/realsense-ros/issues/2564
         # Generate point cloud from not aligned depth
         Node(
             package='rtabmap_util', executable='point_cloud_xyz', output='screen',
             parameters=[{'approx_sync':False}],
-            remappings=[('depth/image',       '/{}/camera/depth/image_rect_raw'.format(host)),
-                        ('depth/camera_info', '/{}/camera/depth/camera_info'.format(host)),
-                        ('cloud',             '/{}/camera/cloud_from_depth'.format(host))],
+            remappings=[('depth/image',       '/camera/depth/image_rect_raw'),
+                        ('depth/camera_info', '/camera/depth/camera_info'),
+                        ('cloud',             '/camera/cloud_from_depth')],
             namespace=host),
         
         # Generate aligned depth to color camera from the point cloud above       
@@ -157,9 +159,10 @@ def generate_launch_description():
             parameters=[{ 'decimation':2,
                           'fixed_frame_id':'camera_link',
                           'fill_holes_size':1}],
-            remappings=[('camera_info', '/{}/camera/color/camera_info'.format(host)),
-                        ('cloud',       '/{}/camera/cloud_from_depth'.format(host)),
-                        ('image_raw',   '/{}/camera/realigned_depth_to_color/image_raw'.format(host))]),
+            remappings=[('camera_info', '/camera/color/camera_info'),
+                        ('cloud',       '/camera/cloud_from_depth'),
+                        ('image_raw',   '/camera/realigned_depth_to_color/image_raw')],
+            namespace=host),
         
         # Compute quaternion of the IMU
         Node(
@@ -167,10 +170,12 @@ def generate_launch_description():
             parameters=[{'use_mag': False, 
                          'world_frame':'enu', 
                          'publish_tf':False}],
-            remappings=[('/{}/imu/data_raw'.format(host), '/{}/camera/imu'.format(host))]),
+            remappings=[('/imu/data_raw', '/camera/imu')],
+            namespace=host),
         
         # The IMU frame is missing in TF tree, add it:
         Node(
             package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),        
+            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame'],
+            namespace=host),        
     ])
