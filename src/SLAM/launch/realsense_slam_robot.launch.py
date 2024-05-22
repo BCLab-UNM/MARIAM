@@ -125,16 +125,18 @@ def generate_launch_description():
             ('odom','/odom_slam'),
             ('imu/data_raw', '/camera/imu')]
 
-    return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
-        # Camera launch
-        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})]  +
+    return LaunchDescription([
+        OpaqueFunction(function=launch_setup, kwargs={'params': set_configurable_parameters(configurable_parameters)}),
         
-        [        # Nodes to launch       
+        # Nodes to launch
         Node(
-            package='rtabmap_odom', executable='rgbd_odometry', output='screen',
+            package='rtabmap_odom', 
+            executable='rgbd_odometry', 
+            output='screen',
             parameters=parameters,
             remappings=remappings,
-            namespace=host),
+            namespace=host
+        ),
 
         Node(
             package='rtabmap_slam', executable='rtabmap', output='screen',
