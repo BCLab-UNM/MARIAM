@@ -119,11 +119,11 @@ def generate_launch_description():
 
     remappings=[
             ('/{}/imu'.format(host), '/imu/data'),
-            ('rgb/image', '/camera/color/image_raw'),
-            ('rgb/camera_info', '/camera/color/camera_info'),
-            ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
-            ('odom','/odom_slam'),
-            ('imu/data', '/camera/imu')]
+            ('/{}/rgb/image'.format(host), '/camera/color/image_raw'),
+            ('/{}/rgb/camera_info'.format(host), '/camera/color/camera_info'),
+            ('/{}/depth/image'.format(host), '/camera/realigned_depth_to_color/image_raw'),
+            ('/{}/odom'.format(host),'/odom_slam'),]
+            #('imu/data_raw', '/camera/imu')]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
