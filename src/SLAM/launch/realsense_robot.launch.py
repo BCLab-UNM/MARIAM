@@ -134,11 +134,11 @@ def generate_launch_description():
             parameters=parameters,
             remappings=remappings),
 
-        Node(
-            package='rtabmap_slam', executable='rtabmap', output='screen',
-            parameters=parameters,
-            remappings=remappings,
-            arguments=['-d']),
+#        Node(
+#            package='rtabmap_slam', executable='rtabmap', output='screen',
+#            parameters=parameters,
+#            remappings=remappings,
+#            arguments=['-d']),
         
         # Because of this issue: https://github.com/IntelRealSense/realsense-ros/issues/2564
         # Generate point cloud from not aligned depth
