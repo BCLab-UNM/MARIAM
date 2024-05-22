@@ -148,7 +148,8 @@ def generate_launch_description():
             parameters=[{'approx_sync':False}],
             remappings=[('depth/image',       '/{}/camera/depth/image_rect_raw'.format(host)),
                         ('depth/camera_info', '/{}/camera/depth/camera_info'.format(host)),
-                        ('cloud',             '/{}/camera/cloud_from_depth'.format(host))]),
+                        ('cloud',             '/{}/camera/cloud_from_depth'.format(host))],
+            namespace=host),
         
         # Generate aligned depth to color camera from the point cloud above       
         Node(
