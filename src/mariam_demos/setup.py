@@ -1,18 +1,8 @@
 import os
 from glob import glob
 from setuptools import find_packages, setup
-import os
 
 package_name = 'mariam_demos'
-
-# Function to get all files in a directory
-def get_package_files(directory):
-    paths = []
-    for (path, directories, filenames) in os.walk(directory):
-        for filename in filenames:
-            # Correctly join the path and filename
-            paths.append(os.path.join(path, filename))
-    return paths
 
 setup(
     name=package_name,
@@ -23,12 +13,10 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/msg', ['msg/Int16Stamped.msg']),
-        # Correctly specify the resource and launch files
-        (os.path.join('share', package_name, 'resource'), get_package_files('resource')),
-        (os.path.join('share', package_name, 'launch'), get_package_files('launch')),
-        (os.path.join('share', package_name, 'src'), get_package_files('src')),
+        (os.path.join('share', package_name, 'resource'), glob('resource/*')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*')),
+        (os.path.join('share', package_name, 'src'), glob('src/*.py')),
         (os.path.join('share', package_name, 'domain_bridge_configs'), glob('domain_bridge_configs/*'))
-        
     ],
     install_requires=['setuptools'],
     zip_safe=True,
