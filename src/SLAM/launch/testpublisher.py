@@ -3,11 +3,13 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+import socket
 
 class SimplePublisher(Node):
     def __init__(self):
         super().__init__('simple_publisher')
-        self.publisher = self.create_publisher(Image, '/camera/color/image_raw', 10)
+        host = socket.gethostname()
+        self.publisher = self.create_publisher(Image, '/{}/camera/color/image_raw'.format(host), 10)
 
     def publish_message(self):
         msg = Image()
