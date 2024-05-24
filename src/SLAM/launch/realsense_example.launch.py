@@ -1,3 +1,4 @@
+# Original realsense camera launch along with rtabmap launch nodes
 # Requirements:
 #   A realsense D435i
 #   Install realsense2 ros2 package (ros-$ROS_DISTRO-realsense2-camera)

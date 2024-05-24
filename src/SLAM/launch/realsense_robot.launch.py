@@ -1,10 +1,11 @@
+## This file is to launch on robots and will use their name as the namespace. Runs camera and rtabmap for odom and imu
+# Does NOT run SLAM
+
 # Requirements:
-#   A realsense D435i
+#   A realsense D455f
 #   Install realsense2 ros2 package (ros-$ROS_DISTRO-realsense2-camera)
 # Example:
-#   $ ros2 launch realsense2_camera rs_launch.py enable_gyro:=true enable_accel:=true unite_imu_method:=1 enable_sync:=true
-#
-#   $ ros2 launch rtabmap_examples realsense_d435i_color.launch.py
+#   $ ros2 launch realsense_robot.launch.py
 
 import os
 import yaml
@@ -15,6 +16,7 @@ from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, Opaque
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+# Get name of robot
 host = socket.gethostname()
 
 # Parameters for camera
@@ -128,13 +130,14 @@ def generate_launch_description():
         # Camera launch
         OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})]  +
         
-        [        # Nodes to launch       
+        [        # Rtabmap nodes to launch       
         Node(
             package='rtabmap_odom', executable='rgbd_odometry', output='screen',
             parameters=parameters,
             remappings=remappings,
             namespace=host),
 
+# Comment back in to run SLAM
 #        Node(
 #            package='rtabmap_slam', executable='rtabmap', output='screen',
 #            parameters=parameters,
@@ -174,5 +177,6 @@ def generate_launch_description():
         # The IMU frame is missing in TF tree, add it:
         Node(
             package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),        
+            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame'],
+            namespace=host),        
     ])
