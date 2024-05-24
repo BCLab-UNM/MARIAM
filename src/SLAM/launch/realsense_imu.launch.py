@@ -6,7 +6,7 @@
 #
 #   $ ros2 launch rtabmap_examples realsense_d435i_color.launch.py
 
-import os
+import socket
 import yaml
 from launch import LaunchDescription
 import launch_ros.actions
@@ -14,9 +14,11 @@ from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, Opaque
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+host = socket.gethostname()
+
 # Parameters for camera
 configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
-                           {'name': 'camera_namespace',             'default': 'camera', 'description': 'namespace for camera'},
+                           {'name': 'camera_namespace',             'default': host + '/camera', 'description': 'namespace for camera'},
                            {'name': 'serial_no',                    'default': "''", 'description': 'choose device by serial number'},
                            {'name': 'usb_port_id',                  'default': "''", 'description': 'choose device by usb port id'},
                            {'name': 'device_type',                  'default': "''", 'description': 'choose device by type'},
@@ -119,10 +121,12 @@ def generate_launch_description():
             parameters=[{'use_mag': False, 
                          'world_frame':'enu', 
                          'publish_tf':False}],
-            remappings=[('imu/data_raw', '/camera/imu')]),
+            remappings=[('imu/data_raw', '/{}/camera/imu')],
+            namespace=host),
         
         # The IMU frame is missing in TF tree, add it:
         Node(
             package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),        
+            arguments=['0', '0', '0', '0', '0', '0', host + '_camera_gyro_optical_frame', host + '_camera_imu_optical_frame'],
+            namespace=host),        
     ])
