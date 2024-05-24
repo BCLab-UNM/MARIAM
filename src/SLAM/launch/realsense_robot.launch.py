@@ -20,7 +20,7 @@ from launch_ros.actions import Node
 host = socket.gethostname()
 
 # Parameters for camera
-configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
+configurable_parameters = [{'name': 'camera_name',                  'default': host + '_camera', 'description': 'camera unique name'},
                            {'name': 'camera_namespace',             'default': host + '/camera', 'description': 'namespace for camera'},
                            {'name': 'serial_no',                    'default': "''", 'description': 'choose device by serial number'},
                            {'name': 'usb_port_id',                  'default': "''", 'description': 'choose device by usb port id'},
@@ -177,6 +177,6 @@ def generate_launch_description():
         # The IMU frame is missing in TF tree, add it:
         Node(
             package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame'],
+            arguments=['0', '0', '0', '0', '0', '0', host + '/camera_gyro_optical_frame', host + '/camera_imu_optical_frame'],
             namespace=host),        
     ])
