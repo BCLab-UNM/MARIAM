@@ -3,13 +3,15 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+import socket
 
 class SimpleSubscriber(Node):
     def __init__(self):
         super().__init__('simple_subscriber')
+        host = socket.gethostname()
         self.subscription = self.create_subscription(
             Image,
-            '/camera/color/image_raw',  # Adjust topic name as needed
+            '/{}/camera/color/image_raw'.format(host),  # Adjust topic name as needed
             self.callback,
             10)
 
