@@ -113,7 +113,7 @@ def launch_setup(context, params, param_name_suffix=''):
 
 def generate_launch_description():
     parameters=[{
-          'frame_id':host+'/camera_link',
+          'frame_id':host+'_camera_link',
           'subscribe_depth':True,
           'subscribe_odom_info':True,
           'approx_sync':False,
@@ -158,7 +158,7 @@ def generate_launch_description():
         Node(
             package='rtabmap_util', executable='pointcloud_to_depthimage', output='screen',
             parameters=[{ 'decimation':2,
-                          'fixed_frame_id':host+'/camera_link',
+                          'fixed_frame_id':host+'_camera_link',
                           'fill_holes_size':1}],
             remappings=[('camera_info', '/{}/camera/color/camera_info'.format(host)),
                         ('cloud',       '/{}/camera/cloud_from_depth'.format(host)),
