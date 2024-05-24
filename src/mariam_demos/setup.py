@@ -16,7 +16,7 @@ setup(
         (os.path.join('share', package_name, 'resource'), glob('resource/*')),
         (os.path.join('share', package_name, 'launch'), glob('launch/*')),
         (os.path.join('share', package_name, 'src'), glob('src/*.py')),
-        
+        (os.path.join('share', package_name, 'domain_bridge_configs'), glob('domain_bridge_configs/*'))
     ],
     install_requires=['setuptools'],
     zip_safe=True,
