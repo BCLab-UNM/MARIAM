@@ -19,7 +19,7 @@ host = socket.gethostname()
 
 # Parameters for camera
 configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
-                           {'name': 'camera_namespace',             'default': 'camera', 'description': 'namespace for camera'},
+                           {'name': 'camera_namespace',             'default': host + '/camera', 'description': 'namespace for camera'},
                            {'name': 'serial_no',                    'default': "''", 'description': 'choose device by serial number'},
                            {'name': 'usb_port_id',                  'default': "''", 'description': 'choose device by usb port id'},
                            {'name': 'device_type',                  'default': "''", 'description': 'choose device by type'},
@@ -118,11 +118,11 @@ def generate_launch_description():
           'wait_imu_to_init':True}]
 
     remappings=[
-            ('imu', '/imu/data'),
-            ('rgb/image', '/camera/color/image_raw'),
-            ('rgb/camera_info', '/camera/color/camera_info'),
-            ('depth/image', '/camera/realigned_depth_to_color/image_raw'),
-            ('odom','/odom_slam')]
+            ('imu', '/{}/imu/data'.format(host)),
+            ('rgb/image', '/{}/camera/color/image_raw'.format(host)),
+            ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
+            ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
+            ('odom','/{}/odom_slam'.format(host))]
 
     return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
         # Camera launch
@@ -132,7 +132,8 @@ def generate_launch_description():
         Node(
             package='rtabmap_odom', executable='rgbd_odometry', output='screen',
             parameters=parameters,
-            remappings=remappings),
+            remappings=remappings,
+            namespace=host),
 
 #        Node(
 #            package='rtabmap_slam', executable='rtabmap', output='screen',
@@ -145,9 +146,10 @@ def generate_launch_description():
         Node(
             package='rtabmap_util', executable='point_cloud_xyz', output='screen',
             parameters=[{'approx_sync':False}],
-            remappings=[('depth/image',       '/camera/depth/image_rect_raw'),
-                        ('depth/camera_info', '/camera/depth/camera_info'),
-                        ('cloud',             '/camera/cloud_from_depth')]),
+            remappings=[('depth/image',       '/{}/camera/depth/image_rect_raw'.format(host)),
+                        ('depth/camera_info', '/{}/camera/depth/camera_info'.format(host)),
+                        ('cloud',             '/{}/camera/cloud_from_depth'.format(host))],
+                        namespace=host),
         
         # Generate aligned depth to color camera from the point cloud above       
         Node(
@@ -155,9 +157,10 @@ def generate_launch_description():
             parameters=[{ 'decimation':2,
                           'fixed_frame_id':'camera_link',
                           'fill_holes_size':1}],
-            remappings=[('camera_info', '/camera/color/camera_info'),
-                        ('cloud',       '/camera/cloud_from_depth'),
-                        ('image_raw',   '/camera/realigned_depth_to_color/image_raw')]),
+            remappings=[('camera_info', '/{}/camera/color/camera_info'.format(host)),
+                        ('cloud',       '/{}/camera/cloud_from_depth'.format(host)),
+                        ('image_raw',   '/{}/camera/realigned_depth_to_color/image_raw'.format(host))],
+                        namespace=host),
         
         # Compute quaternion of the IMU
         Node(
@@ -165,7 +168,8 @@ def generate_launch_description():
             parameters=[{'use_mag': False, 
                          'world_frame':'enu', 
                          'publish_tf':False}],
-            remappings=[('imu/data_raw', '/camera/imu')]),
+            remappings=[('imu/data_raw', '/{}/camera/imu'.format(host))],
+            namespace=host),
         
         # The IMU frame is missing in TF tree, add it:
         Node(
