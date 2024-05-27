@@ -1,7 +1,5 @@
 # MARIAM (Multi-Agent Robust & Intelligent Autonomous Manipulation)
 
-[Description]
-
 ## Installation
 
 Assuming a prior install of `ros-humble-desktop-full`.
@@ -13,8 +11,8 @@ cd ~
 git clone --recursive git@github.com:BCLab-UNM/MARIAM.git
 sudo rosdep init
 rosdep update
-chmod +x ~/MARIAM/mariam_install.sh
-./MARIAM/mariam_install.sh
+chmod +x ~/MARIAM/scripts/mariam_install.sh
+./MARIAM/scripts/mariam_install.sh
 ```
 
 ### Manual Install
@@ -53,7 +51,7 @@ echo 'export ROS_IP=$(echo `hostname -I | cut -d" " -f1`)' >> ~/.bashrc
 echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
 ```
 
-### Submodele Updates
+### Submodule Updates
 Some edits have been made to the submodules owned by TrossenRobotics. Easily make those edits with this script.
 
 ```bash
@@ -72,11 +70,4 @@ git reset --hard HEAD
 ```
 ## Experimentation
 
-### Experiment 1 Setup
-No arguements are needed the defaults are already set.
-On laptop: `ros2 launch arm_controller laptop_demo1.launch.py`
-On Monica: `ros2 launch arm_controller monica_demo1.launch.py`
-On Ross: `ros2 launch arm_controller ross_demo1.launch.py`
-
-Perform pickup of box.
-Then on laptop launch  `<move base node>`
+All experiments are located in `doc/experiment_descriptions.md`.

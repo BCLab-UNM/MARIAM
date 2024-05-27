@@ -34,7 +34,7 @@
     ```
 9. Download `libmicroros.a` from MARIAM Sharepoint and replace the file `/Arduino/libraries/micro_ros_arduino/src/imxrt1062/fpv5-d16-hard/libmicroros.a`
 
-10. Install libraries for MARIAM: Copy all folders in `~/MARIAM/arduino/micro_ros_MARIAM/libraries` to `~/Arduino/libraries`
+10. Install libraries for MARIAM: Copy all folders in `~/MARIAM/microcontroller/micro_ros_MARIAM/libraries` to `~/Arduino/libraries`
     ```bash
     cp -r ~/MARIAM/arduino/micro_ros_MARIAM/libraries/* ~/Arduino/libraries/
     ```
