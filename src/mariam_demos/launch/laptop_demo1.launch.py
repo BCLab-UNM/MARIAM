@@ -24,11 +24,11 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     # Include the ceiling camera launch file
-    #ld.add_action(
-    #    IncludeLaunchDescription(
-     #       PythonLaunchDescriptionSource(ceiling_camera_launch_file)
-      #  )
-    #)
+    ld.add_action(
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(ceiling_camera_launch_file)
+        )
+    )
 
     # Additional nodes...
     ld.add_action(
