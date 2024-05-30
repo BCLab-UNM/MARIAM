@@ -1,7 +1,9 @@
-Guide for using PlotJuggler
+## Guide for using PlotJuggler
 Download using: sudo apt install ros-humble-plotjuggler-ros
 To start plotjuggler: ros2 run plotjuggler plotjuggler
 Optional tags: -l <layout file> or -d <data file>
+
+Current layout file: Experiment_0-5_Plots.xml
 
 Then for bag files, create conversion file in the same directory using
 cat << EOF > convert.yaml
