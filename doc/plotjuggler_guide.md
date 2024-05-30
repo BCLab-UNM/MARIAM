@@ -31,3 +31,5 @@ ros2 bag convert -i <rosbag file path> -o convert.yaml
 This creates a mcap file in the ros2_output directory.
 
 Once you have the mcap file, you can upload to plotjuggler using the data upload button in the top left corner.
+
+You can create layouts and save them to .xml using the layout section. You can also upload layouts and they will contain the original dataset if the filepath is on your computer.
