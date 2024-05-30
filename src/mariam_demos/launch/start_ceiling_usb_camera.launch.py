@@ -11,8 +11,8 @@ def generate_launch_description():
     package_share_directory = get_package_share_directory('mariam_demos')
     
     # Path to the parameter files
-    apriltag_path = os.path.join(package_share_directory, 'resource', 'apriltag.yaml')
-    camera_info_url = f"file://{os.path.join(package_share_directory, 'resource', 'ceiling_camera_y.yaml')}"
+    apriltag_path = os.path.join(package_share_directory, 'config', 'apriltag.yaml')
+    camera_info_url = f"file://{os.path.join(package_share_directory, 'config', 'ceiling_camera_y.yaml')}"
 
     return LaunchDescription([
         Node(
