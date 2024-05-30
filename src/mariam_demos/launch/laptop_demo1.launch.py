@@ -17,7 +17,13 @@ def generate_launch_description():
     ceiling_camera_launch_file = os.path.join(
         mariam_demos_share,
         'launch',
-        'start_ceiling_camera.launch.py'
+        'start_ceiling_v4l_camera.launch.py'
+    )
+        # Get the path to the YAML file using the package name
+    domain_config_file_path = os.path.join(
+        mariam_demos_share,
+        'resource',
+        'experiment_1_bridge.yml'
     )
 
     # Create a LaunchDescription object
@@ -38,12 +44,6 @@ def generate_launch_description():
             name='joy_node'
         )
     )
-    # Get the path to the YAML file using the package name
-    config_file_path = os.path.join(
-        mariam_demos_share,
-        'domain_bridge_configs',
-        'experiment_1_bridge.yml'
-    )
 
     # Define the domain bridge node
     ld.add_action(
@@ -52,7 +52,7 @@ def generate_launch_description():
             executable='domain_bridge',
             name='domain_bridge',
             output='screen',
-            arguments=[config_file_path],
+            arguments=[domain_config_file_path],
         )
     )
 
