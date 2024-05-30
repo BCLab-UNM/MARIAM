@@ -1,0 +1,368 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<root>
+ <tabbed_widget name="Main Window" parent="main_window">
+  <Tab containers="1" tab_name="Trial 13: Ceiling Translations ">
+   <Container>
+    <DockSplitter orientation="-" count="1" sizes="1">
+     <DockSplitter orientation="|" count="3" sizes="0.333115;0.33377;0.333115">
+      <DockSplitter orientation="-" count="3" sizes="0.3337;0.332599;0.3337">
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="2.000000" right="68.977612" left="2.073412" bottom="-2.000000"/>
+         <limitY min="-2" max="2"/>
+         <curve name="/tf/ceiling_camera/monica/mast_link/translation/x" color="#1f77b4"/>
+         <curve name="/tf/ceiling_camera/monica/top_link/translation/x" color="#d62728"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.500000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="0.5"/>
+         <curve name="/tf/ceiling_camera/monica/mast_link/translation/y" color="#ff7f0e"/>
+         <curve name="/tf/ceiling_camera/monica/top_link/translation/y" color="#f14cc1"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="5.000000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="5"/>
+         <curve name="/tf/ceiling_camera/monica/mast_link/translation/z" color="#17becf"/>
+         <curve name="/tf/ceiling_camera/monica/top_link/translation/z" color="#bcbd22"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+      <DockSplitter orientation="-" count="3" sizes="0.3337;0.332599;0.3337">
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="2.000000" right="68.977612" left="2.073412" bottom="-2.000000"/>
+         <limitY min="-2" max="2"/>
+         <curve name="/tf/ceiling_camera/payload_2/translation/x" color="#1ac938"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.500000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="0.5"/>
+         <curve name="/tf/ceiling_camera/payload_2/translation/y" color="#9467bd"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="5.000000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="5"/>
+         <curve name="/tf/ceiling_camera/payload_2/translation/z" color="#1f77b4"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+      <DockSplitter orientation="-" count="3" sizes="0.3337;0.332599;0.3337">
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="2.000000" right="68.977612" left="2.073412" bottom="-2.000000"/>
+         <limitY min="-2" max="2"/>
+         <curve name="/tf/ceiling_camera/ross/mast_link/translation/x" color="#d62728"/>
+         <curve name="/tf/ceiling_camera/ross/top_link/translation/x" color="#f14cc1"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.500000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="0.5"/>
+         <curve name="/tf/ceiling_camera/ross/mast_link/translation/y" color="#1ac938"/>
+         <curve name="/tf/ceiling_camera/ross/top_link/translation/y" color="#9467bd"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="5.000000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="5"/>
+         <curve name="/tf/ceiling_camera/ross/mast_link/translation/z" color="#ff7f0e"/>
+         <curve name="/tf/ceiling_camera/ross/top_link/translation/z" color="#17becf"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+     </DockSplitter>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="Trial 13: PID">
+   <Container>
+    <DockSplitter orientation="-" count="1" sizes="1">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
+      <DockSplitter orientation="-" count="3" sizes="0.35;0.35;0.3">
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.200000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="0.2"/>
+         <curve name="/monica/pid_left_current_speed/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_left_current_speed/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.140000" right="68.977612" left="2.073412" bottom="-0.040000"/>
+         <limitY min="-0.04" max="0.14"/>
+         <curve name="/monica/pid_left_sp/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_left_sp/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="120.000000" right="68.977612" left="2.073412" bottom="-20.000000"/>
+         <limitY min="-20" max="120"/>
+         <curve name="/monica/pid_speedL/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_speedL/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+      <DockSplitter orientation="-" count="3" sizes="0.35;0.35;0.3">
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.200000" right="68.977612" left="2.073412" bottom="0.000000"/>
+         <limitY min="0" max="0.2"/>
+         <curve name="/monica/pid_right_current_speed/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_right_current_speed/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="0.140000" right="68.977612" left="2.073412" bottom="-0.040000"/>
+         <limitY min="-0.04" max="0.14"/>
+         <curve name="/monica/pid_right_sp/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_right_sp/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+       <DockArea name="...">
+        <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+         <range top="120.000000" right="68.977612" left="2.073412" bottom="-20.000000"/>
+         <limitY min="-20" max="120"/>
+         <curve name="/monica/pid_speedR/data" color="#a7a8aa"/>
+         <curve name="/ross/pid_speedR/data" color="#ba0c2f"/>
+        </plot>
+       </DockArea>
+      </DockSplitter>
+     </DockSplitter>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="Trial 13: Force and Velocity">
+   <Container>
+    <DockSplitter orientation="-" count="2" sizes="0.5;0.5">
+     <DockArea name="...">
+      <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+       <range top="8.000000" right="68.977612" left="2.073412" bottom="-0.200000"/>
+       <limitY min="-0.2" max="8"/>
+       <curve name="/monica/force/data" color="#ff7f0e"/>
+       <curve name="/ross/force/data" color="#1ac938"/>
+      </plot>
+     </DockArea>
+     <DockArea name="...">
+      <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+       <range top="8.000000" right="68.977612" left="2.073412" bottom="-0.200000"/>
+       <limitY min="-0.2" max="8"/>
+       <curve name="/monica/voltage/data" color="#ff7f0e"/>
+       <curve name="/ross/voltage/data" color="#1ac938"/>
+      </plot>
+     </DockArea>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="Trial_13_Distance_between_Mast_Links">
+   <Container>
+    <DockSplitter orientation="-" count="1" sizes="1">
+     <DockArea name="...">
+      <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+       <range top="5.000000" right="68.977612" left="2.073412" bottom="0.000000"/>
+       <limitY min="0" max="5"/>
+       <curve name="distance_between_mast_links" color="#1f77b4"/>
+       <curve name="/tf/ceiling_camera/payload_2/translation/z" color="#1ac938"/>
+      </plot>
+     </DockArea>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="Trial 13_Odom">
+   <Container>
+    <DockSplitter orientation="-" count="3" sizes="0.3337;0.332599;0.3337">
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="20.000000" right="68.977612" left="2.073412" bottom="-8.000000"/>
+        <limitY min="-8" max="20"/>
+        <curve name="/ross/odom/wheel/pose/pose/position/x" color="#ff7f0e"/>
+        <curve name="/tf/ceiling_camera/ross/mast_link/translation/x" color="#1ac938"/>
+        <curve name="/tf/ceiling_camera/ross/top_link/translation/x" color="#ff7f0e"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="20.000000" right="68.977612" left="2.073412" bottom="-8.000000"/>
+        <limitY min="-8" max="20"/>
+        <curve name="/monica/odom/wheel/pose/pose/position/x" color="#17becf"/>
+        <curve name="/tf/ceiling_camera/monica/mast_link/translation/x" color="#f14cc1"/>
+        <curve name="/tf/ceiling_camera/monica/top_link/translation/x" color="#9467bd"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="1.000000" right="68.977612" left="2.073412" bottom="-0.500000"/>
+        <limitY min="-0.5" max="1"/>
+        <curve name="/ross/odom/wheel/pose/pose/position/y" color="#f14cc1"/>
+        <curve name="/tf/ceiling_camera/ross/mast_link/translation/y" color="#17becf"/>
+        <curve name="/tf/ceiling_camera/ross/top_link/translation/y" color="#bcbd22"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="1.000000" right="68.977612" left="2.073412" bottom="-0.500000"/>
+        <limitY min="-0.5" max="1"/>
+        <curve name="/monica/odom/wheel/pose/pose/position/y" color="#bcbd22"/>
+        <curve name="/tf/ceiling_camera/monica/mast_link/translation/y" color="#d62728"/>
+        <curve name="/tf/ceiling_camera/monica/top_link/translation/y" color="#1ac938"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+     <DockSplitter orientation="|" count="2" sizes="0.5;0.5">
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="5.200000" right="68.977612" left="2.073412" bottom="0.000000"/>
+        <limitY min="0" max="5.2"/>
+        <curve name="/ross/odom/wheel/pose/pose/position/z" color="#9467bd"/>
+        <curve name="/tf/ceiling_camera/ross/mast_link/translation/z" color="#d62728"/>
+        <curve name="/tf/ceiling_camera/ross/top_link/translation/z" color="#1f77b4"/>
+       </plot>
+      </DockArea>
+      <DockArea name="...">
+       <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+        <range top="5.200000" right="68.977612" left="2.073412" bottom="0.000000"/>
+        <limitY min="0" max="5.2"/>
+        <curve name="/monica/odom/wheel/pose/pose/position/z" color="#1f77b4"/>
+        <curve name="/tf/ceiling_camera/monica/mast_link/translation/z" color="#ff7f0e"/>
+        <curve name="/tf/ceiling_camera/monica/top_link/translation/z" color="#f14cc1"/>
+       </plot>
+      </DockArea>
+     </DockSplitter>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <Tab containers="1" tab_name="Trial_13_Error_in_x">
+   <Container>
+    <DockSplitter orientation="-" count="2" sizes="0.50055;0.49945">
+     <DockArea name="...">
+      <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+       <range top="19590.466499" right="68.977612" left="2.073412" bottom="-112710.104890"/>
+       <limitY/>
+       <curve name="monica_error_between_mastlink_and_odom_x" color="#9467bd"/>
+       <curve name="monica_error_between_toplink_and_odom_x" color="#17becf"/>
+      </plot>
+     </DockArea>
+     <DockArea name="...">
+      <plot mode="TimeSeries" flip_x="false" flip_y="false" style="Lines">
+       <range top="50713.601369" right="68.977612" left="2.073412" bottom="-3677.796166"/>
+       <limitY/>
+       <curve name="ross_error_between_mastlink_and_odom_x" color="#bcbd22"/>
+       <curve name="ross_error_between_toplink_and_odom_x" color="#1f77b4"/>
+      </plot>
+     </DockArea>
+    </DockSplitter>
+   </Container>
+  </Tab>
+  <currentTabIndex index="5"/>
+ </tabbed_widget>
+ <use_relative_time_offset enabled="1"/>
+ <!-- - - - - - - - - - - - - - - -->
+ <!-- - - - - - - - - - - - - - - -->
+ <Plugins>
+  <plugin ID="DataLoad CSV">
+   <parameters delimiter="0" time_axis=""/>
+  </plugin>
+  <plugin ID="DataLoad MCAP">
+   <parameters use_timestamp="0" clamp_large_arrays="1" max_array_size="9999" selected_topics="/tf;/ross/voltage;/ross/pid_speedR;/ross/pid_speedL;/ross/pid_right_sp;/ross/pid_right_current_speed;/ross/pid_left_sp;/ross/pid_left_current_speed;/ross/joint_states;/ross/goal_pose_joy;/ross/force;/ross/cmd_vel;/rosout;/monica/voltage;/monica/pid_speedR;/monica/pid_speedL;/monica/pid_right_sp;/monica/pid_right_current_speed;/monica/pid_left_sp;/monica/pid_left_current_speed;/monica/odom/wheel;/monica/joint_states;/monica/goal_pose_joy;/monica/force;/monica/cmd_vel;/ross/odom/wheel"/>
+  </plugin>
+  <plugin ID="DataLoad ROS2 bags">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value=""/>
+  </plugin>
+  <plugin ID="DataLoad ULog"/>
+  <plugin ID="ROS2 Topic Subscriber">
+   <use_header_stamp value="false"/>
+   <discard_large_arrays value="true"/>
+   <max_array_size value="100"/>
+   <boolean_strings_to_number value="true"/>
+   <remove_suffix_from_strings value="true"/>
+   <selected_topics value=""/>
+  </plugin>
+  <plugin ID="UDP Server"/>
+  <plugin ID="WebSocket Server"/>
+  <plugin ID="ZMQ Subscriber"/>
+  <plugin ID="Fast Fourier Transform"/>
+  <plugin ID="Quaternion to RPY"/>
+  <plugin ID="Reactive Script Editor">
+   <library code="--[[ Helper function to create a series from arrays&#xa;&#xa; new_series: a series previously created with ScatterXY.new(name)&#xa; prefix:     prefix of the timeseries, before the index of the array&#xa; suffix_X:   suffix to complete the name of the series containing the X value. If [nil], use the index of the array.&#xa; suffix_Y:   suffix to complete the name of the series containing the Y value&#xa; timestamp:   usually the tracker_time variable&#xa;              &#xa; Example:&#xa; &#xa; Assuming we have multiple series in the form:&#xa; &#xa;   /trajectory/node.{X}/position/x&#xa;   /trajectory/node.{X}/position/y&#xa;   &#xa; where {N} is the index of the array (integer). We can create a reactive series from the array with:&#xa; &#xa;   new_series = ScatterXY.new(&quot;my_trajectory&quot;) &#xa;   CreateSeriesFromArray( new_series, &quot;/trajectory/node&quot;, &quot;position/x&quot;, &quot;position/y&quot;, tracker_time );&#xa;--]]&#xa;&#xa;function CreateSeriesFromArray( new_series, prefix, suffix_X, suffix_Y, timestamp )&#xa;  &#xa;  --- clear previous values&#xa;  new_series:clear()&#xa;  &#xa;  --- Append points to new_series&#xa;  index = 0&#xa;  while(true) do&#xa;&#xa;    x = index;&#xa;    -- if not nil, get the X coordinate from a series&#xa;    if suffix_X ~= nil then &#xa;      series_x = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_X) )&#xa;      if series_x == nil then break end&#xa;      x = series_x:atTime(timestamp)&#x9; &#xa;    end&#xa;    &#xa;    series_y = TimeseriesView.find( string.format( &quot;%s.%d/%s&quot;, prefix, index, suffix_Y) )&#xa;    if series_y == nil then break end &#xa;    y = series_y:atTime(timestamp)&#xa;    &#xa;    new_series:push_back(x,y)&#xa;    index = index+1&#xa;  end&#xa;end&#xa;&#xa;--[[ Similar to the built-in function GetSeriesNames(), but select only the names with a give prefix. --]]&#xa;&#xa;function GetSeriesNamesByPrefix(prefix)&#xa;  -- GetSeriesNames(9 is a built-in function&#xa;  all_names = GetSeriesNames()&#xa;  filtered_names = {}&#xa;  for i, name in ipairs(all_names)  do&#xa;    -- check the prefix&#xa;    if name:find(prefix, 1, #prefix) then&#xa;      table.insert(filtered_names, name);&#xa;    end&#xa;  end&#xa;  return filtered_names&#xa;end&#xa;&#xa;--[[ Modify an existing series, applying offsets to all their X and Y values&#xa;&#xa; series: an existing timeseries, obtained with TimeseriesView.find(name)&#xa; delta_x: offset to apply to each x value&#xa; delta_y: offset to apply to each y value &#xa;  &#xa;--]]&#xa;&#xa;function ApplyOffsetInPlace(series, delta_x, delta_y)&#xa;  -- use C++ indeces, not Lua indeces&#xa;  for index=0, series:size()-1 do&#xa;    x,y = series:at(index)&#xa;    series:set(index, x + delta_x, y + delta_y)&#xa;  end&#xa;end&#xa;"/>
+   <scripts/>
+  </plugin>
+  <plugin ID="CSV Exporter"/>
+  <plugin ID="ROS2 Topic Re-Publisher"/>
+ </Plugins>
+ <!-- - - - - - - - - - - - - - - -->
+ <previouslyLoaded_Datafiles>
+  <fileInfo filename="../../../Downloads/ROS_BAGS/ros2_output/Experiment 0.5 Trial 13.mcap" prefix="">
+   <plugin ID="DataLoad MCAP">
+    <parameters use_timestamp="0" clamp_large_arrays="1" max_array_size="9999" selected_topics="/tf;/ross/voltage;/ross/pid_speedR;/ross/pid_speedL;/ross/pid_right_sp;/ross/pid_right_current_speed;/ross/pid_left_sp;/ross/pid_left_current_speed;/ross/joint_states;/ross/goal_pose_joy;/ross/force;/ross/cmd_vel;/rosout;/monica/voltage;/monica/pid_speedR;/monica/pid_speedL;/monica/pid_right_sp;/monica/pid_right_current_speed;/monica/pid_left_sp;/monica/pid_left_current_speed;/monica/odom/wheel;/monica/joint_states;/monica/goal_pose_joy;/monica/force;/monica/cmd_vel;/ross/odom/wheel"/>
+   </plugin>
+  </fileInfo>
+ </previouslyLoaded_Datafiles>
+ <!-- - - - - - - - - - - - - - - -->
+ <customMathEquations>
+  <snippet name="ross_error_between_toplink_and_odom_x">
+   <global></global>
+   <function>return math.abs(value-v1)/v1</function>
+   <linked_source>/ross/odom/wheel/pose/pose/position/x</linked_source>
+   <additional_sources>
+    <v1>/tf/ceiling_camera/ross/top_link/translation/x</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="ross_error_between_mastlink_and_odom_x">
+   <global></global>
+   <function>return math.abs(value-v1)/v1</function>
+   <linked_source>/ross/odom/wheel/pose/pose/position/x</linked_source>
+   <additional_sources>
+    <v1>/tf/ceiling_camera/ross/mast_link/translation/x</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="monica_error_between_toplink_and_odom_x">
+   <global></global>
+   <function>return math.abs(value-v1)/v1</function>
+   <linked_source>/monica/odom/wheel/pose/pose/position/x</linked_source>
+   <additional_sources>
+    <v1>/tf/ceiling_camera/monica/top_link/translation/x</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="monica_error_between_mastlink_and_odom_x">
+   <global></global>
+   <function>return math.abs(value-v1)/v1</function>
+   <linked_source>/monica/odom/wheel/pose/pose/position/x</linked_source>
+   <additional_sources>
+    <v1>/tf/ceiling_camera/monica/mast_link/translation/x</v1>
+   </additional_sources>
+  </snippet>
+  <snippet name="distance_between_mast_links">
+   <global></global>
+   <function>return ((v1 - value)^2 + (v3 - v2)^2)^(1/2)</function>
+   <linked_source>/tf/ceiling_camera/monica/mast_link/translation/x</linked_source>
+   <additional_sources>
+    <v1>/tf/ceiling_camera/ross/mast_link/translation/x</v1>
+    <v2>/tf/ceiling_camera/monica/mast_link/translation/y</v2>
+    <v3>/tf/ceiling_camera/ross/mast_link/translation/y</v3>
+   </additional_sources>
+  </snippet>
+ </customMathEquations>
+ <snippets/>
+ <!-- - - - - - - - - - - - - - - -->
+</root>
+
