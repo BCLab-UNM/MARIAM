@@ -1,5 +1,8 @@
 ## Guide for using PlotJuggler
-Download using: sudo apt install ros-humble-plotjuggler-ros
+Download using: 
+```bash
+sudo apt install ros-humble-plotjuggler-ros
+```
 To start plotjuggler: 
 ```bash
 ros2 run plotjuggler plotjuggler
@@ -11,7 +14,7 @@ Optional tags:
 
 Current layout file: Experiment_0-5_Plots.xml
 
-Then for bag files, create conversion file in the same directory using
+Bag files must be converted to mcap files using the convert.yaml file. Create the file using this code:
 ```bash
 cat << EOF > convert.yaml
 output_bags:
@@ -21,7 +24,7 @@ output_bags:
    append: true
 EOF
 ```
-Then use: 
+Then to convert bag files, run:
 ```bash 
 ros2 bag convert -i <rosbag file path> -o convert.yaml
 ```
