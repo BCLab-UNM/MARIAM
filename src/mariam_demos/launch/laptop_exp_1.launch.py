@@ -12,14 +12,13 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     # Correctly find the package directory
     mariam_demos_share = get_package_share_directory('mariam_demos')
+    apriltag_mariam_share = get_package_share_directory('apriltag_mariam')
 
-    # Path to the launch file you want to include
     ceiling_camera_launch_file = os.path.join(
-        mariam_demos_share,
+        apriltag_mariam_share,
         'launch',
         'start_ceiling_v4l_camera.launch.py'
     )
-        # Get the path to the YAML file using the package name
     domain_config_file_path = os.path.join(
         mariam_demos_share,
         'resource',
