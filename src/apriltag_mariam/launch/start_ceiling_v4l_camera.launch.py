@@ -8,7 +8,7 @@ import os
 def generate_launch_description():
 
     # Get the package share directory
-    package_share_directory = get_package_share_directory('mariam_demos')
+    package_share_directory = get_package_share_directory('apriltag_mariam')
     
     # Path to the parameter files
     apriltag_path = os.path.join(package_share_directory, 'resource', 'apriltag.yaml')
@@ -16,19 +16,14 @@ def generate_launch_description():
 
     return LaunchDescription([
         Node(
-            package='usb_cam',
-            executable='usb_cam_node_exe',
+            package='v4l2_camera',
+            executable='v4l2_camera_node',
             namespace='ceiling_camera',
             parameters=[{
-                'camera_name': 'ceiling_camera',
-                'device': '/dev/video_ceiling',
-                'frame_id':  "ceiling_camera",
-                'video_device': '/dev/video0', # Does not accept UDEV symlinks
-                'image_width': 800,
-                'image_height': 448,
-                'frame_rate': 30,
-                'pixel_format': 'yuyv',
-                'io_method': 'mmap',
+                'video_device': '/dev/video_ceiling',
+                'pixel_format': 'YUYV',
+                'output_encoding': 'rgb8',
+                'image_size': [800,448],
                 'camera_info_url': camera_info_url,
                 'camera_frame_id': 'ceiling_camera'
             }],
