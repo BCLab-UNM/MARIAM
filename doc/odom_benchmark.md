@@ -2,7 +2,8 @@
 
 ### Topic Hz
 ![Alt text](image/ross-camera-image-rect-raw-hz.png) 
-| Device                             | monica/camera/color/image_raw | monica/odom_slam | ross/imu/data |                                                 Ross                                         |                                    Monica                                         |         
+
+| Device                             |                               Laptop                             |                                                 Ross                                         |                                    Monica                                                                |         
 |------------------------------------|-------------------------------|------------------|---------------|------------------------------------|------------------------|----------------|---------------|------------------------------------|--------------------------------|-----------------|------------------|
 | Topic Name                         | monica/camera/color/image_raw | monica/odom_slam | ross/imu/data | ross/camera/depth/image_rect_raw   | ross/camera/image_raw  | ross/odom_slam | ross/imu/data | monica/camera/depth/image_rect_raw | monica/camera/color/image_raw | monica/imu/data | monica/odom_slam |
 |------------------------------------|-------------------------------|------------------|---------------|------------------------------------|------------------------|----------------|---------------|------------------------------------|--------------------------------|------------------|------------------|
