@@ -1,8 +1,6 @@
 # ODOM Benchmark
 
 ### Topic Hz
-![Alt text](image/ross-camera-image-rect-raw-hz.png) 
-
 | Topics on Laptop                   | monica/camera/depth/image_rect_raw | monica/camera/color/image_raw | monica/imu/data |monica/odom_slam | ross/camera/depth/image_rect_raw | ross/camera/color/image | ross/odom_slam | ross/imu/data |
 |------------------------------------|------------------------------------|-------------------------------|-----------------|-----------------|----------------------------------|-------------------------|----------------|---------------|
 | Hz                                 | 2.415                              | 0.727                         | 189.271         | 3.899           | 1.830                            | 0.731                   | 4.932          | 199.232       |
@@ -17,6 +15,7 @@
 |                                    | 2.430                              | 0.725                         | 191.652         | 7.741           | 2.380                            | 0.711                   | 6.453          | 199.384       |
 | Average	Hz                         | 2.436                              |	0.728	                        | 190.367	        | 6.234	          | 2.244	                           | 0.724	                 | 5.249          | 199.326	      |
 
+
 | Topics on Ross | ross/camera/depth/image_rect_raw   | ross/camera/image_raw  | ross/odom_slam | ross/imu/data |
 |----------------|------------------------------------|------------------------|----------------|---------------|
 | Average Hz     | 29.126                             | 31.100                 | 4.788          | 220.370       |
@@ -29,6 +28,7 @@
 |                | 28.521                             | 30.134                 | 6.782          | 202.085       |
 |                | 28.674                             | 30.121                 | 6.836          | 201.796       |
 |                | 28.808                             | 30.106                 | 6.902          | 201.560       |
+
 
 | Topics on Monica | monica/camera/depth/image_rect_raw | monica/camera/color/image_raw | monica/imu/data | monica/odom_slam |
 |------------------|------------------------------------|-------------------------------|-----------------|------------------|
