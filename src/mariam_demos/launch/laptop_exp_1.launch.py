@@ -12,12 +12,17 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
     # Correctly find the package directory
     mariam_demos_share = get_package_share_directory('mariam_demos')
+    apriltag_mariam_share = get_package_share_directory('apriltag_mariam')
 
-    # Path to the launch file you want to include
     ceiling_camera_launch_file = os.path.join(
-        mariam_demos_share,
+        apriltag_mariam_share,
         'launch',
-        'start_ceiling_camera.launch.py'
+        'start_ceiling_v4l_camera.launch.py'
+    )
+    domain_config_file_path = os.path.join(
+        mariam_demos_share,
+        'resource',
+        'experiment_1_bridge.yml'
     )
 
     # Create a LaunchDescription object
@@ -38,12 +43,6 @@ def generate_launch_description():
             name='joy_node'
         )
     )
-    # Get the path to the YAML file using the package name
-    config_file_path = os.path.join(
-        mariam_demos_share,
-        'domain_bridge_configs',
-        'experiment_1_bridge.yml'
-    )
 
     # Define the domain bridge node
     ld.add_action(
@@ -52,7 +51,7 @@ def generate_launch_description():
             executable='domain_bridge',
             name='domain_bridge',
             output='screen',
-            arguments=[config_file_path],
+            arguments=[domain_config_file_path],
         )
     )
 
