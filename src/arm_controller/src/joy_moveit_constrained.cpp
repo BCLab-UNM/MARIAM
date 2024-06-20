@@ -12,33 +12,30 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/move_group_interface/move_group_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-// #include <moveit/kinematic_constraints/kinematic_constraint.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit_msgs/msg/constraints.hpp>
 #include <moveit_msgs/msg/orientation_constraint.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
 using moveit::planning_interface::MoveGroupInterface;
+using std::placeholders::_1;
 
 class JoyMoveitConstrained : public rclcpp::Node 
 {
   public:
-    JoyMoveitConstrained() : rclcpp::Node("joy_moveit_constrained")
+    JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
-      // Set custom home pose
-      this->set_custom_home_pose();
-      move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_gripper");
-      std::string my_namespace = this->get_namespace();
-      RCLCPP_INFO(this->get_logger(), "Using namespace: %s'}", my_namespace.c_str());
-
       joy_subscriber_ = this->create_subscription<sensor_msgs::msg::Joy>(
         "joy", 10, std::bind(&JoyMoveitConstrained::joy_callback, this, std::placeholders::_1));
       
-      marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
-        "box_constraint",
-        10
-      );
-      
+      // marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
+      //   "plane_constraint",
+      //   10
+      // );
+    }
+    void init_move_group()
+    {
+      move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
     }
     ~JoyMoveitConstrained() 
     {
@@ -48,16 +45,17 @@ class JoyMoveitConstrained : public rclcpp::Node
   private:
     // Member variabls
     MoveGroupInterface *move_group_interface = nullptr;
-    bool allow_constraint = false;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr goal_pose_joy_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
+    // rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
 
     /**
      * Applies a plane constraint to the gripper.
      */
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
-    {      
+    {
+      RCLCPP_INFO(this->get_logger(), "Received message from joy topic\nMsg size: %ld",msg->axes.size());
+      auto curr_pose = move_group_interface->getCurrentPose();
+
       // generating a box constraint
       moveit_msgs::msg::PositionConstraint plane_constraint;
       plane_constraint.header.frame_id = move_group_interface->getPoseReferenceFrame();
@@ -70,14 +68,15 @@ class JoyMoveitConstrained : public rclcpp::Node
       otherwise the box won't always form a proper plane perpendicular to the arm */
 
       // generating position of plane
+      // plane must be parallel to y axis
       geometry_msgs::msg::Pose plane_pose;
-      plane_pose.position.x = pose_goal_initial.position.x;
-      plane_pose.position.y = pose_goal_initial.position.y;
-      plane_pose.position.z = pose_goal_initial.position.z;
-      plane_pose.orientation.x = pose_goal_initial.orientation.x;
-      plane_pose.orientation.y = pose_goal_initial.orientation.y;
-      plane_pose.orientation.z = pose_goal_initial.orientation.z;
-      plane_pose.orientation.w = pose_goal_initial.orientation.w;
+      plane_pose.position.x = curr_pose.pose.position.x;
+      plane_pose.position.y = curr_pose.pose.position.y;
+      plane_pose.position.z = curr_pose.pose.position.z;
+      plane_pose.orientation.x = curr_pose.pose.orientation.x;
+      plane_pose.orientation.y = curr_pose.pose.orientation.y;
+      plane_pose.orientation.z = curr_pose.pose.orientation.z;
+      plane_pose.orientation.w = curr_pose.pose.orientation.w;
       plane_constraint.constraint_region.primitive_poses.emplace_back(plane_pose);
       plane_constraint.weight = 1.0;
 
@@ -86,16 +85,6 @@ class JoyMoveitConstrained : public rclcpp::Node
       plane_constraints.name = "plane_constraint";
       move_group_interface->setPathConstraints(plane_constraints);
       this->publish_plane_constraint(plane_pose);
-    }
-
-  
-    /**
-     * This function attempts to generate a path to the pose_goal.
-     * If it is successful, the plan is executed.
-     */
-    void attempt_execution()
-    {
-      
     }
     
      /**
@@ -117,7 +106,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.color.g = 0.05;
       marker.color.b = 0.05;
       marker.pose = plane_pose;
-      marker_pub_->publish(marker);
+      // marker_pub_->publish(marker);
     }
 };
 
@@ -125,7 +114,7 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<JoyMoveitConstrained>();
-  node->initilize_moveit(); // can only be done after the constuctor is completed
+  node->init_move_group();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
