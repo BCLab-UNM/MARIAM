@@ -3,18 +3,12 @@
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
-#include "std_msgs/msg/string.hpp"
-#include <sensor_msgs/msg/joy.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 // moveit
 #include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_interface/planning_interface.h>
-#include <moveit/move_group_interface/move_group_interface.h>
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit_msgs/msg/constraints.hpp>
-#include <moveit_msgs/msg/orientation_constraint.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
 using moveit::planning_interface::MoveGroupInterface;
@@ -26,9 +20,9 @@ class JoyMoveitConstrained : public rclcpp::Node
     JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
       pose_subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>(
-        "target_pose",
+        "joy_target_pose",
         1,
-        std::bind(&JoyMoveitConstrained::joy_callback, this, std::placeholders::_1)
+        std::bind(&JoyMoveitConstrained::target_pose_callback, this, std::placeholders::_1)
       );
       
       marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
@@ -36,11 +30,16 @@ class JoyMoveitConstrained : public rclcpp::Node
         10
       );
     }
+
+    /**
+     * Initializes the move group interface.
+     */
     void init_move_group()
     {
       // RCLCPP_INFO(this->get_logger(), "Getting move_group_interface for interbotix_gripper");
       move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
     }
+    
     ~JoyMoveitConstrained() 
     {
       delete move_group_interface;
@@ -52,9 +51,9 @@ class JoyMoveitConstrained : public rclcpp::Node
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_subscriber_;
 
     /**
-     * Applies a plane constraint to the gripper.
+     * 
      */
-    void joy_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
+    void target_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
     {
       RCLCPP_INFO(this->get_logger(), "Received a pose, planning path...");
       auto target_pose = *msg;

@@ -151,10 +151,10 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
-    joy_pose_update_node = Node(
+    joy_input_handler_node = Node(
         package='arm_controller',
-    	executable='joy_pose_update',
-    	name='joy_pose_update',
+    	executable='joy_input_handler',
+    	name='joy_input_handler',
         parameters=[
             robot_description,
             robot_description_semantic,
@@ -196,7 +196,7 @@ def launch_setup(context, *args, **kwargs):
     return [
         joy_node,
         joy_moveit_constrained_node,
-        joy_pose_update_node,
+        joy_input_handler_node,
         xsarm_moveit_launch_include,
     ]
 

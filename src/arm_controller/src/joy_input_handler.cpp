@@ -8,13 +8,13 @@
 
 using std::placeholders::_1;
 
-class JoyPoseUpdate : public rclcpp::Node
+class JoyInputHandler : public rclcpp::Node
 {
   public:
-    JoyPoseUpdate() : Node("joy_pose_update")
+    JoyInputHandler() : Node("joy_input_handler")
     {
       pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>(
-        "target_pose",
+        "joy_target_pose",
         1
       );
 
@@ -26,7 +26,7 @@ class JoyPoseUpdate : public rclcpp::Node
       joy_subscription_ = this->create_subscription<sensor_msgs::msg::Joy>(
         "joy",
         10,
-        std::bind(&JoyPoseUpdate::joy_callback, this, _1)
+        std::bind(&JoyInputHandler::joy_callback, this, _1)
       );
 
       // Set custom home pose
@@ -47,21 +47,36 @@ class JoyPoseUpdate : public rclcpp::Node
     geometry_msgs::msg::Pose pose_home;
     geometry_msgs::msg::Pose pose_sleep;
 
+
+    /**
+     * This method is the callback function for /joy.
+     * It reads the message from /joy and performs specific actions
+     * depending on which button was pressed.
+     * xbox360 layout can be found here: http://wiki.ros.org/joy
+     * 
+     * Controls:
+     * Left stick to move the target pose in the y and z directions.
+     * Right stick to move the target pose in the x direction.
+     * 'x' to publish the target pose.
+     * 'Back' to publish a preset custom pose.
+     * 
+     * @msg: controller input
+     */
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
     {
       geometry_msgs::msg::Pose new_pose = curr_pose;
 
-      // Back button pressed
+      // Back button
       if (msg->buttons[6] == 1) {
         RCLCPP_INFO(this->get_logger(), "Publishing home pose");
         pose_publisher_->publish(pose_home);
       }
 
       // Update pose
-      curr_pose.position.x +=  (0.01)*msg->buttons[0];
-      curr_pose.position.x += -(0.01)*msg->buttons[3];
-      curr_pose.position.y += -(0.01)*msg->axes[6]; // DPAD left (+) and right (-)
-      curr_pose.position.z +=  (0.01)*msg->axes[7]; // DPAD up (+) and down (-)
+      curr_pose.position.x +=  (0.01)*msg->axes[3]; // right stick
+      curr_pose.position.x +=  (0.01)*msg->axes[4]; // right stick
+      curr_pose.position.y += -(0.01)*msg->axes[0]; // left stick
+      curr_pose.position.z +=  (0.01)*msg->axes[1]; // left stick
 
       // Home button pressed
       if (msg->buttons[7] == 1) {
@@ -86,7 +101,7 @@ class JoyPoseUpdate : public rclcpp::Node
 
       if (msg->buttons[2] == 1) { // X button pressed
         // publish pose
-        RCLCPP_INFO(this->get_logger(), "Publishing a target_pose");
+        RCLCPP_INFO(this->get_logger(), "Publishing a target pose");
         pose_publisher_->publish(new_pose);
       }
     }
@@ -115,7 +130,7 @@ class JoyPoseUpdate : public rclcpp::Node
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<JoyPoseUpdate>());
+  rclcpp::spin(std::make_shared<JoyInputHandler>());
   rclcpp::shutdown();
   return 0;
 }
