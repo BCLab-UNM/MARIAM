@@ -51,24 +51,6 @@ install(TARGETS joy_moveit
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable joy_moveit_constrained.cpp
-add_executable(joy_moveit_constrained src/joy_moveit_constrained.cpp)
-target_include_directories(joy_moveit PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(joy_moveit PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(
-  joy_moveit_constrained
-  "moveit_ros_planning_interface"
-  "rclcpp"
-  "std_msgs"
-)
-install(TARGETS joy_moveit_constrained
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-
-
 # Add launch file to share folder
 install(
   DIRECTORY
