@@ -27,7 +27,7 @@ class JoyMoveitConstrained : public rclcpp::Node
     {
       pose_subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>(
         "target_pose",
-        10,
+        1,
         std::bind(&JoyMoveitConstrained::joy_callback, this, std::placeholders::_1)
       );
       
@@ -58,12 +58,13 @@ class JoyMoveitConstrained : public rclcpp::Node
     {
       RCLCPP_INFO(this->get_logger(), "Received a pose, planning path...");
       auto target_pose = *msg;
+      std::string eof_link = move_group_interface->getEndEffectorLink();
 
       // generating a box constraint
       moveit_msgs::msg::PositionConstraint plane_constraint;
       plane_constraint.header.frame_id = move_group_interface->getPoseReferenceFrame();
       plane_constraint.link_name = move_group_interface->getEndEffectorLink();
-      // RCLCPP_INFO(this->get_logger(), move_group_interface->getEndEffectorLink());
+      RCLCPP_INFO(this->get_logger(), "EOF Link: %s", eof_link.c_str());
       shape_msgs::msg::SolidPrimitive plane;
       plane.type = shape_msgs::msg::SolidPrimitive::BOX;
       plane.dimensions = { 1.0, 0.0005, 1.0 };
@@ -71,18 +72,18 @@ class JoyMoveitConstrained : public rclcpp::Node
       /* TODO: write code to detect what direction the robot is facing,
       otherwise the box won't always form a proper plane perpendicular to the arm */
 
-      // generating position of plane
-      // plane must be parallel to y axis
+      // generating position of plane plane must be parallel to y axis
       geometry_msgs::msg::Pose plane_pose;
       plane_pose.position.x = target_pose.position.x;
       plane_pose.position.y = target_pose.position.y;
       plane_pose.position.z = target_pose.position.z;
-      plane_pose.orientation.x = target_pose.orientation.x;
-      plane_pose.orientation.y = target_pose.orientation.y;
-      plane_pose.orientation.z = target_pose.orientation.z;
-      plane_pose.orientation.w = target_pose.orientation.w;
+      plane_pose.orientation.x = 0;
+      plane_pose.orientation.y = 0;
+      plane_pose.orientation.z = sin(M_PI_4);
+      plane_pose.orientation.w = cos(M_PI_4);
       plane_constraint.constraint_region.primitive_poses.emplace_back(plane_pose);
       plane_constraint.weight = 1.0;
+      this->publish_plane_constraint(plane_pose);
 
       moveit_msgs::msg::Constraints plane_constraints;
       plane_constraints.position_constraints.emplace_back(plane_constraint);
@@ -91,20 +92,18 @@ class JoyMoveitConstrained : public rclcpp::Node
       MoveGroupInterface::Plan plan;
       // move_group_interface->setPathConstraints(plane_constraints);
       move_group_interface->setPoseTarget(target_pose);
-      move_group_interface->setPlanningTime(10.0);
+      move_group_interface->setPlanningTime(5.0);
       bool success = static_cast<bool> (move_group_interface->plan(plan));
 
       if(success)
       {
-        RCLCPP_INFO(this->get_logger(), "Plan successful");
+        RCLCPP_INFO(this->get_logger(), "Executing...");
         move_group_interface->execute(plan);
       }
       else
       {
-        RCLCPP_INFO(this->get_logger(), "Plan failed.");
+        RCLCPP_INFO(this->get_logger(), "Plan failed");
       }
-
-      this->publish_plane_constraint(plane_pose);
     }
     
      /**
@@ -112,7 +111,7 @@ class JoyMoveitConstrained : public rclcpp::Node
      */
     void publish_plane_constraint(geometry_msgs::msg::Pose plane_pose)
     {
-      RCLCPP_INFO(this->get_logger(), "Publishing plane.");
+      RCLCPP_INFO(this->get_logger(), "Publishing plane");
       auto marker = visualization_msgs::msg::Marker();
       marker.header.frame_id = "world";
       marker.header.stamp = this->now();
