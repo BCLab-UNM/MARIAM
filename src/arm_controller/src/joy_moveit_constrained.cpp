@@ -36,7 +36,6 @@ class JoyMoveitConstrained : public rclcpp::Node
      */
     void init_move_group()
     {
-      // RCLCPP_INFO(this->get_logger(), "Getting move_group_interface for interbotix_gripper");
       move_group_interface = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
     }
     
@@ -51,35 +50,39 @@ class JoyMoveitConstrained : public rclcpp::Node
     rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_subscriber_;
 
     /**
+     * This callback function is triggered when a pose is published from
+     * /joy_target_pose. It creates a constraint in the form of a plane in front
+     * of the robot and then tries to develop a plan to move the robot into the
+     * target position.
      * 
+     * @msg: the target_pose
      */
     void target_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
     {
-      RCLCPP_INFO(this->get_logger(), "Received a pose, planning path...");
+      RCLCPP_INFO(this->get_logger(), "Received a target pose");
       auto target_pose = *msg;
-      std::string eof_link = move_group_interface->getEndEffectorLink();
 
-      // generating a box constraint
+      // creating a PositionConstraint
       moveit_msgs::msg::PositionConstraint plane_constraint;
       plane_constraint.header.frame_id = move_group_interface->getPoseReferenceFrame();
+      // sets the link plane_constraint will be applied to
       plane_constraint.link_name = move_group_interface->getEndEffectorLink();
-      RCLCPP_INFO(this->get_logger(), "EOF Link: %s", eof_link.c_str());
       shape_msgs::msg::SolidPrimitive plane;
       plane.type = shape_msgs::msg::SolidPrimitive::BOX;
       plane.dimensions = { 1.0, 0.0005, 1.0 };
       plane_constraint.constraint_region.primitives.emplace_back(plane);
-      /* TODO: write code to detect what direction the robot is facing,
-      otherwise the box won't always form a proper plane perpendicular to the arm */
 
-      // generating position of plane plane must be parallel to y axis
+      // creating a pose for the plane_constraint
       geometry_msgs::msg::Pose plane_pose;
       plane_pose.position.x = target_pose.position.x;
       plane_pose.position.y = target_pose.position.y;
       plane_pose.position.z = target_pose.position.z;
       plane_pose.orientation.x = 0;
       plane_pose.orientation.y = 0;
-      plane_pose.orientation.z = sin(M_PI_4);
-      plane_pose.orientation.w = cos(M_PI_4);
+      plane_pose.orientation.z = target_pose.orientation.z*cos(M_PI_4)
+                               + target_pose.orientation.w*sin(M_PI_4);
+      plane_pose.orientation.w = target_pose.orientation.w*(M_PI_4)
+                               - target_pose.orientation.z*sin(M_PI_4);
       plane_constraint.constraint_region.primitive_poses.emplace_back(plane_pose);
       plane_constraint.weight = 1.0;
       this->publish_plane_constraint(plane_pose);
@@ -91,7 +94,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       MoveGroupInterface::Plan plan;
       // move_group_interface->setPathConstraints(plane_constraints);
       move_group_interface->setPoseTarget(target_pose);
-      move_group_interface->setPlanningTime(5.0);
+      move_group_interface->setPlanningTime(10.0);
       bool success = static_cast<bool> (move_group_interface->plan(plan));
 
       if(success)

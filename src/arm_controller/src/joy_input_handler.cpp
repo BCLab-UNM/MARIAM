@@ -30,13 +30,21 @@ class JoyInputHandler : public rclcpp::Node
       );
 
       // Set custom home pose
-      pose_home.position.x = 0.0;
-      pose_home.position.y = 0.223;
-      pose_home.position.z = 0.098;
-      pose_home.orientation.x =  0.000;
-      pose_home.orientation.y =  0.000;
-      pose_home.orientation.z =  0.707;
-      pose_home.orientation.w =  0.707;
+      pose_test_start.position.x = 0.0;
+      pose_test_start.position.y = 0.223;
+      pose_test_start.position.z = 0.098;
+      pose_test_start.orientation.x =  0.000;
+      pose_test_start.orientation.y =  0.000;
+      pose_test_start.orientation.z =  0.707;
+      pose_test_start.orientation.w =  0.707;
+
+      pose_test_end.position.x = 0.0;
+      pose_test_end.position.y = 0.223;
+      pose_test_end.position.z = 0.244;
+      pose_test_end.orientation.x =  0.000;
+      pose_test_end.orientation.y =  0.000;
+      pose_test_end.orientation.z =  0.707;
+      pose_test_end.orientation.w =  0.707;
     }
 
   private:
@@ -44,9 +52,11 @@ class JoyInputHandler : public rclcpp::Node
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr goal_pose_joy_publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
     geometry_msgs::msg::Pose curr_pose;
-    geometry_msgs::msg::Pose pose_home;
-    geometry_msgs::msg::Pose pose_sleep;
-
+    // poses for testing the arm's motion
+    geometry_msgs::msg::Pose pose_test_start;
+    geometry_msgs::msg::Pose pose_test_end;
+    float theta = 0;
+    bool safe_to_publish = true;
 
     /**
      * This method is the callback function for /joy.
@@ -66,25 +76,55 @@ class JoyInputHandler : public rclcpp::Node
     {
       geometry_msgs::msg::Pose new_pose = curr_pose;
 
-      // Back button
-      if (msg->buttons[6] == 1) {
-        RCLCPP_INFO(this->get_logger(), "Publishing home pose");
-        pose_publisher_->publish(pose_home);
+      if (msg->buttons[6] == 1 && safe_to_publish == true) 
+      { // Back button pressed
+        RCLCPP_INFO(this->get_logger(), "Publishing pose_test_start");
+        curr_pose = pose_test_start;
+        this->publish_marker(pose_test_start);
+        pose_publisher_->publish(pose_test_start);
+        safe_to_publish = false;
+      }
+      if(msg->buttons[7] == 1 && safe_to_publish == true)
+      { // start button pressed
+        RCLCPP_INFO(this->get_logger(), "Publishing pose_test_end");
+        curr_pose = pose_test_end;
+        this->publish_marker(pose_test_end);
+        pose_publisher_->publish(pose_test_end);
+        safe_to_publish = false;
+      }
+      if (msg->buttons[2] && safe_to_publish)
+      { // X button pressed
+        RCLCPP_INFO(this->get_logger(), "Publishing a target pose");
+        pose_publisher_->publish(new_pose);
+        safe_to_publish = false;
       }
 
       // Update pose
-      curr_pose.position.x +=  (0.01)*msg->axes[3]; // right stick
-      curr_pose.position.x +=  (0.01)*msg->axes[4]; // right stick
-      curr_pose.position.y += -(0.01)*msg->axes[0]; // left stick
-      curr_pose.position.z +=  (0.01)*msg->axes[1]; // left stick
+      curr_pose.position.x +=  (0.005)*msg->axes[3]; // right stick
+      curr_pose.position.x +=  (0.005)*msg->axes[4]; // right stick
+      curr_pose.position.y += -(0.005)*msg->axes[0]; // left stick
+      curr_pose.position.z +=  (0.005)*msg->axes[1]; // left stick
 
-      // Home button pressed
-      if (msg->buttons[7] == 1) {
-        // RCLCPP_INFO(this->get_logger(), "Updated pose to 'Sleep' position"); 
+      // LB rotate counter-clockwise
+      if(msg->buttons[4] == 1)
+      {
+        theta += (0.05)*msg->axes[2];
+        curr_pose.orientation.w = cos(theta);
+        curr_pose.orientation.z = sin(theta);
+      }
+      
+      // RB rotate clockwise
+      if(msg->buttons[5] == 1)
+      {
+        theta -= (0.05)*msg->axes[5];
+        curr_pose.orientation.w = cos(theta);
+        curr_pose.orientation.z = sin(theta);
       }
 
       // Print updated pose
-      if (new_pose != curr_pose) {
+      if (new_pose != curr_pose) 
+      {
+        safe_to_publish = true;
         RCLCPP_INFO(
           this->get_logger(), 
           "Updated \n Pose: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
@@ -95,14 +135,7 @@ class JoyInputHandler : public rclcpp::Node
           new_pose.orientation.y, 
           new_pose.orientation.z,
           new_pose.orientation.w);
-      }
-
-      this->publish_marker(new_pose);
-
-      if (msg->buttons[2] == 1) { // X button pressed
-        // publish pose
-        RCLCPP_INFO(this->get_logger(), "Publishing a target pose");
-        pose_publisher_->publish(new_pose);
+        this->publish_marker(new_pose);
       }
     }
 
