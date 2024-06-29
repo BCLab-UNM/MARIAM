@@ -1,3 +1,31 @@
+# Copyright 2022 Trossen Robotics
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#    * Redistributions of source code must retain the above copyright
+#      notice, this list of conditions and the following disclaimer.
+#
+#    * Redistributions in binary form must reproduce the above copyright
+#      notice, this list of conditions and the following disclaimer in the
+#      documentation and/or other materials provided with the distribution.
+#
+#    * Neither the name of the copyright holder nor the names of its
+#      contributors may be used to endorse or promote products derived from
+#      this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -56,7 +84,6 @@ def launch_setup(context, *args, **kwargs):
     hardware_type_launch_arg = LaunchConfiguration('hardware_type')
     xs_driver_logging_level_launch_arg = LaunchConfiguration(
         'xs_driver_logging_level')
-    use_joy_launch_arg = LaunchConfiguration('use_joy')
 
     # sets use_sim_time parameter to 'true' if using gazebo hardware
     use_sim_time_param = determine_use_sim_time_param(
@@ -101,7 +128,7 @@ def launch_setup(context, *args, **kwargs):
     }
 
     ompl_planning_pipeline_yaml_file = load_yaml(
-        'interbotix_xsarm_moveit', 'config/ompl_planning.yaml'
+        'arm_controller', 'config/ompl_planning.yaml'
     )
     ompl_planning_pipeline_config['move_group'].update(
         ompl_planning_pipeline_yaml_file)
@@ -115,6 +142,35 @@ def launch_setup(context, *args, **kwargs):
         'interbotix_xsarm_moveit',
         f'config/joint_limits/{robot_model_launch_arg.perform(context)}_joint_limits.yaml'
     )
+
+    joint_limits = {
+        'robot_description_planning': config_joint_limits,
+    }
+
+    moveit_controllers = {
+        'moveit_simple_controller_manager':
+            controllers_config,
+        'moveit_controller_manager':
+            'moveit_simple_controller_manager/MoveItSimpleControllerManager',
+    }
+
+    trajectory_execution_parameters = {
+        'moveit_manage_controllers': True,
+        'trajectory_execution.allowed_execution_duration_scaling': 1.2,
+        'trajectory_execution.allowed_goal_duration_margin': 0.5,
+        'trajectory_execution.allowed_start_tolerance': 0.01,
+    }
+
+    planning_scene_monitor_parameters = {
+        'publish_planning_scene': True,
+        'publish_geometry_updates': True,
+        'publish_state_updates': True,
+        'publish_transforms_updates': True,
+    }
+
+    sensor_parameters = {
+        'sensors': [''],
+    }
 
     remappings = [
         (
@@ -131,43 +187,61 @@ def launch_setup(context, *args, **kwargs):
         ),
     ]
 
-    joy_node = Node(
-        condition=IfCondition(use_joy_launch_arg),
-    	package='joy',
-    	executable='joy_node',
-    	name='joy_node',
-    )
-
-    # MoveGroupInterface node
-    joy_moveit_constrained_node = Node(
-    	package='arm_controller',
-    	executable='joy_moveit_constrained',
-    	name='joy_moveit_constrained',
+    move_group_node = Node(
+        package='moveit_ros_move_group',
+        executable='move_group',
+        # namespace=robot_name_launch_arg,
+        parameters=[
+            {
+                'planning_scene_monitor_options': {
+                    'robot_description':
+                        'robot_description',
+                    'joint_state_topic':
+                        f'/{robot_name_launch_arg.perform(context)}/joint_states',
+                },
+                'use_sim_time': use_sim_time_param,
+            },
+            robot_description,
+            robot_description_semantic,
+            kinematics_config,
+            ompl_planning_pipeline_config,
+            trajectory_execution_parameters,
+            moveit_controllers,
+            planning_scene_monitor_parameters,
+            joint_limits,
+            sensor_parameters,
+        ],
         remappings=remappings,
+        output={'both': 'screen'},
+    )
+
+    moveit_rviz_node = Node(
+        condition=IfCondition(use_moveit_rviz_launch_arg),
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        # namespace=robot_name_launch_arg,
+        arguments=[
+            '-d', rviz_config_file_launch_arg,
+            '-f', rviz_frame_launch_arg,
+        ],
         parameters=[
             robot_description,
             robot_description_semantic,
+            ompl_planning_pipeline_config,
+            kinematics_config,
+            {'use_sim_time': use_sim_time_param},
         ],
-        output='screen',
+        remappings=remappings,
+        output={'both': 'log'},
     )
 
-    joy_input_handler_node = Node(
-        package='arm_controller',
-    	executable='joy_input_handler',
-    	name='joy_input_handler',
-        parameters=[
-            robot_description,
-            robot_description_semantic,
-        ],
-        output='screen',
-    )
-
-    xsarm_moveit_launch_include = IncludeLaunchDescription(
+    xsarm_ros_control_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
-                FindPackageShare('interbotix_xsarm_moveit'),
+                FindPackageShare('interbotix_xsarm_ros_control'),
                 'launch',
-                'xsarm_moveit.launch.py'
+                'xsarm_ros_control.launch.py'
             ])
         ]),
         launch_arguments={
@@ -193,11 +267,71 @@ def launch_setup(context, *args, **kwargs):
         ),
     )
 
+    xsarm_gz_classic_launch_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('interbotix_xsarm_sim'),
+                'launch',
+                'xsarm_gz_classic.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_model': robot_model_launch_arg,
+            'robot_name': robot_name_launch_arg,
+            'base_link_frame': base_link_frame_launch_arg,
+            'show_ar_tag': show_ar_tag_launch_arg,
+            'show_gripper_bar': 'true',
+            'show_gripper_fingers': 'true',
+            'use_world_frame': use_world_frame_launch_arg,
+            'external_urdf_loc': external_urdf_loc_launch_arg,
+            'use_rviz': 'false',
+            'world_filepath': world_filepath_launch_arg,
+            'hardware_type': hardware_type_launch_arg,
+            'robot_description': robot_description_launch_arg,
+            'use_sim_time': use_sim_time_param,
+        }.items(),
+        condition=LaunchConfigurationEquals(
+            launch_configuration_name='hardware_type',
+            expected_value='gz_classic'
+        ),
+    )
+
+    joy_node = Node(
+    	package='joy',
+    	executable='joy_node',
+    	name='joy_node',
+    )
+
+    joy_input_handler_node = Node(
+        package='arm_controller',
+    	executable='joy_input_handler',
+    	name='joy_input_handler',
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+        ],
+        output='screen',
+    )
+
+    joy_moveit_constrained_node = Node(
+    	package='arm_controller',
+    	executable='joy_moveit_constrained',
+    	name='joy_moveit_constrained',
+        parameters=[
+            robot_description,
+            robot_description_semantic,
+        ],
+        output='screen',
+    )
+
     return [
+        move_group_node,
+        moveit_rviz_node,
+        xsarm_ros_control_launch_include,
+        xsarm_gz_classic_launch_include,
         joy_node,
-        joy_moveit_constrained_node,
         joy_input_handler_node,
-        xsarm_moveit_launch_include,
+        joy_moveit_constrained_node
     ]
 
 
@@ -206,8 +340,16 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
+            default_value='px100',
             choices=get_interbotix_xsarm_models(),
             description='model type of the Interbotix Arm such as `wx200` or `rx150`.',
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'hardware_type',
+            default_value='fake',
+            # choices=['fake', 'gz_classic', 'actual']
         )
     )
     declared_arguments.append(
@@ -305,13 +447,6 @@ def generate_launch_description():
             show_gripper_bar='true',
             show_gripper_fingers='true',
             hardware_type='actual',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_joy',
-            default_value='true',
-            description='whether to use the joy node to control the arm or not.'
         )
     )
 

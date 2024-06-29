@@ -2,6 +2,7 @@
 #include <functional>
 
 #include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <visualization_msgs/msg/marker.hpp>
@@ -29,22 +30,21 @@ class JoyInputHandler : public rclcpp::Node
         std::bind(&JoyInputHandler::joy_callback, this, _1)
       );
 
-      // Set custom home pose
-      pose_test_start.position.x = 0.0;
-      pose_test_start.position.y = 0.223;
+      pose_test_start.position.x = 0.250048;
+      pose_test_start.position.y = 0;
       pose_test_start.position.z = 0.098;
       pose_test_start.orientation.x =  0.000;
       pose_test_start.orientation.y =  0.000;
-      pose_test_start.orientation.z =  0.707;
-      pose_test_start.orientation.w =  0.707;
+      pose_test_start.orientation.z =  0.000;
+      pose_test_start.orientation.w =  1.000;
 
-      pose_test_end.position.x = 0.0;
-      pose_test_end.position.y = 0.223;
-      pose_test_end.position.z = 0.244;
+      pose_test_end.position.x = 0.250048;
+      pose_test_end.position.y = 0;
+      pose_test_end.position.z = 0.144;
       pose_test_end.orientation.x =  0.000;
       pose_test_end.orientation.y =  0.000;
-      pose_test_end.orientation.z =  0.707;
-      pose_test_end.orientation.w =  0.707;
+      pose_test_end.orientation.z =  0.000;
+      pose_test_end.orientation.w =  1.000;
     }
 
   private:
@@ -78,7 +78,7 @@ class JoyInputHandler : public rclcpp::Node
 
       if (msg->buttons[6] == 1 && safe_to_publish == true) 
       { // Back button pressed
-        RCLCPP_INFO(this->get_logger(), "Publishing pose_test_start");
+        RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_start\n\n");
         curr_pose = pose_test_start;
         this->publish_marker(pose_test_start);
         pose_publisher_->publish(pose_test_start);
@@ -86,7 +86,7 @@ class JoyInputHandler : public rclcpp::Node
       }
       if(msg->buttons[7] == 1 && safe_to_publish == true)
       { // start button pressed
-        RCLCPP_INFO(this->get_logger(), "Publishing pose_test_end");
+        RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_end\n\n");
         curr_pose = pose_test_end;
         this->publish_marker(pose_test_end);
         pose_publisher_->publish(pose_test_end);
@@ -94,7 +94,7 @@ class JoyInputHandler : public rclcpp::Node
       }
       if (msg->buttons[2] && safe_to_publish)
       { // X button pressed
-        RCLCPP_INFO(this->get_logger(), "Publishing a target pose");
+        RCLCPP_INFO(this->get_logger(), "\n\nPublishing target pose\n\n");
         pose_publisher_->publish(new_pose);
         safe_to_publish = false;
       }

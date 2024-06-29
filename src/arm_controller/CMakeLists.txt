@@ -87,6 +87,7 @@ install(TARGETS joy_input_handler
 install(
   DIRECTORY
     launch
+    config
   DESTINATION
     share/${PROJECT_NAME}/
 )
