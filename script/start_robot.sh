@@ -42,4 +42,4 @@ then
 else
     export ROS_DOMAIN_ID=2
 fi
-ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual controller:=xbox360 use_joy:=false
+ros2 launch arm_controller moveit_joy.launch.py robot_model:=px100 hardware_type:=actual use_joy:=false
