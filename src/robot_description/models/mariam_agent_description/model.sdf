@@ -1,0 +1,343 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <model name="mariam_agent">  
+  <static>false</static>
+
+  <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
+  <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+  <link name="base_footprint"/>
+
+  <!-- ********************** ROBOT BASE *********************************  -->
+  <link name="base_link">
+
+    <collision name="base_collision">
+      <pose>0 0 0.02 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.24 0.20 0.06</size>
+        </box>
+      </geometry>
+    </collision>
+
+    <visual name="base_visual">
+      <pose>0 0 0.02 0 0 0</pose>
+      <geometry>
+        <box>
+          <size>0.24 0.20 0.06</size>
+        </box>
+      </geometry>
+      <material>
+        <ambient>1.0 0.0 0.0 1.0</ambient>
+        <diffuse>1.0 0.0 0.0 1.0</diffuse>
+        <specular>0.0 0.0 0.0 1.0</specular>
+        <emissive>0.0 0.0 0.0 1.0</emissive>
+      </material>
+    </visual>
+  </link>
+
+  <!-- *********************** IMU SENSOR SETUP **************************  -->
+  <link name="imu_link">
+    <gravity>true</gravity>
+    <sensor name="bmb_imu" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <visualize>true</visualize>
+      <imu>
+        <orientation>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-3</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-3</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-3</stddev>
+            </noise>
+          </z>
+        </orientation>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+      <plugin name="marima_agent_imu" filename="libgazebo_ros_imu_sensor.so">
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        <frame_name>imu_link</frame_name>
+        <ros>
+          <namespace>/imu</namespace>
+          <remapping>~/out:=data</remapping>
+        </ros>
+      </plugin>
+    </sensor>
+  </link>
+
+  <!-- *********************** GPS SETUP *********************************  -->
+  <link name="gps_link">
+    <sensor name="ma_gps" type="gps">
+      <always_on>true</always_on>
+      <update_rate>10.0</update_rate>
+      <gps>
+        <position_sensing>
+          <horizontal>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1e-2</stddev>
+            </noise>
+          </horizontal>
+          <vertical>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1</stddev>
+            </noise>
+          </vertical>
+        </position_sensing>
+      </gps>
+      <plugin name="mariam_agent_gps" filename="libgazebo_ros_gps_sensor.so">
+        <ros>
+          <remapping>~/out:=gps/fix</remapping>
+        </ros>
+      </plugin>
+    </sensor>
+  </link>
+
+  <!-- *********************** DRIVE WHEELS ******************************  -->
+  <link name="drivewheel_left_forward_link">
+    <pose>0.09 0.14 -0.01 0 1.570796 1.570796</pose>
+    
+    <collision name="drivewheel_left_forward_collision">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </collision>
+
+    <visual name="drivewheel_left_forward_visual">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="drivewheel_left_back_link">
+    <pose>-0.09 0.14 -0.01 0 1.570796 1.570796</pose>
+    
+    <collision name="drivewheel_left_back_collision">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry> 
+    </collision>
+
+    <visual name="drivewheel_left_back_cvisual">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry> 
+    </visual>
+  </link>
+
+  <link name="drivewheel_right_forward_link">
+    <pose>0.09 -0.14 -0.01 0 1.570796 1.570796</pose>
+    
+    <collision name="drivewheel_right_forward_collision">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </collision>
+
+    <visual name="drivewheel_right_forward_visual">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="drivewheel_right_back_link">
+    <pose>-0.09 -0.14 -0.01 0 1.570796 1.570796</pose>
+    
+    <collision name="drivewheel_right_back_collision">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </collision>
+
+    <visual name="drivewheel_right_back_visual">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- ************************ JOINTS ***********************************  -->
+  <!-- Pose of the joint is the same as the child link frame -->
+  <!-- Axis is the axis of rotation relative to the child link frame -->
+  
+  <joint name="base_joint" type="fixed">
+    <parent>base_footprint</parent>
+    <child>base_link</child>
+    <pose>0 0 0 0 0 0</pose>
+  </joint>
+
+  <joint name="drivewheel_left_forward_joint" type="revolute">
+    <parent>base_link</parent>
+    <child>drivewheel_left_forward_link</child>
+    <pose>0 0 0 0 0 0</pose>
+    <axis>
+      <xyz>0 0 1</xyz>
+    </axis>
+  </joint>
+
+  <joint name="drivewheel_left_back_joint" type="revolute">
+    <parent>base_link</parent>
+    <child>drivewheel_left_back_link</child>
+    <pose>0 0 0 0 0 0</pose>
+    <axis>
+      <xyz>0 0 1</xyz>
+    </axis>
+  </joint>
+
+  <joint name="drivewheel_right_forward_joint" type="revolute">
+    <parent>base_link</parent>
+    <child>drivewheel_right_forward_link</child>
+    <pose>0 0 0 0 0 0</pose>
+    <axis>
+      <xyz>0 0 1</xyz>
+    </axis>
+  </joint>
+
+  <joint name="drivewheel_right_back_joint" type="revolute">
+    <parent>base_link</parent>
+    <child>drivewheel_right_back_link</child>
+    <pose>0 0 0 0 0 0</pose>
+    <axis>
+      <xyz>0 0 1</xyz>
+    </axis>
+  </joint>
+
+  <joint name="imu_joint" type="fixed">
+    <parent>base_link</parent>
+    <child>imu_link</child>
+    <pose>0 0 0 0 0 0</pose>
+  </joint>  
+
+  <joint name="gps_joint" type="fixed">
+    <parent>base_link</parent>
+    <child>gps_link</child>
+    <pose>0 0 0 0 0 0</pose>
+  </joint>  
+
+  <!-- *********************** WHEEL ODOMETRY ***************************    -->
+  <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+    
+    <updateRate>30.0</updateRate>
+    <robotNamespace>/</robotNamespace>
+
+    <!-- wheels -->
+    <num_wheel_pairs>2</num_wheel_pairs>
+    <left_joint>drivewheel_left_forward_joint</left_joint>
+    <left_joint>drivewheel_left_back_joint</left_joint>
+    <right_joint>drivewheel_right_back_joint</right_joint>
+    <right_joint>drivewheel_right_forward_joint</right_joint>
+
+    <!-- kinematics -->
+    <wheel_separation>0.18</wheel_separation>
+    <wheel_diameter>0.11</wheel_diameter>
+
+    <!-- Limits -->
+    <max_wheel_torque>20.0</max_wheel_torque>
+    <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+    <!-- Output -->
+    <odometry_frame>odom</odometry_frame>
+    <robot_base_frame>base_link</robot_base_frame>
+
+    <publish_odom>true</publish_odom>
+    <publish_odom_tf>true</publish_odom_tf>
+    <update_rate>30.0</update_rate>
+
+    <ros>
+      <remapping>odom:=wheel/odometry</remapping>
+    </ros>
+
+  </plugin>
+
+  <!-- *********************** JOINT STATE PUBLISHER *********************   -->
+  
+  <plugin name="mariam_agent_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
+    <ros>
+      <remapping>~/out:=joint_states</remapping>
+    </ros>
+    <update_rate>30</update_rate>
+    <joint_name>drivewheel_left_back_joint</joint_name>
+    <joint_name>drivewheel_right_back_joint</joint_name>
+    <joint_name>drivewheel_left_forward_joint</joint_name>
+    <joint_name>drivewheel_right_forward_joint</joint_name>
+  </plugin>   
+  
+  </model>
+</sdf>
