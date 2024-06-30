@@ -6,6 +6,7 @@
 #include <sensor_msgs/msg/joy.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <visualization_msgs/msg/marker.hpp>
+#include "arm_controller/msg/constrained_pose.hpp"
 
 using std::placeholders::_1;
 
@@ -14,7 +15,7 @@ class JoyInputHandler : public rclcpp::Node
   public:
     JoyInputHandler() : Node("joy_input_handler")
     {
-      pose_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>(
+      pose_publisher_ = this->create_publisher<arm_controller::msg::ConstrainedPose>(
         "joy_target_pose",
         1
       );
@@ -48,8 +49,10 @@ class JoyInputHandler : public rclcpp::Node
     }
 
   private:
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr goal_pose_joy_publisher_;
+    rclcpp::Publisher<arm_controller::msg::ConstrainedPose>::SharedPtr
+      pose_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
+      goal_pose_joy_publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
     geometry_msgs::msg::Pose curr_pose;
     // poses for testing the arm's motion
@@ -57,6 +60,7 @@ class JoyInputHandler : public rclcpp::Node
     geometry_msgs::msg::Pose pose_test_end;
     float theta = 0;
     bool safe_to_publish = true;
+    bool apply_constraints = false;
 
     /**
      * This method is the callback function for /joy.
@@ -76,49 +80,64 @@ class JoyInputHandler : public rclcpp::Node
     {
       geometry_msgs::msg::Pose new_pose = curr_pose;
 
-      if (msg->buttons[6] == 1 && safe_to_publish == true) 
-      { // Back button pressed
+      // Back button pressed
+      if (msg->buttons[6] == 1 && safe_to_publish) 
+      {
         RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_start\n\n");
         curr_pose = pose_test_start;
         this->publish_marker(pose_test_start);
-        pose_publisher_->publish(pose_test_start);
+        this->publish_pose(pose_test_start, true);
         safe_to_publish = false;
       }
-      if(msg->buttons[7] == 1 && safe_to_publish == true)
-      { // start button pressed
+
+      // start button pressed
+      if(msg->buttons[7] == 1 && safe_to_publish)
+      {
         RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_end\n\n");
         curr_pose = pose_test_end;
         this->publish_marker(pose_test_end);
-        pose_publisher_->publish(pose_test_end);
+        this->publish_pose(new_pose, true);
         safe_to_publish = false;
       }
+      
+      // X button pressed
       if (msg->buttons[2] && safe_to_publish)
-      { // X button pressed
+      {
         RCLCPP_INFO(this->get_logger(), "\n\nPublishing target pose\n\n");
-        pose_publisher_->publish(new_pose);
+        this->publish_pose(new_pose, apply_constraints);
         safe_to_publish = false;
       }
 
       // Update pose
-      curr_pose.position.x +=  (0.005)*msg->axes[3]; // right stick
-      curr_pose.position.x +=  (0.005)*msg->axes[4]; // right stick
-      curr_pose.position.y += -(0.005)*msg->axes[0]; // left stick
-      curr_pose.position.z +=  (0.005)*msg->axes[1]; // left stick
+      curr_pose.position.x +=  (0.001)*msg->axes[3]; // right stick
+      curr_pose.position.x +=  (0.001)*msg->axes[4]; // right stick
+      curr_pose.position.y += -(0.001)*msg->axes[0]; // left stick
+      curr_pose.position.z +=  (0.001)*msg->axes[1]; // left stick
 
-      // LB rotate counter-clockwise
-      if(msg->buttons[4] == 1)
+      // LT rotate counter-clockwise
+      if(msg->axes[2] == 1)
       {
         theta += (0.05)*msg->axes[2];
         curr_pose.orientation.w = cos(theta);
         curr_pose.orientation.z = sin(theta);
       }
       
-      // RB rotate clockwise
-      if(msg->buttons[5] == 1)
+      // RT rotate clockwise
+      if(msg->axes[5] == 1)
       {
         theta -= (0.05)*msg->axes[5];
         curr_pose.orientation.w = cos(theta);
         curr_pose.orientation.z = sin(theta);
+      }
+
+      // RB change value for applying constraints
+      if(msg->buttons[5])
+      {
+        apply_constraints = !apply_constraints;
+        RCLCPP_INFO(this->get_logger(),
+          "Apply constraints value: %d",
+          apply_constraints
+        );
       }
 
       // Print updated pose
@@ -127,7 +146,7 @@ class JoyInputHandler : public rclcpp::Node
         safe_to_publish = true;
         RCLCPP_INFO(
           this->get_logger(), 
-          "Updated \n Pose: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
+          "Position: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
           new_pose.position.x, 
           new_pose.position.y, 
           new_pose.position.z,
@@ -137,6 +156,14 @@ class JoyInputHandler : public rclcpp::Node
           new_pose.orientation.w);
         this->publish_marker(new_pose);
       }
+    }
+
+    void publish_pose(geometry_msgs::msg::Pose new_pose, bool use_constraints)
+    {
+      auto msg = arm_controller::msg::ConstrainedPose();
+      msg.pose = new_pose;
+      msg.use_plane_constraint = use_constraints;
+      pose_publisher_->publish(msg);
     }
 
     void publish_marker(geometry_msgs::msg::Pose new_pose)

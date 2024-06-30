@@ -108,6 +108,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
 
 target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
+target_link_libraries(joy_input_handler "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

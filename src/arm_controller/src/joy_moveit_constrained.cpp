@@ -27,7 +27,7 @@ class JoyMoveitConstrained : public rclcpp::Node
   public:
     JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
-      pose_subscription_ = this->create_subscription<geometry_msgs::msg::Pose>(
+      pose_subscription_ = this->create_subscription<arm_controller::msg::ConstrainedPose>(
         "joy_target_pose",
         1,
         std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
@@ -71,7 +71,7 @@ class JoyMoveitConstrained : public rclcpp::Node
     rclcpp::Publisher<arm_controller::msg::PathAndExecutionTiming>::SharedPtr 
       path_and_execution_timing_publisher_;
 
-    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr
+    rclcpp::Subscription<arm_controller::msg::ConstrainedPose>::SharedPtr
       pose_subscription_;
 
     const rclcpp::Logger LOGGER = 
@@ -89,27 +89,34 @@ class JoyMoveitConstrained : public rclcpp::Node
      * 
      * @msg: the target_pose
      */
-    void targetPoseCallback(const geometry_msgs::msg::Pose::SharedPtr msg)
+    void targetPoseCallback(
+      const arm_controller::msg::ConstrainedPose::SharedPtr msg
+    )
     {
       RCLCPP_INFO(LOGGER, "\n\nReceived a target pose\n\n");
       const std::string pose_ref_frame = move_group->getPoseReferenceFrame();
       const std::string end_effector_link = move_group->getEndEffectorLink();
-      auto target_pose = *msg;
-      geometry_msgs::msg::Pose curr_pose = 
+      auto target_pose = msg->pose;
+      moveit_msgs::msg::Constraints constraints;
+      
+      if(msg->use_plane_constraint)
+      {
+        geometry_msgs::msg::Pose curr_pose = 
                                       getEndEffectorPose(end_effector_link);
-
-      moveit_msgs::msg::Constraints constraints = createConstraints(
-        curr_pose,
-        pose_ref_frame,
-        end_effector_link
-      );
+        constraints = createConstraints(
+          curr_pose,
+          pose_ref_frame,
+          end_effector_link
+        );
+        move_group->setPathConstraints(constraints);
+      }
+      else move_group->clearPathConstraints();
 
       MoveGroupInterface::Plan plan;
-      move_group->setPathConstraints(constraints);
       move_group->setPoseTarget(target_pose);
       move_group->setPlanningTime(30);
 
-      // You could also use plan.planning_time_
+      // NOTE: You could also use plan.planning_time_
       auto planning_time_start = high_resolution_clock::now();
       bool success = (
         move_group->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS
@@ -131,7 +138,8 @@ class JoyMoveitConstrained : public rclcpp::Node
           planning_time.count(),
           execution_time.count()
         );
-        publishPlanAndExecuteTiming(planning_time, execution_time);
+        publishPlanAndExecuteTiming(planning_time.count(),
+                                    execution_time.count());
       }
     }
     
@@ -159,13 +167,13 @@ class JoyMoveitConstrained : public rclcpp::Node
     }
 
     void publishPlanAndExecuteTiming(
-      duration<double> planning_time,
-      duration<double> execution_time
+      double planning_time,
+      double execution_time
     )
     {
       auto msg = arm_controller::msg::PathAndExecutionTiming();
-      msg.path_planning_time = planning_time.count();
-      msg.execution_time = execution_time.count();
+      msg.path_planning_time = planning_time;
+      msg.execution_time = execution_time;
       path_and_execution_timing_publisher_->publish(msg);
     }
 
