@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(joy REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 
 # For executable pose_listener_moveit
@@ -92,6 +93,22 @@ install(
     share/${PROJECT_NAME}/
 )
 
+# converting messages to into C++ code
+set(msg_files
+  "msg/ConstrainedPose.msg"
+  "msg/PathAndExecutionTiming.msg"
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+  DEPENDENCIES geometry_msgs
+)
+
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
+
+target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -103,5 +120,7 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()

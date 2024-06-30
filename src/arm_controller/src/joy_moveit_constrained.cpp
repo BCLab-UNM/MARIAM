@@ -1,9 +1,12 @@
 // C++
 #include <memory>
+#include <chrono>
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include "arm_controller/msg/constrained_pose.hpp"
+#include "arm_controller/msg/path_and_execution_timing.hpp"
 
 // moveit
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -17,25 +20,33 @@
 
 using moveit::planning_interface::MoveGroupInterface;
 using std::placeholders::_1;
+using namespace std::chrono;
 
 class JoyMoveitConstrained : public rclcpp::Node 
 {
   public:
     JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
-      pose_subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>(
+      pose_subscription_ = this->create_subscription<geometry_msgs::msg::Pose>(
         "joy_target_pose",
         1,
-        std::bind(&JoyMoveitConstrained::target_pose_callback, this, std::placeholders::_1)
+        std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
       );
       
-      marker_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(
+      marker_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>(
         "plane_constraint",
         10
       );
 
+      path_and_execution_timing_publisher_ = 
+        this->create_publisher<arm_controller::msg::PathAndExecutionTiming>(
+          "moveit_path_and_execution_timing",
+          10
+        );
+
       tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
-      tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+      tf_listener_ = 
+              std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     }
 
     /**
@@ -43,7 +54,8 @@ class JoyMoveitConstrained : public rclcpp::Node
      */
     void init_move_group()
     {
-      move_group = new MoveGroupInterface(shared_from_this(), "interbotix_arm");
+      move_group = 
+          new MoveGroupInterface(shared_from_this(), "interbotix_arm");
     }
     
     ~JoyMoveitConstrained() 
@@ -53,12 +65,21 @@ class JoyMoveitConstrained : public rclcpp::Node
 
   private:
     MoveGroupInterface *move_group = nullptr;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_subscriber_;
-    const rclcpp::Logger LOGGER = rclcpp::get_logger("joy_moveit_constrained");
+
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
+      marker_publisher_;
+    rclcpp::Publisher<arm_controller::msg::PathAndExecutionTiming>::SharedPtr 
+      path_and_execution_timing_publisher_;
+
+    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr
+      pose_subscription_;
+
+    const rclcpp::Logger LOGGER = 
+      rclcpp::get_logger("joy_moveit_constrained");
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+
 
     /**
      * This callback function is triggered when a pose is published from
@@ -68,78 +89,56 @@ class JoyMoveitConstrained : public rclcpp::Node
      * 
      * @msg: the target_pose
      */
-    void target_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
+    void targetPoseCallback(const geometry_msgs::msg::Pose::SharedPtr msg)
     {
       RCLCPP_INFO(LOGGER, "\n\nReceived a target pose\n\n");
       const std::string pose_ref_frame = move_group->getPoseReferenceFrame();
       const std::string end_effector_link = move_group->getEndEffectorLink();
       auto target_pose = *msg;
-      geometry_msgs::msg::Pose curr_pose = get_ee_pose(end_effector_link);
+      geometry_msgs::msg::Pose curr_pose = 
+                                      getEndEffectorPose(end_effector_link);
 
-      /* Plane constraints */
-      moveit_msgs::msg::PositionConstraint plane_constraint;
-      plane_constraint.header.frame_id = pose_ref_frame;
-      RCLCPP_INFO(LOGGER, "\n\nPose reference frame: %s\n\n",
-                              pose_ref_frame.c_str());
-      // sets the link plane_constraint will be applied to
-      RCLCPP_INFO(LOGGER, "\n\nEnd-effector link: %s\n\n",
-                              end_effector_link.c_str());
-      plane_constraint.link_name = end_effector_link;
-
-      shape_msgs::msg::SolidPrimitive primitive;
-      primitive.type = primitive.BOX;
-      primitive.dimensions = { 0.01, 0.1, 0.2 };
-      plane_constraint.constraint_region.primitives.push_back(primitive);
-
-      // creating a pose for the plane_constraint
-      // TODO: have the plane position lie in something like "starting_life_pose"
-      geometry_msgs::msg::Pose plane_pose;
-      plane_pose.position.x = curr_pose.position.x;
-      plane_pose.position.y = curr_pose.position.y;
-      plane_pose.position.z = curr_pose.position.z;
-      
-      plane_constraint.constraint_region.primitive_poses.push_back(plane_pose);
-      plane_constraint.weight = 1.0;
-      this->publish_plane_constraint(plane_pose);
-
-      moveit_msgs::msg::OrientationConstraint orientation_constraint;
-      orientation_constraint.header.frame_id = pose_ref_frame;
-      orientation_constraint.link_name = end_effector_link;
-
-      orientation_constraint.orientation = curr_pose.orientation;
-      orientation_constraint.absolute_x_axis_tolerance = 0.4;
-      orientation_constraint.absolute_y_axis_tolerance = 0.4;
-      orientation_constraint.absolute_z_axis_tolerance = 0.4;
-      orientation_constraint.weight = 1.0;
-
-      moveit_msgs::msg::Constraints constraints;
-      constraints.name = "use_equality_constraints";
-      constraints.position_constraints.push_back(plane_constraint);
-      constraints.orientation_constraints.push_back(orientation_constraint);
+      moveit_msgs::msg::Constraints constraints = createConstraints(
+        curr_pose,
+        pose_ref_frame,
+        end_effector_link
+      );
 
       MoveGroupInterface::Plan plan;
-      RCLCPP_INFO(LOGGER, "\n\nApplying path constraint\n\n");
       move_group->setPathConstraints(constraints);
       move_group->setPoseTarget(target_pose);
       move_group->setPlanningTime(30);
-      bool success = (move_group->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS);
-      RCLCPP_INFO(LOGGER, "\n\nPlan status: %s\n\n", success ? "SUCCESS" : "FAILED");
+
+      // You could also use plan.planning_time_
+      auto planning_time_start = high_resolution_clock::now();
+      bool success = (
+        move_group->plan(plan) == moveit::core::MoveItErrorCode::SUCCESS
+      );
+      auto planning_time_end = high_resolution_clock::now();
+      duration<double> planning_time = duration_cast<duration<double>>(
+        planning_time_end - planning_time_start
+      );
 
       if(success)
       {
-        RCLCPP_INFO(LOGGER, "\n\nMoving to target pose\n\n");
+        auto exectuion_time_start = high_resolution_clock::now();
         move_group->execute(plan);
-      }
-      else
-      {
-        RCLCPP_INFO(LOGGER, "\n\nCould not find a plan to move to target pose\n\n");
+        auto execution_time_end = high_resolution_clock::now();
+        auto execution_time = duration_cast<duration<double>>(
+          execution_time_end - exectuion_time_start
+        );
+        RCLCPP_INFO(LOGGER, "Planning and execution time: %f s, %f s",
+          planning_time.count(),
+          execution_time.count()
+        );
+        publishPlanAndExecuteTiming(planning_time, execution_time);
       }
     }
     
      /**
      * Publishes a visual representation of the constraint.
      */
-    void publish_plane_constraint(geometry_msgs::msg::Pose plane_pose)
+    void publishPlaneConstraint(geometry_msgs::msg::Pose plane_pose)
     {
       RCLCPP_INFO(LOGGER, "Publishing plane");
       auto marker = visualization_msgs::msg::Marker();
@@ -156,17 +155,77 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.color.g = 0.05;
       marker.color.b = 0.05;
       marker.pose = plane_pose;
-      marker_pub_->publish(marker);
+      marker_publisher_->publish(marker);
     }
 
-    geometry_msgs::msg::Pose get_ee_pose(const std::string end_effector)
+    void publishPlanAndExecuteTiming(
+      duration<double> planning_time,
+      duration<double> execution_time
+    )
+    {
+      auto msg = arm_controller::msg::PathAndExecutionTiming();
+      msg.path_planning_time = planning_time.count();
+      msg.execution_time = execution_time.count();
+      path_and_execution_timing_publisher_->publish(msg);
+    }
+
+    /**
+     * Creates a plane constraint and an orientation constraint,
+     * then adds them to a Constraints object, which 
+     * is the object returned by the method.
+     */
+    moveit_msgs::msg::Constraints createConstraints(
+      geometry_msgs::msg::Pose curr_pose,
+      const std::string pose_ref_frame,
+      const std::string end_effector_link
+    )
+    {
+      RCLCPP_INFO(LOGGER, "\n\nCreating constraints\n\n");
+      moveit_msgs::msg::PositionConstraint plane_constraint;
+      plane_constraint.header.frame_id = pose_ref_frame;
+      plane_constraint.link_name = end_effector_link;
+
+      shape_msgs::msg::SolidPrimitive primitive;
+      primitive.type = primitive.BOX;
+      primitive.dimensions = { 0.01, 0.1, 0.2 }; // in meters
+      plane_constraint.constraint_region.primitives.push_back(primitive);
+
+      geometry_msgs::msg::Pose plane_pose;
+      plane_pose.position.x = curr_pose.position.x;
+      plane_pose.position.y = curr_pose.position.y;
+      plane_pose.position.z = curr_pose.position.z;
+      
+      plane_constraint.constraint_region.primitive_poses.push_back(plane_pose);
+      plane_constraint.weight = 1.0;
+      this->publishPlaneConstraint(plane_pose);
+
+      moveit_msgs::msg::OrientationConstraint orientation_constraint;
+      orientation_constraint.header.frame_id = pose_ref_frame;
+      orientation_constraint.link_name = end_effector_link;
+
+      orientation_constraint.orientation = curr_pose.orientation;
+      orientation_constraint.absolute_x_axis_tolerance = 0.4;
+      orientation_constraint.absolute_y_axis_tolerance = 0.4;
+      orientation_constraint.absolute_z_axis_tolerance = 0.4;
+      orientation_constraint.weight = 1.0;
+
+      moveit_msgs::msg::Constraints constraints;
+      constraints.name = "use_equality_constraints";
+      constraints.position_constraints.push_back(plane_constraint);
+      constraints.orientation_constraints.push_back(orientation_constraint);
+      RCLCPP_INFO(LOGGER, "\n\nReturning constraints\n\n");
+      return constraints;
+    }
+
+    /**
+     * This method is used to get the current position of the end effector.
+     */
+    geometry_msgs::msg::Pose getEndEffectorPose(const std::string end_effector)
     {
       geometry_msgs::msg::Pose pose;
       try
       {
-        // auto now = this->get_clock()->now();
         geometry_msgs::msg::TransformStamped transformStamped;
-
         transformStamped = tf_buffer_->lookupTransform(
           "world", end_effector, rclcpp::Time(0)
         );
