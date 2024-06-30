@@ -22,16 +22,29 @@ using moveit::planning_interface::MoveGroupInterface;
 using std::placeholders::_1;
 using namespace std::chrono;
 
+/**
+ * Topics:
+ * - joy_target_pose: this node has a subscription to this topic.
+ * Once a target_pose is published to this topic, the node use the
+ * moveit move group interface to create a plan and move to the target pose.
+ * 
+ * - plane_constraint: this node publishes the position and orientation of
+ * the plane constraint to this topic, whenever one is created.
+ * 
+ * - moveit_path_and_execution_timing: this node will publish the time taken
+ * to create a plan and execute that plan to this topic.
+ */
 class JoyMoveitConstrained : public rclcpp::Node 
 {
   public:
     JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
-      pose_subscription_ = this->create_subscription<arm_controller::msg::ConstrainedPose>(
-        "joy_target_pose",
-        1,
-        std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
-      );
+      pose_subscription_ = 
+          this->create_subscription<arm_controller::msg::ConstrainedPose>(
+            "joy_target_pose",
+            10,
+            std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
+          );
       
       marker_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>(
         "plane_constraint",
@@ -143,7 +156,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       }
     }
     
-     /**
+    /**
      * Publishes a visual representation of the constraint.
      */
     void publishPlaneConstraint(geometry_msgs::msg::Pose plane_pose)
@@ -156,8 +169,8 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.type = visualization_msgs::msg::Marker::CUBE;
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.scale.x = 0.01;
-      marker.scale.y = 0.1;
-      marker.scale.z = 0.2;
+      marker.scale.y = 0.05;
+      marker.scale.z = 0.4;
       marker.color.a = 0.5;
       marker.color.r = 0.05;
       marker.color.g = 0.05;
@@ -195,7 +208,7 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       shape_msgs::msg::SolidPrimitive primitive;
       primitive.type = primitive.BOX;
-      primitive.dimensions = { 0.01, 0.1, 0.2 }; // in meters
+      primitive.dimensions = { 0.01, 0.05, 0.4 }; // in meters
       plane_constraint.constraint_region.primitives.push_back(primitive);
 
       geometry_msgs::msg::Pose plane_pose;

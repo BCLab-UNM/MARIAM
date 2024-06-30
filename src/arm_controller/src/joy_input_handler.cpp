@@ -17,7 +17,7 @@ class JoyInputHandler : public rclcpp::Node
     {
       pose_publisher_ = this->create_publisher<arm_controller::msg::ConstrainedPose>(
         "joy_target_pose",
-        1
+        10
       );
 
       goal_pose_joy_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>(
@@ -41,7 +41,7 @@ class JoyInputHandler : public rclcpp::Node
 
       pose_test_end.position.x = 0.250048;
       pose_test_end.position.y = 0;
-      pose_test_end.position.z = 0.144;
+      pose_test_end.position.z = 0.244;
       pose_test_end.orientation.x =  0.000;
       pose_test_end.orientation.y =  0.000;
       pose_test_end.orientation.z =  0.000;
