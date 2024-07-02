@@ -9,18 +9,21 @@
 #include "arm_controller/msg/constrained_pose.hpp"
 
 using std::placeholders::_1;
+using namespace arm_controller::msg;
+using namespace visualization_msgs::msg;
+using namespace geometry_msgs::msg;
 
 class JoyInputHandler : public rclcpp::Node
 {
   public:
     JoyInputHandler() : Node("joy_input_handler")
     {
-      pose_publisher_ = this->create_publisher<arm_controller::msg::ConstrainedPose>(
+      pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
         10
       );
 
-      goal_pose_joy_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>(
+      goal_pose_joy_publisher_ = this->create_publisher<Marker>(
         "goal_pose_joy",
         10
       );
@@ -49,15 +52,15 @@ class JoyInputHandler : public rclcpp::Node
     }
 
   private:
-    rclcpp::Publisher<arm_controller::msg::ConstrainedPose>::SharedPtr
+    rclcpp::Publisher<ConstrainedPose>::SharedPtr
       pose_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
+    rclcpp::Publisher<Marker>::SharedPtr
       goal_pose_joy_publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
-    geometry_msgs::msg::Pose curr_pose;
+    Pose curr_pose;
     // poses for testing the arm's motion
-    geometry_msgs::msg::Pose pose_test_start;
-    geometry_msgs::msg::Pose pose_test_end;
+    Pose pose_test_start;
+    Pose pose_test_end;
     float theta = 0;
     bool safe_to_publish = true;
     bool apply_constraints = false;
@@ -71,14 +74,15 @@ class JoyInputHandler : public rclcpp::Node
      * Controls:
      * Left stick to move the target pose in the y and z directions.
      * Right stick to move the target pose in the x direction.
+     * 'LT' & 'RT' to rotate the target pose.
      * 'x' to publish the target pose.
-     * 'Back' to publish a preset custom pose.
+     * 'Back' & 'Start' to publish a preset custom pose.
      * 
      * @msg: controller input
      */
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
     {
-      geometry_msgs::msg::Pose new_pose = curr_pose;
+      Pose new_pose = curr_pose;
 
       // Back button pressed
       if (msg->buttons[6] == 1 && safe_to_publish) 
@@ -145,7 +149,7 @@ class JoyInputHandler : public rclcpp::Node
       {
         safe_to_publish = true;
         RCLCPP_INFO(
-          this->get_logger(), 
+          this->get_logger(),
           "Position: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
           new_pose.position.x, 
           new_pose.position.y, 
@@ -158,23 +162,23 @@ class JoyInputHandler : public rclcpp::Node
       }
     }
 
-    void publish_pose(geometry_msgs::msg::Pose new_pose, bool use_constraints)
+    void publish_pose(Pose new_pose, bool use_constraints)
     {
-      auto msg = arm_controller::msg::ConstrainedPose();
+      auto msg = ConstrainedPose();
       msg.pose = new_pose;
       msg.use_plane_constraint = use_constraints;
       pose_publisher_->publish(msg);
     }
 
-    void publish_marker(geometry_msgs::msg::Pose new_pose)
+    void publish_marker(Pose new_pose)
     {
       // Publish goal pose as a marker for rviz
-      auto marker = visualization_msgs::msg::Marker();
+      auto marker = Marker();
       marker.header.frame_id = "world";
       marker.header.stamp = this->now();
-      marker.id = 0;
-      marker.type = visualization_msgs::msg::Marker::ARROW;
-      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.id      = 0;
+      marker.type    = Marker::ARROW;
+      marker.action  = Marker::ADD;
       marker.scale.x = 0.03;
       marker.scale.y = 0.01;
       marker.scale.z = 0.01;
@@ -182,7 +186,7 @@ class JoyInputHandler : public rclcpp::Node
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
-      marker.pose = new_pose;
+      marker.pose    = new_pose;
       goal_pose_joy_publisher_->publish(marker);
     }
 };

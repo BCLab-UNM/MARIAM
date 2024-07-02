@@ -21,6 +21,9 @@
 using moveit::planning_interface::MoveGroupInterface;
 using std::placeholders::_1;
 using namespace std::chrono;
+using namespace arm_controller::msg;
+using namespace visualization_msgs::msg;
+using namespace geometry_msgs::msg;
 
 /**
  * Topics:
@@ -39,20 +42,20 @@ class JoyMoveitConstrained : public rclcpp::Node
   public:
     JoyMoveitConstrained() : Node("joy_moveit_constrained")
     {
-      pose_subscription_ = 
-          this->create_subscription<arm_controller::msg::ConstrainedPose>(
+      pose_sub_ = 
+          this->create_subscription<ConstrainedPose>(
             "joy_target_pose",
             10,
             std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
           );
       
-      marker_publisher_ = this->create_publisher<visualization_msgs::msg::Marker>(
+      market_pub_ = this->create_publisher<Marker>(
         "plane_constraint",
         10
       );
 
-      path_and_execution_timing_publisher_ = 
-        this->create_publisher<arm_controller::msg::PathAndExecutionTiming>(
+      timing_pub_ = 
+        this->create_publisher<PathAndExecutionTiming>(
           "moveit_path_and_execution_timing",
           10
         );
@@ -79,13 +82,9 @@ class JoyMoveitConstrained : public rclcpp::Node
   private:
     MoveGroupInterface *move_group = nullptr;
 
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
-      marker_publisher_;
-    rclcpp::Publisher<arm_controller::msg::PathAndExecutionTiming>::SharedPtr 
-      path_and_execution_timing_publisher_;
-
-    rclcpp::Subscription<arm_controller::msg::ConstrainedPose>::SharedPtr
-      pose_subscription_;
+    rclcpp::Publisher<Marker>::SharedPtr market_pub_;
+    rclcpp::Publisher<PathAndExecutionTiming>::SharedPtr timing_pub_;
+    rclcpp::Subscription<ConstrainedPose>::SharedPtr pose_sub_;
 
     const rclcpp::Logger LOGGER = 
       rclcpp::get_logger("joy_moveit_constrained");
@@ -102,9 +101,7 @@ class JoyMoveitConstrained : public rclcpp::Node
      * 
      * @msg: the target_pose
      */
-    void targetPoseCallback(
-      const arm_controller::msg::ConstrainedPose::SharedPtr msg
-    )
+    void targetPoseCallback(const ConstrainedPose::SharedPtr msg)
     {
       RCLCPP_INFO(LOGGER, "\n\nReceived a target pose\n\n");
       const std::string pose_ref_frame = move_group->getPoseReferenceFrame();
@@ -114,8 +111,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       
       if(msg->use_plane_constraint)
       {
-        geometry_msgs::msg::Pose curr_pose = 
-                                      getEndEffectorPose(end_effector_link);
+        Pose curr_pose = getEndEffectorPose(end_effector_link);
         constraints = createConstraints(
           curr_pose,
           pose_ref_frame,
@@ -159,15 +155,15 @@ class JoyMoveitConstrained : public rclcpp::Node
     /**
      * Publishes a visual representation of the constraint.
      */
-    void publishPlaneConstraint(geometry_msgs::msg::Pose plane_pose)
+    void publishPlaneConstraint(Pose plane_pose)
     {
       RCLCPP_INFO(LOGGER, "Publishing plane");
-      auto marker = visualization_msgs::msg::Marker();
+      auto marker = Marker();
       marker.header.frame_id = "world";
       marker.header.stamp = this->now();
-      marker.id = 0;
-      marker.type = visualization_msgs::msg::Marker::CUBE;
-      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.id      = 0;
+      marker.type    = Marker::CUBE;
+      marker.action  = Marker::ADD;
       marker.scale.x = 0.01;
       marker.scale.y = 0.05;
       marker.scale.z = 0.4;
@@ -175,8 +171,8 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.color.r = 0.05;
       marker.color.g = 0.05;
       marker.color.b = 0.05;
-      marker.pose = plane_pose;
-      marker_publisher_->publish(marker);
+      marker.pose    = plane_pose;
+      market_pub_->publish(marker);
     }
 
     void publishPlanAndExecuteTiming(
@@ -184,10 +180,10 @@ class JoyMoveitConstrained : public rclcpp::Node
       double execution_time
     )
     {
-      auto msg = arm_controller::msg::PathAndExecutionTiming();
+      auto msg = PathAndExecutionTiming();
       msg.path_planning_time = planning_time;
       msg.execution_time = execution_time;
-      path_and_execution_timing_publisher_->publish(msg);
+      timing_pub_->publish(msg);
     }
 
     /**
@@ -211,7 +207,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       primitive.dimensions = { 0.01, 0.05, 0.4 }; // in meters
       plane_constraint.constraint_region.primitives.push_back(primitive);
 
-      geometry_msgs::msg::Pose plane_pose;
+      Pose plane_pose;
       plane_pose.position.x = curr_pose.position.x;
       plane_pose.position.y = curr_pose.position.y;
       plane_pose.position.z = curr_pose.position.z;
@@ -226,7 +222,7 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       orientation_constraint.orientation = curr_pose.orientation;
       orientation_constraint.absolute_x_axis_tolerance = 0.4;
-      orientation_constraint.absolute_y_axis_tolerance = 0.4;
+      orientation_constraint.absolute_y_axis_tolerance = 0.01;
       orientation_constraint.absolute_z_axis_tolerance = 0.4;
       orientation_constraint.weight = 1.0;
 
@@ -241,9 +237,9 @@ class JoyMoveitConstrained : public rclcpp::Node
     /**
      * This method is used to get the current position of the end effector.
      */
-    geometry_msgs::msg::Pose getEndEffectorPose(const std::string end_effector)
+    Pose getEndEffectorPose(const std::string end_effector)
     {
-      geometry_msgs::msg::Pose pose;
+      Pose pose;
       try
       {
         geometry_msgs::msg::TransformStamped transformStamped;
@@ -266,12 +262,16 @@ class JoyMoveitConstrained : public rclcpp::Node
       {
         RCLCPP_WARN(LOGGER, "Could not transform: %s", ex.what());
       }
-      RCLCPP_INFO(LOGGER, "\n\nCurrent end effector position: x=%f, y=%f, z=%f\n\n",
-      pose.position.x,pose.position.y,pose.position.z);
+      RCLCPP_INFO(LOGGER,
+        "\n\nCurrent end effector position: x=%f, y=%f, z=%f\n\n",
+        pose.position.x,pose.position.y,pose.position.z
+      );
 
-      RCLCPP_INFO(LOGGER, "\n\nCurrent end effector quaternion: w=%f, x=%f, y=%f, z=%f\n\n",
-      pose.orientation.w,pose.orientation.x,pose.orientation.y,
-      pose.orientation.z);
+      RCLCPP_INFO(LOGGER,
+        "\n\nCurrent end effector quaternion: w=%f, x=%f, y=%f, z=%f\n\n",
+        pose.orientation.w,pose.orientation.x,pose.orientation.y,
+        pose.orientation.z
+      );
       return pose;
     }
 };

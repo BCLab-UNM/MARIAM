@@ -39,7 +39,7 @@ class ConstraintExperiment : public rclcpp::Node
       );
 
       timer_ = this->create_wall_timer(
-      5s, std::bind(&ConstraintExperiment::run_experiment, this));
+        15s, std::bind(&ConstraintExperiment::run_experiment, this));
       
       stop_timer_ = this->create_wall_timer(
         publish_duration_, std::bind(
@@ -62,23 +62,17 @@ class ConstraintExperiment : public rclcpp::Node
 
     void stop_experiment()
     {
+      RCLCPP_INFO(this->get_logger(), "Canceling timer");
       timer_->cancel();
     }
 
   private:
     rclcpp::Publisher<ConstrainedPose>::SharedPtr pose_publisher_;
 
-    rclcpp::Subscription<PathAndExecutionTiming>::SharedPtr 
-      path_and_execution_timing_subscription_;
-
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
-    seconds publish_duration_ = 120s;
+    seconds publish_duration_ = 300s;
     bool use_first_pose = true;
-  
-    const int ITERATIONS = 10;
-    std::vector<double> planning_times;
-    std::vector<double> execution_times;
     
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;

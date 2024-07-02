@@ -54,7 +54,7 @@ planner_configs:
     type: geometric::PRMstar
 interbotix_arm:
   enforce_constrained_state_space: true
-  projection_evaluator: joints(wrist_angle,shoulder)
+  projection_evaluator: joints(wrist_angle,elbow,shoulder)
   default_planner_config: RRTConnect
   planner_configs:
     - SBL
@@ -69,8 +69,8 @@ interbotix_arm:
     - PRM
     - PRMstar
 interbotix_gripper:
-  # enforce_constrained_state_space: true
-  # projection_evaluator: joints(shoulder,elbow)
+  enforce_constrained_state_space: true
+  projection_evaluator: joints(wrist_angle,elbow,shoulder)
   default_planner_config: RRTConnect
   planner_configs:
     - SBL
