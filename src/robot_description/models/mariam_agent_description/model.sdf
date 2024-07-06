@@ -11,19 +11,19 @@
   <link name="base_link">
 
     <collision name="base_collision">
-      <pose>0 0 0.02 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <geometry>
         <box>
-          <size>0.24 0.20 0.06</size>
+          <size> 0.24 0.20 0.06</size>
         </box>
       </geometry>
     </collision>
 
     <visual name="base_visual">
-      <pose>0 0 0.02 0 0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
       <geometry>
         <box>
-          <size>0.24 0.20 0.06</size>
+          <size> 0.24 0.20 0.06</size>
         </box>
       </geometry>
       <material>
@@ -104,7 +104,7 @@
           </z>
         </linear_acceleration>
       </imu>
-      <plugin name="marima_agent_imu" filename="libgazebo_ros_imu_sensor.so">
+      <plugin name="mariam_agent_imu" filename="libgazebo_ros_imu_sensor.so">
         <initial_orientation_as_reference>false</initial_orientation_as_reference>
         <frame_name>imu_link</frame_name>
         <ros>
@@ -117,7 +117,7 @@
 
   <!-- *********************** GPS SETUP *********************************  -->
   <link name="gps_link">
-    <sensor name="ma_gps" type="gps">
+    <sensor name="bmb_gps" type="gps">
       <always_on>true</always_on>
       <update_rate>10.0</update_rate>
       <gps>
@@ -145,30 +145,8 @@
   </link>
 
   <!-- *********************** DRIVE WHEELS ******************************  -->
-  <link name="drivewheel_left_forward_link">
-    <pose>0.09 0.14 -0.01 0 1.570796 1.570796</pose>
-    
-    <collision name="drivewheel_left_forward_collision">
-      <geometry>
-        <cylinder>
-          <radius>0.055</radius>
-          <length>0.065</length>
-        </cylinder>
-      </geometry>
-    </collision>
-
-    <visual name="drivewheel_left_forward_visual">
-      <geometry>
-        <cylinder>
-          <radius>0.055</radius>
-          <length>0.065</length>
-        </cylinder>
-      </geometry>
-    </visual>
-  </link>
-
   <link name="drivewheel_left_back_link">
-    <pose>-0.09 0.14 -0.01 0 1.570796 1.570796</pose>
+    <pose>-0.09 0.14 0 0 1.570796 1.570796</pose>
     
     <collision name="drivewheel_left_back_collision">
       <geometry>
@@ -176,23 +154,23 @@
           <radius>0.055</radius>
           <length>0.065</length>
         </cylinder>
-      </geometry> 
+      </geometry>
     </collision>
 
-    <visual name="drivewheel_left_back_cvisual">
+    <visual name="drivewheel_left_back_visual">
       <geometry>
         <cylinder>
           <radius>0.055</radius>
           <length>0.065</length>
         </cylinder>
-      </geometry> 
+      </geometry>
     </visual>
   </link>
 
-  <link name="drivewheel_right_forward_link">
-    <pose>0.09 -0.14 -0.01 0 1.570796 1.570796</pose>
+  <link name="drivewheel_left_front_link">
+    <pose>0.09 0.14 0 0 1.570796 1.570796</pose>
     
-    <collision name="drivewheel_right_forward_collision">
+    <collision name="drivewheel_left_front_collision">
       <geometry>
         <cylinder>
           <radius>0.055</radius>
@@ -201,7 +179,7 @@
       </geometry>
     </collision>
 
-    <visual name="drivewheel_right_forward_visual">
+    <visual name="drivewheel_left_front_visual">
       <geometry>
         <cylinder>
           <radius>0.055</radius>
@@ -212,7 +190,7 @@
   </link>
 
   <link name="drivewheel_right_back_link">
-    <pose>-0.09 -0.14 -0.01 0 1.570796 1.570796</pose>
+    <pose>-0.09 -0.14 0 0 1.570796 1.570796</pose>
     
     <collision name="drivewheel_right_back_collision">
       <geometry>
@@ -233,6 +211,28 @@
     </visual>
   </link>
 
+  <link name="drivewheel_right_front_link">
+    <pose>0.09 -0.14 0 0 1.570796 1.570796</pose>
+    
+    <collision name="drivewheel_right_front_collision">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </collision>
+
+    <visual name="drivewheel_right_front_visual">
+      <geometry>
+        <cylinder>
+          <radius>0.055</radius>
+          <length>0.065</length>
+        </cylinder>
+      </geometry>
+    </visual>
+  </link>
+
   <!-- ************************ JOINTS ***********************************  -->
   <!-- Pose of the joint is the same as the child link frame -->
   <!-- Axis is the axis of rotation relative to the child link frame -->
@@ -241,15 +241,6 @@
     <parent>base_footprint</parent>
     <child>base_link</child>
     <pose>0 0 0 0 0 0</pose>
-  </joint>
-
-  <joint name="drivewheel_left_forward_joint" type="revolute">
-    <parent>base_link</parent>
-    <child>drivewheel_left_forward_link</child>
-    <pose>0 0 0 0 0 0</pose>
-    <axis>
-      <xyz>0 0 1</xyz>
-    </axis>
   </joint>
 
   <joint name="drivewheel_left_back_joint" type="revolute">
@@ -261,9 +252,9 @@
     </axis>
   </joint>
 
-  <joint name="drivewheel_right_forward_joint" type="revolute">
+  <joint name="drivewheel_left_front_joint" type="revolute">
     <parent>base_link</parent>
-    <child>drivewheel_right_forward_link</child>
+    <child>drivewheel_left_front_link</child>
     <pose>0 0 0 0 0 0</pose>
     <axis>
       <xyz>0 0 1</xyz>
@@ -273,6 +264,15 @@
   <joint name="drivewheel_right_back_joint" type="revolute">
     <parent>base_link</parent>
     <child>drivewheel_right_back_link</child>
+    <pose>0 0 0 0 0 0</pose>
+    <axis>
+      <xyz>0 0 1</xyz>
+    </axis>
+  </joint>
+
+  <joint name="drivewheel_right_front_joint" type="revolute">
+    <parent>base_link</parent>
+    <child>drivewheel_right_front_link</child>
     <pose>0 0 0 0 0 0</pose>
     <axis>
       <xyz>0 0 1</xyz>
@@ -299,10 +299,10 @@
 
     <!-- wheels -->
     <num_wheel_pairs>2</num_wheel_pairs>
-    <left_joint>drivewheel_left_forward_joint</left_joint>
+    <left_joint>drivewheel_left_front_joint</left_joint>
     <left_joint>drivewheel_left_back_joint</left_joint>
     <right_joint>drivewheel_right_back_joint</right_joint>
-    <right_joint>drivewheel_right_forward_joint</right_joint>
+    <right_joint>drivewheel_right_front_joint</right_joint>
 
     <!-- kinematics -->
     <wheel_separation>0.18</wheel_separation>
@@ -314,7 +314,7 @@
 
     <!-- Output -->
     <odometry_frame>odom</odometry_frame>
-    <robot_base_frame>base_link</robot_base_frame>
+    <robot_base_frame>base_footprint</robot_base_frame>
 
     <publish_odom>true</publish_odom>
     <publish_odom_tf>true</publish_odom_tf>
@@ -335,8 +335,8 @@
     <update_rate>30</update_rate>
     <joint_name>drivewheel_left_back_joint</joint_name>
     <joint_name>drivewheel_right_back_joint</joint_name>
-    <joint_name>drivewheel_left_forward_joint</joint_name>
-    <joint_name>drivewheel_right_forward_joint</joint_name>
+    <joint_name>drivewheel_left_front_joint</joint_name>
+    <joint_name>drivewheel_right_front_joint</joint_name>
   </plugin>   
   
   </model>
