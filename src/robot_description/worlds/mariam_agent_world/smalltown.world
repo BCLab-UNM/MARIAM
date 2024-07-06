@@ -3833,7 +3833,7 @@
             <box>
               <size>4.06542 0.5 0.064516</size>
             </box>
-          </geometrdy>
+          </geometry>
           <max_contacts>10</max_contacts>
           <surface>
             <contact>
