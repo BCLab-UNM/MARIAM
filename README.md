@@ -4,7 +4,8 @@
 
 Assuming a prior install of `ros-humble-desktop-full`.
 
-### Easy-Peasy-Lemon-Squeezy Install
+### Easy-Peasy-Lemon-Squeezy Install (BAD)
+TODO: Fix this, now that forked submodules are being used.
 
 ```bash
 cd ~
@@ -51,23 +52,36 @@ echo 'export ROS_IP=$(echo `hostname -I | cut -d" " -f1`)' >> ~/.bashrc
 echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
 ```
 
-### Submodule Updates
-Some edits have been made to the submodules owned by TrossenRobotics. Easily make those edits with this script.
+## Submodule Updates
+All submodules that we need to make changes to have been forked by the BCLab-UNM group. If you find any other submodules that you need to edit that have not been forked yet, feel free to do so.
 
+#### Pulling
+Updating and pushing to submodules is somewhat nuanced... here are the steps for **pulling** changes that others have made to submodules:
 ```bash
-cd ~
-ansible MARIAM/misc/playbook_submodule_edits.yaml
+cd ~/MARIAM
+git submodule init
+git submodule update
+cd <path/to/submodule>
+git fetch origin
+git pull origin <branch>
 ```
 
-To revert edits reset each submodule to its head.
+#### Editing Submodules & Pushing
+Here are the steps for **pushing** your changes to a submodules. First checkout the correct branch:
 ```bash
-cd ~MARIAM/src/interbotix_ros_toolboxes
-git reset --hard HEAD
-cd ~MARIAM/src/interbotix_ros_core
-git reset --hard HEAD
-cd ~MARIAM/src/interbotix_ros_manipulators
-git reset --hard HEAD
+cd <path/to/submodule>
+git checkout <branch>
 ```
+Next, make your changes and push:
+```bash
+git add .
+git commit -m "<Your commit message>"
+git push origin <branch>
+cd ~/MARIAM
+git add <path/to/submodule>
+git commit -m "Update submodule to the latest commit"
+git push origin main
+```
+
 ## Experimentation
-
 All experiments are located in `doc/experiment_descriptions.md`.
