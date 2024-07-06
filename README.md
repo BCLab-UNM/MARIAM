@@ -53,7 +53,7 @@ echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
 ```
 
 ## Submodule Updates
-All submodules that we need to make changes to have been forked by the BCLab-UNM group. If you find any other submodules that you need to edit that have not been forked yet, feel free to do so. Pulling and pushing to submodules is somewhat nuanced, so please follow this instructions carefully...
+All submodules that we need to make changes to have been forked by the BCLab-UNM group. If you find any other submodules that you need to edit that have not been forked yet, feel free to do so. Pulling and pushing to submodules is somewhat nuanced, so please follow these instructions carefully...
 
 ### Pulling
 Here are the steps for **pulling** changes that others have made to submodules:
