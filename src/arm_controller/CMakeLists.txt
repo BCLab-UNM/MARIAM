@@ -104,7 +104,6 @@ install(TARGETS constraint_experiment
 install(
   DIRECTORY
     launch
-    config
   DESTINATION
     share/${PROJECT_NAME}/
 )

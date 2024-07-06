@@ -204,7 +204,7 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       shape_msgs::msg::SolidPrimitive primitive;
       primitive.type = primitive.BOX;
-      primitive.dimensions = { 0.01, 0.05, 0.4 }; // in meters
+      primitive.dimensions = { 0.04, 0.08, 0.4 }; // in meters
       plane_constraint.constraint_region.primitives.push_back(primitive);
 
       Pose plane_pose;
@@ -222,7 +222,7 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       orientation_constraint.orientation = curr_pose.orientation;
       orientation_constraint.absolute_x_axis_tolerance = 0.4;
-      orientation_constraint.absolute_y_axis_tolerance = 0.01;
+      orientation_constraint.absolute_y_axis_tolerance = 0.4;
       orientation_constraint.absolute_z_axis_tolerance = 0.4;
       orientation_constraint.weight = 1.0;
 
