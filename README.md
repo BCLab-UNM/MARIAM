@@ -55,7 +55,7 @@ echo -e 'if [ -z "$ROS_IP" ]; then\n\texport ROS_IP=127.0.0.1\nfi' >> ~/.bashrc
 ## Submodule Updates
 All submodules that we need to make changes to have been forked by the BCLab-UNM group. If you find any other submodules that you need to edit that have not been forked yet, feel free to do so.
 
-#### Pulling
+### Pulling
 Updating and pushing to submodules is somewhat nuanced... here are the steps for **pulling** changes that others have made to submodules:
 ```bash
 cd ~/MARIAM
@@ -66,7 +66,7 @@ git fetch origin
 git pull origin <branch>
 ```
 
-#### Editing Submodules & Pushing
+### Editing Submodules & Pushing
 Here are the steps for **pushing** your changes to a submodules. First checkout the correct branch:
 ```bash
 cd <path/to/submodule>
