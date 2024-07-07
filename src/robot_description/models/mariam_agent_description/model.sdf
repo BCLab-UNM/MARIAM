@@ -291,6 +291,13 @@
     <pose>0 0 0 0 0 0</pose>
   </joint>  
 
+  <joint name="lidar_joint" type="fixed">
+    <parent>base_link</parent>
+    <child>lidar_link</child>
+    <pose>0 0 0 0 0 0</pose>
+  </joint>
+
+
   <!-- *********************** WHEEL ODOMETRY ***************************    -->
   <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
     
@@ -320,6 +327,9 @@
     <publish_odom_tf>true</publish_odom_tf>
     <update_rate>30.0</update_rate>
 
+    <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
+    <odometry_source>1</odometry_source>
+
     <ros>
       <remapping>odom:=wheel/odometry</remapping>
     </ros>
@@ -338,6 +348,82 @@
     <joint_name>drivewheel_left_front_joint</joint_name>
     <joint_name>drivewheel_right_front_joint</joint_name>
   </plugin>   
+
+  <!-- ****************************** LIDAR *****************************    -->
+  <link name="lidar_link">    
+    <inertial>
+      <pose>0 0 0.13 0 0 0</pose>
+      <inertia>
+        <ixx>0.001</ixx>
+        <ixy>0.000</ixy>
+        <ixz>0.000</ixz>
+        <iyy>0.001</iyy>
+        <iyz>0.000</iyz>
+        <izz>0.001</izz>
+      </inertia>
+      <mass>0.114</mass>
+    </inertial>
+
+    <collision name="lidar_collision">
+      <pose>0 0 0.13 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0508</radius>
+          <length>0.18</length>
+        </cylinder>
+      </geometry>
+    </collision>
+
+    <visual name="lidar_visual">
+      <pose>0 0 0.13 0 0 0</pose>
+      <geometry>
+        <cylinder>
+          <radius>0.0508</radius>
+          <length>0.18</length>
+        </cylinder>
+      </geometry>
+      <material>
+        <ambient>0.0 0.0 0.0 1.0</ambient>
+        <diffuse>0.0 0.0 0.0 1.0</diffuse>
+        <specular>0.0 0.0 0.0 1.0</specular>
+        <emissive>0.0 0.0 0.0 1.0</emissive>
+      </material>
+    </visual>
+
+    <sensor name="lidar" type="ray">
+      <pose>0 0 0.215 0 0 0</pose>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <update_rate>5</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>120</samples>
+            <resolution>1.000000</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.3</min>
+          <max>15.0</max>
+          <resolution>0.015</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>lidar_link</frame_name>
+      </plugin>
+    </sensor>
+  </link>
   
   </model>
 </sdf>
