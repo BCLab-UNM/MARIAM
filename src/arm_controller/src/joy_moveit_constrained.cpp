@@ -86,11 +86,17 @@ class JoyMoveitConstrained : public rclcpp::Node
     rclcpp::Publisher<PathAndExecutionTiming>::SharedPtr timing_pub_;
     rclcpp::Subscription<ConstrainedPose>::SharedPtr pose_sub_;
 
-    const rclcpp::Logger LOGGER = 
-      rclcpp::get_logger("joy_moveit_constrained");
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("joy_moveit_constrained");
 
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+
+    float plane_x_dim = 0.0571;
+    float plane_y_dim = 0.116;
+    float plane_z_dim = 0.4;
+    float x_tolerance = 0.4;
+    float y_tolerance = 0.1999;
+    float z_tolerance = 0.4;
 
 
     /**
@@ -104,6 +110,7 @@ class JoyMoveitConstrained : public rclcpp::Node
     void targetPoseCallback(const ConstrainedPose::SharedPtr msg)
     {
       RCLCPP_INFO(LOGGER, "\n\nReceived a target pose\n\n");
+      const std::string pose_name = msg->pose_name;
       const std::string pose_ref_frame = move_group->getPoseReferenceFrame();
       const std::string end_effector_link = move_group->getEndEffectorLink();
       auto target_pose = msg->pose;
@@ -122,7 +129,11 @@ class JoyMoveitConstrained : public rclcpp::Node
       else move_group->clearPathConstraints();
 
       MoveGroupInterface::Plan plan;
-      move_group->setPoseTarget(target_pose);
+      if(pose_name.compare("none") != 0)
+      {
+        move_group->setNamedTarget(pose_name);
+      }
+      else move_group->setPoseTarget(target_pose);
       move_group->setPlanningTime(30);
 
       // NOTE: You could also use plan.planning_time_
@@ -164,9 +175,9 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.id      = 0;
       marker.type    = Marker::CUBE;
       marker.action  = Marker::ADD;
-      marker.scale.x = 0.01;
-      marker.scale.y = 0.05;
-      marker.scale.z = 0.4;
+      marker.scale.x = plane_x_dim;
+      marker.scale.y = plane_y_dim;
+      marker.scale.z = plane_z_dim;
       marker.color.a = 0.5;
       marker.color.r = 0.05;
       marker.color.g = 0.05;
@@ -204,7 +215,11 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       shape_msgs::msg::SolidPrimitive primitive;
       primitive.type = primitive.BOX;
-      primitive.dimensions = { 0.04, 0.08, 0.4 }; // in meters
+      primitive.dimensions = {
+        plane_x_dim,
+        plane_y_dim,
+        plane_z_dim,
+      }; // in meters
       plane_constraint.constraint_region.primitives.push_back(primitive);
 
       Pose plane_pose;
@@ -221,9 +236,9 @@ class JoyMoveitConstrained : public rclcpp::Node
       orientation_constraint.link_name = end_effector_link;
 
       orientation_constraint.orientation = curr_pose.orientation;
-      orientation_constraint.absolute_x_axis_tolerance = 0.4;
-      orientation_constraint.absolute_y_axis_tolerance = 0.4;
-      orientation_constraint.absolute_z_axis_tolerance = 0.4;
+      orientation_constraint.absolute_x_axis_tolerance = x_tolerance;
+      orientation_constraint.absolute_y_axis_tolerance = y_tolerance;
+      orientation_constraint.absolute_z_axis_tolerance = z_tolerance;
       orientation_constraint.weight = 1.0;
 
       moveit_msgs::msg::Constraints constraints;

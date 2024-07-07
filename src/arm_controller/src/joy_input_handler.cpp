@@ -64,6 +64,7 @@ class JoyInputHandler : public rclcpp::Node
     float theta = 0;
     bool safe_to_publish = true;
     bool apply_constraints = false;
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("joy_input_handler");
 
     /**
      * This method is the callback function for /joy.
@@ -76,7 +77,9 @@ class JoyInputHandler : public rclcpp::Node
      * Right stick to move the target pose in the x direction.
      * 'LT' & 'RT' to rotate the target pose.
      * 'x' to publish the target pose.
-     * 'Back' & 'Start' to publish a preset custom pose.
+     * 'Back' to publish the Sleep pose.
+     * 'Start' to publish the Home pose.
+     * 'LB' & 'RB' to publish a custom pose.
      * 
      * @msg: controller input
      */
@@ -84,31 +87,49 @@ class JoyInputHandler : public rclcpp::Node
     {
       Pose new_pose = curr_pose;
 
-      // Back button pressed
-      if (msg->buttons[6] == 1 && safe_to_publish) 
+      // LB
+      if (msg->buttons[4] == 1 && safe_to_publish) 
       {
-        RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_start\n\n");
+        RCLCPP_INFO(LOGGER, "\n\nPublishing pose_test_start\n\n");
         curr_pose = pose_test_start;
         this->publish_marker(pose_test_start);
-        this->publish_pose(pose_test_start, true);
+        this->publish_pose(pose_test_start, true, "none");
         safe_to_publish = false;
       }
 
-      // start button pressed
-      if(msg->buttons[7] == 1 && safe_to_publish)
+      // RB
+      if(msg->buttons[5] == 1 && safe_to_publish)
       {
-        RCLCPP_INFO(this->get_logger(), "\n\nPublishing pose_test_end\n\n");
+        RCLCPP_INFO(LOGGER, "\n\nPublishing pose_test_end\n\n");
         curr_pose = pose_test_end;
         this->publish_marker(pose_test_end);
-        this->publish_pose(new_pose, true);
+        this->publish_pose(new_pose, true, "none");
+        safe_to_publish = false;
+      }
+
+      // Back
+      if(msg->buttons[6] == 1)
+      {
+        RCLCPP_INFO(LOGGER, "\n\nPublishing Sleep pose\n\n");
+        curr_pose = pose_test_end;
+        this->publish_pose(new_pose, false, "Sleep");
+        safe_to_publish = false;
+      }
+
+      // Start
+      if(msg->buttons[7] == 1)
+      {
+        RCLCPP_INFO(LOGGER, "\n\nPublishing Home pose\n\n");
+        curr_pose = pose_test_end;
+        this->publish_pose(new_pose, false, "Home");
         safe_to_publish = false;
       }
       
-      // X button pressed
+      // X: publish pose
       if (msg->buttons[2] && safe_to_publish)
       {
-        RCLCPP_INFO(this->get_logger(), "\n\nPublishing target pose\n\n");
-        this->publish_pose(new_pose, apply_constraints);
+        RCLCPP_INFO(LOGGER, "\n\nPublishing target pose\n\n");
+        this->publish_pose(new_pose, apply_constraints, "none");
         safe_to_publish = false;
       }
 
@@ -118,7 +139,7 @@ class JoyInputHandler : public rclcpp::Node
       curr_pose.position.y += -(0.001)*msg->axes[0]; // left stick
       curr_pose.position.z +=  (0.001)*msg->axes[1]; // left stick
 
-      // LT rotate counter-clockwise
+      // LT: rotate counter clockwise
       if(msg->axes[2] == 1)
       {
         theta += (0.05)*msg->axes[2];
@@ -126,7 +147,7 @@ class JoyInputHandler : public rclcpp::Node
         curr_pose.orientation.z = sin(theta);
       }
       
-      // RT rotate clockwise
+      // RT: rotate clockwise
       if(msg->axes[5] == 1)
       {
         theta -= (0.05)*msg->axes[5];
@@ -138,7 +159,7 @@ class JoyInputHandler : public rclcpp::Node
       if(msg->buttons[5])
       {
         apply_constraints = !apply_constraints;
-        RCLCPP_INFO(this->get_logger(),
+        RCLCPP_INFO(LOGGER,
           "Apply constraints value: %d",
           apply_constraints
         );
@@ -149,7 +170,7 @@ class JoyInputHandler : public rclcpp::Node
       {
         safe_to_publish = true;
         RCLCPP_INFO(
-          this->get_logger(),
+          LOGGER,
           "Position: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 
           new_pose.position.x, 
           new_pose.position.y, 
@@ -162,11 +183,12 @@ class JoyInputHandler : public rclcpp::Node
       }
     }
 
-    void publish_pose(Pose new_pose, bool use_constraints)
+    void publish_pose(Pose new_pose, bool use_constraints, std::string pose_name)
     {
       auto msg = ConstrainedPose();
       msg.pose = new_pose;
       msg.use_plane_constraint = use_constraints;
+      msg.pose_name = pose_name;
       pose_publisher_->publish(msg);
     }
 

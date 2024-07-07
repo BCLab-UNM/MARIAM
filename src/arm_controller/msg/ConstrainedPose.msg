@@ -1,2 +1,3 @@
 geometry_msgs/Pose pose
+string pose_name
 bool use_plane_constraint
