@@ -3,6 +3,18 @@ Different modes of control for the end effector of the PX100 robotic arm.
 
 ## Launch Files
 
+### moveit_joy_constrained.launch.py
+Launch with:
+
+```bash
+ros2 launch arm_controller moveit_joy_constrained.launch.py
+```
+
+Or:
+```bash
+ros2 launch arm_controller moveit_joy_constrained.launch.py hardware_type:=actual
+```
+
 ### moveit_joy.launch.py
 Launch with:
 
@@ -29,9 +41,3 @@ Each launch file will use some or all of these parameters, here are their option
 - controller:= xbox360
 - use_rviz:= true, false
 - use_joy:= true, false
-
-***
-
-### TODO
-
-- Add use_rviz parameters

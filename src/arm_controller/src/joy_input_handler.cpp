@@ -75,11 +75,11 @@ class JoyInputHandler : public rclcpp::Node
      * Controls:
      * Left stick to move the target pose in the y and z directions.
      * Right stick to move the target pose in the x direction.
-     * 'LT' & 'RT' to rotate the target pose.
      * 'x' to publish the target pose.
      * 'Back' to publish the Sleep pose.
      * 'Start' to publish the Home pose.
      * 'LB' & 'RB' to publish a custom pose.
+     * 'Y' to apply path constraints.
      * 
      * @msg: controller input
      */
@@ -155,8 +155,8 @@ class JoyInputHandler : public rclcpp::Node
         curr_pose.orientation.z = sin(theta);
       }
 
-      // RB change value for applying constraints
-      if(msg->buttons[5])
+      // RT change value for applying constraints
+      if(msg->buttons[3])
       {
         apply_constraints = !apply_constraints;
         RCLCPP_INFO(LOGGER,

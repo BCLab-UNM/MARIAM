@@ -91,8 +91,8 @@ class JoyMoveitConstrained : public rclcpp::Node
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
-    float plane_x_dim = 0.0571;
-    float plane_y_dim = 0.116;
+    float plane_x_dim = 0.02;
+    float plane_y_dim = 0.08;
     float plane_z_dim = 0.4;
     float x_tolerance = 0.4;
     float y_tolerance = 0.1999;
