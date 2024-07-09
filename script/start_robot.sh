@@ -27,7 +27,7 @@ source /home/swarmie/MARIAM/install/setup.bash
 hostname=$(hostname)
 
 # Launch the modern robotics arm controller
-ros2 launch interbotix_xsarm_joy xsarm_joy.launch.py robot_model:=px100 controller:=xbox360 robot_name:=$hostname
+#ros2 launch interbotix_xsarm_joy xsarm_joy.launch.py robot_model:=px100 controller:=xbox360 robot_name:=$hostname
 
 # Will add staticTF in post-processing
 # source /home/swarmie/MARIAM/install/setup.bash
@@ -42,4 +42,4 @@ then
 else
     export ROS_DOMAIN_ID=2
 fi
-ros2 launch arm_controller xsarm_moveit_joy.launch.py robot_model:=px100 hardware_type:=actual use_joy:=false
+ros2 launch arm_controller moveit_joy.launch.py robot_model:=px100 hardware_type:=actual use_joy:=true
