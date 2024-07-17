@@ -91,12 +91,12 @@ class JoyMoveitConstrained : public rclcpp::Node
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
-    float plane_x_dim = 0.02;
-    float plane_y_dim = 0.08;
-    float plane_z_dim = 0.4;
-    float x_tolerance = 0.4;
-    float y_tolerance = 0.1999;
-    float z_tolerance = 0.4;
+    const double PLANE_X_DIM = 0.02;
+    const double PLANE_Y_DIM = 0.08;
+    const double PLANE_Z_DIM = 0.4;
+    const double X_TOLERANCE = 0.4;
+    const double Y_TOLERANCE = 0.1999;
+    const double Z_TOLERANCE = 0.4;
 
 
     /**
@@ -175,9 +175,9 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.id      = 0;
       marker.type    = Marker::CUBE;
       marker.action  = Marker::ADD;
-      marker.scale.x = plane_x_dim;
-      marker.scale.y = plane_y_dim;
-      marker.scale.z = plane_z_dim;
+      marker.scale.x = PLANE_X_DIM;
+      marker.scale.y = PLANE_Y_DIM;
+      marker.scale.z = PLANE_Z_DIM;
       marker.color.a = 0.5;
       marker.color.r = 0.05;
       marker.color.g = 0.05;
@@ -186,10 +186,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       market_pub_->publish(marker);
     }
 
-    void publishPlanAndExecuteTiming(
-      double planning_time,
-      double execution_time
-    )
+    void publishPlanAndExecuteTiming(double planning_time, double execution_time)
     {
       auto msg = PathAndExecutionTiming();
       msg.path_planning_time = planning_time;
@@ -215,11 +212,8 @@ class JoyMoveitConstrained : public rclcpp::Node
 
       shape_msgs::msg::SolidPrimitive primitive;
       primitive.type = primitive.BOX;
-      primitive.dimensions = {
-        plane_x_dim,
-        plane_y_dim,
-        plane_z_dim,
-      }; // in meters
+      // in meters
+      primitive.dimensions = { PLANE_X_DIM, PLANE_Y_DIM, PLANE_Z_DIM };
       plane_constraint.constraint_region.primitives.push_back(primitive);
 
       Pose plane_pose;
@@ -236,9 +230,9 @@ class JoyMoveitConstrained : public rclcpp::Node
       orientation_constraint.link_name = end_effector_link;
 
       orientation_constraint.orientation = curr_pose.orientation;
-      orientation_constraint.absolute_x_axis_tolerance = x_tolerance;
-      orientation_constraint.absolute_y_axis_tolerance = y_tolerance;
-      orientation_constraint.absolute_z_axis_tolerance = z_tolerance;
+      orientation_constraint.absolute_x_axis_tolerance = X_TOLERANCE;
+      orientation_constraint.absolute_y_axis_tolerance = Y_TOLERANCE;
+      orientation_constraint.absolute_z_axis_tolerance = Z_TOLERANCE;
       orientation_constraint.weight = 1.0;
 
       moveit_msgs::msg::Constraints constraints;

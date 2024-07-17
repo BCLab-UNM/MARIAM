@@ -34,21 +34,21 @@ class JoyInputHandler : public rclcpp::Node
         std::bind(&JoyInputHandler::joy_callback, this, _1)
       );
 
-      pose_test_start.position.x = 0.250048;
-      pose_test_start.position.y = 0;
-      pose_test_start.position.z = 0.098;
-      pose_test_start.orientation.x =  0.000;
-      pose_test_start.orientation.y =  0.000;
-      pose_test_start.orientation.z =  0.000;
-      pose_test_start.orientation.w =  1.000;
+      test_pose1.position.x = 0.250048;
+      test_pose1.position.y = 0;
+      test_pose1.position.z = 0.098;
+      test_pose1.orientation.x =  0.000;
+      test_pose1.orientation.y =  0.000;
+      test_pose1.orientation.z =  0.000;
+      test_pose1.orientation.w =  1.000;
 
-      pose_test_end.position.x = 0.250048;
-      pose_test_end.position.y = 0;
-      pose_test_end.position.z = 0.244;
-      pose_test_end.orientation.x =  0.000;
-      pose_test_end.orientation.y =  0.000;
-      pose_test_end.orientation.z =  0.000;
-      pose_test_end.orientation.w =  1.000;
+      test_pose2.position.x = 0.250048;
+      test_pose2.position.y = 0;
+      test_pose2.position.z = 0.244;
+      test_pose2.orientation.x =  0.000;
+      test_pose2.orientation.y =  0.000;
+      test_pose2.orientation.z =  0.000;
+      test_pose2.orientation.w =  1.000;
     }
 
   private:
@@ -59,8 +59,8 @@ class JoyInputHandler : public rclcpp::Node
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscription_;
     Pose curr_pose;
     // poses for testing the arm's motion
-    Pose pose_test_start;
-    Pose pose_test_end;
+    Pose test_pose1;
+    Pose test_pose2;
     float theta = 0;
     bool safe_to_publish = true;
     bool apply_constraints = false;
@@ -90,19 +90,19 @@ class JoyInputHandler : public rclcpp::Node
       // LB
       if (msg->buttons[4] == 1 && safe_to_publish) 
       {
-        RCLCPP_INFO(LOGGER, "\n\nPublishing pose_test_start\n\n");
-        curr_pose = pose_test_start;
-        this->publish_marker(pose_test_start);
-        this->publish_pose(pose_test_start, true, "none");
+        RCLCPP_INFO(LOGGER, "\n\nPublishing test_pose1\n\n");
+        curr_pose = test_pose1;
+        this->publish_marker(test_pose1);
+        this->publish_pose(test_pose1, true, "none");
         safe_to_publish = false;
       }
 
       // RB
       if(msg->buttons[5] == 1 && safe_to_publish)
       {
-        RCLCPP_INFO(LOGGER, "\n\nPublishing pose_test_end\n\n");
-        curr_pose = pose_test_end;
-        this->publish_marker(pose_test_end);
+        RCLCPP_INFO(LOGGER, "\n\nPublishing test_pose2\n\n");
+        curr_pose = test_pose2;
+        this->publish_marker(test_pose2);
         this->publish_pose(new_pose, true, "none");
         safe_to_publish = false;
       }
@@ -111,7 +111,7 @@ class JoyInputHandler : public rclcpp::Node
       if(msg->buttons[6] == 1)
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing Sleep pose\n\n");
-        curr_pose = pose_test_end;
+        curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Sleep");
         safe_to_publish = false;
       }
@@ -120,7 +120,7 @@ class JoyInputHandler : public rclcpp::Node
       if(msg->buttons[7] == 1)
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing Home pose\n\n");
-        curr_pose = pose_test_end;
+        curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Home");
         safe_to_publish = false;
       }
