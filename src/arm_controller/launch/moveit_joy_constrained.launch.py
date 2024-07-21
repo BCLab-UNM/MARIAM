@@ -16,9 +16,11 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression
 )
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 from ament_index_python.packages import get_package_share_directory
 
 
@@ -87,11 +89,33 @@ def launch_setup(context, *args, **kwargs):
         ],
         output='screen',
     )
+
+    xasrm_robot_node = Node(
+        condition=IfCondition(
+            PythonExpression([
+                "'",
+                hardware_type_launch_arg,
+                "' == 'actual'"
+            ])
+        ),
+        package='interbotix_xsarm_joy',
+        executable='xsarm_robot.py',
+        namespace=robot_model_launch_arg,
+        parameters=[{
+            'robot_model': robot_model_launch_arg
+        }],
+        arguments=[
+            '--robot_model', robot_model_launch_arg.perform(context),
+            '--robot_name', robot_name_launch_arg.perform(context)
+        ]
+    )
+
     return [
         interbotix_launch_description,
         joy_node,
         joy_input_handler_node,
-        joy_moveit_constrained_node
+        joy_moveit_constrained_node,
+        xasrm_robot_node
     ]
 
 

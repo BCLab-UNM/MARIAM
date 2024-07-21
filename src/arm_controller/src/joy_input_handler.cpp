@@ -20,7 +20,7 @@ class JoyInputHandler : public rclcpp::Node
     {
       pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
-        10
+        1
       );
 
       goal_pose_joy_publisher_ = this->create_publisher<Marker>(
@@ -62,7 +62,6 @@ class JoyInputHandler : public rclcpp::Node
     Pose test_pose1;
     Pose test_pose2;
     float theta = 0;
-    bool safe_to_publish = true;
     bool apply_constraints = false;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("joy_input_handler");
 
@@ -88,23 +87,21 @@ class JoyInputHandler : public rclcpp::Node
       Pose new_pose = curr_pose;
 
       // LB
-      if (msg->buttons[4] == 1 && safe_to_publish) 
+      if (msg->buttons[4] == 1) 
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing test_pose1\n\n");
         curr_pose = test_pose1;
         this->publish_marker(test_pose1);
         this->publish_pose(test_pose1, true, "none");
-        safe_to_publish = false;
       }
 
       // RB
-      if(msg->buttons[5] == 1 && safe_to_publish)
+      if(msg->buttons[5] == 1)
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing test_pose2\n\n");
         curr_pose = test_pose2;
         this->publish_marker(test_pose2);
         this->publish_pose(new_pose, true, "none");
-        safe_to_publish = false;
       }
 
       // Back
@@ -113,7 +110,6 @@ class JoyInputHandler : public rclcpp::Node
         RCLCPP_INFO(LOGGER, "\n\nPublishing Sleep pose\n\n");
         curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Sleep");
-        safe_to_publish = false;
       }
 
       // Start
@@ -122,15 +118,13 @@ class JoyInputHandler : public rclcpp::Node
         RCLCPP_INFO(LOGGER, "\n\nPublishing Home pose\n\n");
         curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Home");
-        safe_to_publish = false;
       }
       
       // X: publish pose
-      if (msg->buttons[2] && safe_to_publish)
+      if (msg->buttons[2])
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing target pose\n\n");
         this->publish_pose(new_pose, apply_constraints, "none");
-        safe_to_publish = false;
       }
 
       // Update pose
@@ -168,7 +162,6 @@ class JoyInputHandler : public rclcpp::Node
       // Print updated pose
       if (new_pose != curr_pose) 
       {
-        safe_to_publish = true;
         RCLCPP_INFO(
           LOGGER,
           "Position: x = %f, y = %f, z = %f \n Quaternion: x = %f, y = %f, z = %f, w = %f", 

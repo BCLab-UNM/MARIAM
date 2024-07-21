@@ -7,6 +7,8 @@
 #include <geometry_msgs/msg/pose.hpp>
 #include "arm_controller/msg/constrained_pose.hpp"
 #include "arm_controller/msg/path_and_execution_timing.hpp"
+#include <rmw/types.h>
+#include <rclcpp/qos.hpp>
 
 // moveit
 #include <moveit/move_group_interface/move_group_interface.h>
@@ -24,6 +26,7 @@ using namespace std::chrono;
 using namespace arm_controller::msg;
 using namespace visualization_msgs::msg;
 using namespace geometry_msgs::msg;
+
 
 /**
  * Topics:
@@ -45,7 +48,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       pose_sub_ = 
           this->create_subscription<ConstrainedPose>(
             "joy_target_pose",
-            10,
+            1,
             std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
           );
       
@@ -126,7 +129,6 @@ class JoyMoveitConstrained : public rclcpp::Node
         );
         move_group->setPathConstraints(constraints);
       }
-      else move_group->clearPathConstraints();
 
       MoveGroupInterface::Plan plan;
       if(pose_name.compare("none") != 0)
@@ -161,6 +163,7 @@ class JoyMoveitConstrained : public rclcpp::Node
         publishPlanAndExecuteTiming(planning_time.count(),
                                     execution_time.count());
       }
+      move_group->clearPathConstraints();
     }
     
     /**
