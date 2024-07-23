@@ -108,6 +108,14 @@ install(
     share/${PROJECT_NAME}/
 )
 
+##### adding script to lib folder #####
+install(
+  PROGRAMS
+    scripts/xsarm_robot.py
+  DESTINATION
+    lib/${PROJECT_NAME}
+)
+
 ##### adding custom messages #####
 set(msg_files
   "msg/ConstrainedPose.msg"
