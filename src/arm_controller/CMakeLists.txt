@@ -13,7 +13,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 # find_package(interbotix_moveit_interface REQUIRED)
 # find_package(interbotix_moveit_interface_msgs REQUIRED)
-# find_package(interbotix_xs_msgs REQUIRED)
+find_package(interbotix_xs_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(joy REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -79,6 +79,7 @@ ament_target_dependencies(
   "moveit_ros_planning_interface"
   "rclcpp"
   "std_msgs"
+  "interbotix_xs_msgs"
 )
 install(TARGETS joy_input_handler
   DESTINATION lib/${PROJECT_NAME}

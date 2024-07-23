@@ -1,7 +1,4 @@
-import os
-
 from interbotix_xs_modules.xs_launch import (
-    construct_interbotix_xsarm_semantic_robot_description_command,
     declare_interbotix_xsarm_robot_description_launch_arguments
 )
 
@@ -16,12 +13,10 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
-    PythonExpression
 )
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 from launch.conditions import IfCondition
-from ament_index_python.packages import get_package_share_directory
 
 
 def launch_setup(context, *args, **kwargs):
@@ -51,6 +46,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     joy_input_handler_node = Node(
+        name='joy_input_handler',
         package='arm_controller',
         executable='joy_input_handler',
         namespace=robot_name_launch_arg,
@@ -61,6 +57,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     xsarm_robot_node = Node(
+        name='xsarm_robot_node',
         package='arm_controller',
         executable='xsarm_robot.py',
         namespace=robot_name_launch_arg,
