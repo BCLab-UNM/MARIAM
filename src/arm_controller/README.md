@@ -7,19 +7,19 @@ Documentation: https://wiki.ros.org/joy#Microsoft_Xbox_360_Wired_Controller_for_
 Note: the buttons on the controller fall under two categories: buttons and axes. The following table documents which category each button falls under and the action it will perform when pressed.
 
 **Buttons**
-| Value | Button       | Action |
-|-------|--------------|--------|
-|   0   | A            |        |
-|   1   | B            |        |
-|   2   | X            |        |
-|   3   | Y            |        |
-|   4   | LB           |        |
-|   5   | RB           |        |
-|   6   | back         |        |
-|   7   | start        |        |
-|   8   | power        |        |
-|   9   | LS (pressed) |        |
-|  10   | RS (pressed) |        |
+| Value | Button       | Action                   |
+|-------|--------------|--------------------------|
+|   0   | A            |                          |
+|   1   | B            |                          |
+|   2   | X            | Go to end lift pose      |
+|   3   | Y            | Go to starting lift pose |
+|   4   | LB           |                          |
+|   5   | RB           |                          |
+|   6   | back         |                          |
+|   7   | start        |                          |
+|   8   | power        |                          |
+|   9   | LS (pressed) |                          |
+|  10   | RS (pressed) |                          |
 
 **Axes**
 | Value | Button                 | Action |
@@ -34,6 +34,17 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 |   7   | Cross key (up/down)    |        |
 
 ## Launch Files
+
+### xsarm_joy.launch.py
+Launch command (with fake hardware):
+```bash
+ros2 launch arm_controller xsarm_joy.launch.py
+```
+
+Launch command (with actual hardware):
+```bash
+ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
+```
 
 ### moveit_joy_constrained.launch.py
 Launch with:

@@ -23,8 +23,8 @@ static std::map<std::string, int> btn_map =
   // TODO: update these entries to publish poses for lifting
   // {"GRIPPER_PWM_DEC", 0},  // buttons start here
   // {"GRIPPER_RELEASE", 1},
-  // {"GRIPPER_GRASP", 2},
-  // {"GRIPPER_PWM_INC", 3},
+  {"LIFT", 2},       // X
+  {"START_LIFT", 3}, // Y
   {"WAIST_CCW", 4},
   {"WAIST_CW", 5},
   {"SLEEP_POSE", 6},
@@ -34,10 +34,10 @@ static std::map<std::string, int> btn_map =
   {"FLIP_EE_ROLL", 10},
   {"EE_X", 0},             // axes start here
   {"EE_Z", 1},
-  {"EE_Y_INC", 2},
-  {"EE_ROLL", 3},
+  // {"EE_Y_INC", 2},
+  // {"EE_ROLL", 3},
   {"EE_PITCH", 4},
-  {"EE_Y_DEC", 5},
+  // {"EE_Y_DEC", 5},
   {"SPEED_TYPE", 6},
   {"SPEED", 7}
 };
@@ -77,18 +77,18 @@ class JoyInputHandler : public rclcpp::Node
       test_pose1.position.x = 0.250048;
       test_pose1.position.y = 0;
       test_pose1.position.z = 0.098;
-      test_pose1.orientation.x =  0.000;
-      test_pose1.orientation.y =  0.000;
-      test_pose1.orientation.z =  0.000;
-      test_pose1.orientation.w =  1.000;
+      test_pose1.orientation.x =  0.0;
+      test_pose1.orientation.y =  0.0;
+      test_pose1.orientation.z =  0.0;
+      test_pose1.orientation.w =  1.0;
 
       test_pose2.position.x = 0.250048;
       test_pose2.position.y = 0;
       test_pose2.position.z = 0.244;
-      test_pose2.orientation.x =  0.000;
-      test_pose2.orientation.y =  0.000;
-      test_pose2.orientation.z =  0.000;
-      test_pose2.orientation.w =  1.000;
+      test_pose2.orientation.x =  0.0;
+      test_pose2.orientation.y =  0.0;
+      test_pose2.orientation.z =  0.0;
+      test_pose2.orientation.w =  1.0;
 
       this->declare_parameter("threshold", 0.75);
       this->get_parameter("threshold", threshold);
@@ -103,6 +103,7 @@ class JoyInputHandler : public rclcpp::Node
     Pose curr_pose;
     Pose test_pose1;
     Pose test_pose2;
+    Pose pose_experiment_home;
     interbotix_xs_msgs::msg::ArmJoy prev_joy_cmd;
     float theta = 0;
     bool apply_constraints = false;
@@ -152,7 +153,6 @@ class JoyInputHandler : public rclcpp::Node
       if(msg->buttons[6] == 1)
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing Sleep pose\n\n");
-        curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Sleep");
       }
 
@@ -160,7 +160,6 @@ class JoyInputHandler : public rclcpp::Node
       if(msg->buttons[7] == 1)
       {
         RCLCPP_INFO(LOGGER, "\n\nPublishing Home pose\n\n");
-        curr_pose = test_pose2;
         this->publish_pose(new_pose, false, "Home");
       }
       
@@ -261,6 +260,15 @@ class JoyInputHandler : public rclcpp::Node
         timer_started = false;
       }
 
+      if(msg->buttons.at(btn_map["START_LIFT"]) ==  1)
+      {
+        joy_cmd.pose_cmd = 50;
+      }
+      else if(msg->buttons.at(btn_map["LIFT"]) == 1)
+      {
+        joy_cmd.pose_cmd = 60;
+      }
+
       // Check if the ee_x_cmd should be flipped
       if (msg->buttons.at(btn_map["FLIP_EE_X"]) == 1
             && !flip_ee_x_cmd_last_state)
@@ -292,16 +300,6 @@ class JoyInputHandler : public rclcpp::Node
       else if (msg->axes.at(btn_map["EE_X"]) <= -threshold && flip_ee_x_cmd)
       {
         joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
-      }
-
-      // Check the ee_y_cmd
-      if (msg->axes.at(btn_map["EE_Y_INC"]) <= 1.0 - 2.0 * threshold)
-      {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_INC;
-      }
-      else if (msg->axes.at(btn_map["EE_Y_DEC"]) <= 1.0 - 2.0 * threshold)
-      {
-        joy_cmd.ee_y_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Y_DEC;
       }
 
       // Check the ee_z_cmd

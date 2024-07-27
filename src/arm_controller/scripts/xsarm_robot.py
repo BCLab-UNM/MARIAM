@@ -42,6 +42,7 @@ from interbotix_xs_msgs.msg import ArmJoy
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
+from tf_transformations import quaternion_matrix
 
 
 class XSArmRobot(InterbotixManipulatorXS):
@@ -62,6 +63,15 @@ class XSArmRobot(InterbotixManipulatorXS):
     loop_rates = {'coarse': 25, 'fine': 25}
     joy_msg = ArmJoy()
     joy_mutex = Lock()
+    rot_matrix = quaternion_matrix(np.array([1,0,0,0]))
+    custom_pos: np.ndarray = np.array(
+        [
+            [1,   0,   0,  0.2     ],
+            [0,   1,   0,  0       ],
+            [0,   0,   1,  0.2     ],
+            [0,   0,   0,  1       ]
+        ]
+    )
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
@@ -77,7 +87,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
+        # Orientation around z-axis (YAW) with respect to frame
         self.T_sy = np.identity(4)
+        # Translation matrix with respect to the frame
         self.T_yb = np.identity(4)
         self.update_T_yb()
         self.core.get_node().create_subscription(
@@ -110,11 +122,21 @@ class XSArmRobot(InterbotixManipulatorXS):
             f'Current loop rate is {self.current_loop_rate} Hz.')
 
     def update_T_yb(self) -> None:
-        """Calculate the pose of the end-effector w.r.t. T_y."""
+        """
+        Calculate the pose of the end-effector w.r.t. T_y.
+        
+        Specifically calculates the orientation around the z-axis,
+        this method is only used to update T_yb to contain the orientation of
+        the end-effector?
+        """
+        self.core.get_node().get_logger().info(f'Before update: T_yb: \n {self.T_yb}')
         T_sb = self.arm.get_ee_pose_command()
         rpy = ang.rotation_matrix_to_euler_angles(T_sb[:3, :3])
+        # get rotation matrix from yaw
         self.T_sy[:2, :2] = ang.yaw_to_rotation_matrix(rpy[2])
+        # update T_yb to 
         self.T_yb = np.dot(ang.trans_inv(self.T_sy), T_sb)
+        self.core.get_node().get_logger().info(f'After update: T_yb: \n {self.T_yb}')
 
     def joy_control_cb(self, msg: ArmJoy) -> None:
         """
@@ -167,6 +189,10 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
             elif (msg.pose_cmd == ArmJoy.SLEEP_POSE):
                 self.arm.go_to_sleep_pose(moving_time=1.5, accel_time=0.75)
+            elif (msg.pose_cmd == 50):
+                self.arm.start_lift(moving_time=1.5, accel_time=0.75)
+            elif (msg.pose_cmd == 60):
+                self.arm.lift(moving_time=0.5, accel_time=0.75)
             self.update_T_yb()
             self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
 
@@ -204,8 +230,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             self.update_T_yb()
 
         position_changed = msg.ee_x_cmd + msg.ee_z_cmd
-        if (self.num_joints >= 6):
-            position_changed += msg.ee_y_cmd
         orientation_changed = msg.ee_roll_cmd + msg.ee_pitch_cmd
 
         if (position_changed + orientation_changed == 0):
@@ -221,12 +245,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             elif (msg.ee_x_cmd == ArmJoy.EE_X_DEC):
                 T_yb[0, 3] -= self.translate_step
 
-            # check ee_y_cmd
-            if (msg.ee_y_cmd == ArmJoy.EE_Y_INC and self.num_joints >= 6 and T_yb[0, 3] > 0.3):
-                T_yb[1, 3] += self.translate_step
-            elif (msg.ee_y_cmd == ArmJoy.EE_Y_DEC and self.num_joints >= 6 and T_yb[0, 3] > 0.3):
-                T_yb[1, 3] -= self.translate_step
-
             # check ee_z_cmd
             if (msg.ee_z_cmd == ArmJoy.EE_Z_INC):
                 T_yb[2, 3] += self.translate_step
@@ -236,12 +254,6 @@ class XSArmRobot(InterbotixManipulatorXS):
         # check end-effector orientation related commands
         if (orientation_changed != 0):
             rpy = ang.rotation_matrix_to_euler_angles(T_yb[:3, :3])
-
-            # check ee_roll_cmd
-            if (msg.ee_roll_cmd == ArmJoy.EE_ROLL_CCW):
-                rpy[0] += self.rotate_step
-            elif (msg.ee_roll_cmd == ArmJoy.EE_ROLL_CW):
-                rpy[0] -= self.rotate_step
 
             # check ee_pitch_cmd
             if (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_DOWN):
@@ -261,8 +273,11 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=0.1,
             blocking=False)
         if success:
+            self.core.get_node().get_logger().info(f'T_sy: \n {self.T_sy}')
+            self.core.get_node().get_logger().info(f'T_yb: \n {T_yb}')
+            self.core.get_node().get_logger().info(f'T_sd: \n {T_sd}')
+            self.core.get_node().get_logger().info(f'Theta list:\n{_}')
             self.T_yb = np.array(T_yb)
-
 
 def main(args=None):
     p = argparse.ArgumentParser()
