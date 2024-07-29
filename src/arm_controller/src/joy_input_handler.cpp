@@ -9,20 +9,22 @@
 #include <visualization_msgs/msg/marker.hpp>
 
 #include "arm_controller/msg/constrained_pose.hpp"
-// for publishing to joy_processed topic
+// for publishing to /commands/joy_processed
 #include <interbotix_xs_msgs/msg/arm_joy.hpp>
 
 using std::placeholders::_1;
 using namespace arm_controller::msg;
 using namespace visualization_msgs::msg;
 using namespace geometry_msgs::msg;
+using namespace interbotix_xs_msgs::msg;
+
 
 // Xbox 360 Controller button mappings
 static std::map<std::string, int> btn_map = 
 {
   // TODO: update these entries to publish poses for lifting
   // {"GRIPPER_PWM_DEC", 0},  // buttons start here
-  // {"GRIPPER_RELEASE", 1},
+  {"MOVE_FORWARD", 1}, // B
   {"LIFT", 2},       // X
   {"START_LIFT", 3}, // Y
   {"WAIST_CCW", 4},
@@ -31,7 +33,7 @@ static std::map<std::string, int> btn_map =
   {"HOME_POSE", 7},
   {"TORQUE_ENABLE", 8},
   {"FLIP_EE_X", 9},
-  {"FLIP_EE_ROLL", 10},
+  // {"FLIP_EE_ROLL", 10},
   {"EE_X", 0},             // axes start here
   {"EE_Z", 1},
   // {"EE_Y_INC", 2},
@@ -225,22 +227,20 @@ class JoyInputHandler : public rclcpp::Node
      */
     void raw_joy_handler(const sensor_msgs::msg::Joy::SharedPtr msg)
     {
-      static bool flip_ee_roll_cmd = false;
-      static bool flip_ee_roll_cmd_last_state = false;
       static bool flip_ee_x_cmd = false;
       static bool flip_ee_x_cmd_last_state = false;
       static bool flip_torque_cmd = true;
       static bool flip_torque_cmd_last_state = true;
       static double time_start;
       static bool timer_started = false;
-      interbotix_xs_msgs::msg::ArmJoy joy_cmd;
+      ArmJoy joy_cmd;
 
       // Check if the torque_cmd should be flipped
-      if (msg->buttons.at(btn_map["TORQUE_ENABLE"]) == 1
-          && !flip_torque_cmd_last_state) 
+      if (msg->buttons.at(btn_map["TORQUE_ENABLE"]) == 1 
+          && !flip_torque_cmd_last_state)
       {
         flip_torque_cmd = true;
-        joy_cmd.torque_cmd = interbotix_xs_msgs::msg::ArmJoy::TORQUE_ON;
+        joy_cmd.torque_cmd = ArmJoy::TORQUE_ON;
       }
       else if (msg->buttons.at(btn_map["TORQUE_ENABLE"]) == 1 
                 && flip_torque_cmd_last_state) 
@@ -253,20 +253,31 @@ class JoyInputHandler : public rclcpp::Node
         if (timer_started && 
             this->get_clock()->now().seconds() - time_start > 3.0) 
         {
-          joy_cmd.torque_cmd = interbotix_xs_msgs::msg::ArmJoy::TORQUE_OFF;
+          joy_cmd.torque_cmd = ArmJoy::TORQUE_OFF;
           flip_torque_cmd = false;
         }
         flip_torque_cmd_last_state = flip_torque_cmd;
         timer_started = false;
       }
 
-      if(msg->buttons.at(btn_map["START_LIFT"]) ==  1)
+      // Check the speed_cmd
+      if (msg->axes.at(btn_map["SPEED"]) == 1)
       {
-        joy_cmd.pose_cmd = 50;
+        joy_cmd.speed_cmd = ArmJoy::SPEED_INC;
       }
-      else if(msg->buttons.at(btn_map["LIFT"]) == 1)
+      else if (msg->axes.at(btn_map["SPEED"]) == -1)
       {
-        joy_cmd.pose_cmd = 60;
+        joy_cmd.speed_cmd = ArmJoy::SPEED_DEC;
+      }
+
+      // Check the speed_toggle_cmd
+      if (msg->axes.at(btn_map["SPEED_TYPE"]) == 1)
+      {
+        joy_cmd.speed_toggle_cmd = ArmJoy::SPEED_COARSE;
+      }
+      else if (msg->axes.at(btn_map["SPEED_TYPE"]) == -1)
+      {
+        joy_cmd.speed_toggle_cmd = ArmJoy::SPEED_FINE;
       }
 
       // Check if the ee_x_cmd should be flipped
@@ -287,129 +298,81 @@ class JoyInputHandler : public rclcpp::Node
       // Check the ee_x_cmd
       if (msg->axes.at(btn_map["EE_X"]) >= threshold && !flip_ee_x_cmd)
       {
-        joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
+        joy_cmd.ee_x_cmd = ArmJoy::EE_X_INC;
       }
       else if (msg->axes.at(btn_map["EE_X"]) <= -threshold && !flip_ee_x_cmd)
       {
-        joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_DEC;
+        joy_cmd.ee_x_cmd = ArmJoy::EE_X_DEC;
       }
       else if (msg->axes.at(btn_map["EE_X"]) >= threshold && flip_ee_x_cmd)
       {
-        joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_DEC;
+        joy_cmd.ee_x_cmd = ArmJoy::EE_X_DEC;
       }
       else if (msg->axes.at(btn_map["EE_X"]) <= -threshold && flip_ee_x_cmd)
       {
-        joy_cmd.ee_x_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_X_INC;
+        joy_cmd.ee_x_cmd = ArmJoy::EE_X_INC;
       }
 
       // Check the ee_z_cmd
       if (msg->axes.at(btn_map["EE_Z"]) >= threshold)
       {
-        joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_INC;
+        joy_cmd.ee_z_cmd = ArmJoy::EE_Z_INC;
       }
       else if (msg->axes.at(btn_map["EE_Z"]) <= -threshold)
       {
-        joy_cmd.ee_z_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_Z_DEC;
-      }
-
-      // Check if the ee_roll_cmd should be flipped
-      if (msg->buttons.at(btn_map["FLIP_EE_ROLL"]) == 1
-          && !flip_ee_roll_cmd_last_state)
-      {
-        flip_ee_roll_cmd = true;
-      }
-      else if (msg->buttons.at(btn_map["FLIP_EE_ROLL"]) == 1
-              && flip_ee_roll_cmd_last_state)
-      {
-        flip_ee_roll_cmd = false;
-      }
-      else if (msg->buttons.at(btn_map["FLIP_EE_ROLL"]) == 0)
-      {
-        flip_ee_roll_cmd_last_state = flip_ee_roll_cmd;
-      }
-
-      // Check the ee_roll_cmd
-      if (msg->axes.at(btn_map["EE_ROLL"]) >= threshold && !flip_ee_roll_cmd)
-      {
-        joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CW;
-      }
-      else if (msg->axes.at(btn_map["EE_ROLL"]) <= -threshold
-                && !flip_ee_roll_cmd)
-      {
-        joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CCW;
-      }
-      else if (msg->axes.at(btn_map["EE_ROLL"]) >= threshold && flip_ee_roll_cmd) 
-      {
-        joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CCW;
-      }
-      else if (msg->axes.at(btn_map["EE_ROLL"]) <= -threshold
-                && flip_ee_roll_cmd)
-      {
-        joy_cmd.ee_roll_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_ROLL_CW;
+        joy_cmd.ee_z_cmd = ArmJoy::EE_Z_DEC;
       }
 
       // Check the ee_pitch_cmd
       if (msg->axes.at(btn_map["EE_PITCH"]) >= threshold)
       {
-        joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_UP;
+        joy_cmd.ee_pitch_cmd = ArmJoy::EE_PITCH_UP;
       }
       else if (msg->axes.at(btn_map["EE_PITCH"]) <= -threshold) {
-        joy_cmd.ee_pitch_cmd = interbotix_xs_msgs::msg::ArmJoy::EE_PITCH_DOWN;
+        joy_cmd.ee_pitch_cmd = ArmJoy::EE_PITCH_DOWN;
       }
 
       // Check the waist_cmd
       if (msg->buttons.at(btn_map["WAIST_CCW"]) == 1)
       {
-        joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CCW;
+        joy_cmd.waist_cmd = ArmJoy::WAIST_CCW;
       }
       else if (msg->buttons.at(btn_map["WAIST_CW"]) == 1)
       {
-        joy_cmd.waist_cmd = interbotix_xs_msgs::msg::ArmJoy::WAIST_CW;
+        joy_cmd.waist_cmd = ArmJoy::WAIST_CW;
       }
 
-      // Check the pose_cmd
+      // Check pose_cmd
       if (msg->buttons.at(btn_map["HOME_POSE"]) == 1)
       {
-        joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::HOME_POSE;
+        joy_cmd.pose_cmd = ArmJoy::HOME_POSE;
       }
       else if (msg->buttons.at(btn_map["SLEEP_POSE"]) == 1)
       {
-        joy_cmd.pose_cmd = interbotix_xs_msgs::msg::ArmJoy::SLEEP_POSE;
+        joy_cmd.pose_cmd = ArmJoy::SLEEP_POSE;
       }
-
-      // Check the speed_cmd
-      if (msg->axes.at(btn_map["SPEED"]) == 1)
+      else if (msg->buttons.at(btn_map["START_LIFT"]) == 1)
       {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_INC;
+        joy_cmd.pose_cmd = ArmJoy::START_LIFT;
       }
-      else if (msg->axes.at(btn_map["SPEED"]) == -1)
+      else if (msg->buttons.at(btn_map["LIFT"]) == 1)
       {
-        joy_cmd.speed_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_DEC;
+        joy_cmd.pose_cmd = ArmJoy::LIFT;
       }
-
-      // Check the speed_toggle_cmd
-      if (msg->axes.at(btn_map["SPEED_TYPE"]) == 1)
+      else if (msg->buttons.at(btn_map["MOVE_FORWARD"]) == 1)
       {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_COARSE;
-      }
-      else if (msg->axes.at(btn_map["SPEED_TYPE"]) == -1)
-      {
-        joy_cmd.speed_toggle_cmd = interbotix_xs_msgs::msg::ArmJoy::SPEED_FINE;
+        joy_cmd.pose_cmd = 70;
       }
 
       // Only publish a ArmJoy message if any of the following fields have changed.
       if (
         !((prev_joy_cmd.ee_x_cmd == joy_cmd.ee_x_cmd) &&
-        (prev_joy_cmd.ee_y_cmd == joy_cmd.ee_y_cmd) &&
         (prev_joy_cmd.ee_z_cmd == joy_cmd.ee_z_cmd) &&
-        (prev_joy_cmd.ee_roll_cmd == joy_cmd.ee_roll_cmd) &&
         (prev_joy_cmd.ee_pitch_cmd == joy_cmd.ee_pitch_cmd) &&
         (prev_joy_cmd.waist_cmd == joy_cmd.waist_cmd) &&
-        (prev_joy_cmd.gripper_cmd == joy_cmd.gripper_cmd) &&
         (prev_joy_cmd.pose_cmd == joy_cmd.pose_cmd) &&
         (prev_joy_cmd.speed_cmd == joy_cmd.speed_cmd) &&
         (prev_joy_cmd.speed_toggle_cmd == joy_cmd.speed_toggle_cmd) &&
-        (prev_joy_cmd.gripper_pwm_cmd == joy_cmd.gripper_pwm_cmd) &&
         (prev_joy_cmd.torque_cmd == joy_cmd.torque_cmd)))
       {
         pub_joy_cmd->publish(joy_cmd);

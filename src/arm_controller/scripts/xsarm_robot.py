@@ -63,15 +63,6 @@ class XSArmRobot(InterbotixManipulatorXS):
     loop_rates = {'coarse': 25, 'fine': 25}
     joy_msg = ArmJoy()
     joy_mutex = Lock()
-    rot_matrix = quaternion_matrix(np.array([1,0,0,0]))
-    custom_pos: np.ndarray = np.array(
-        [
-            [1,   0,   0,  0.2     ],
-            [0,   1,   0,  0       ],
-            [0,   0,   1,  0.2     ],
-            [0,   0,   0,  1       ]
-        ]
-    )
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
@@ -87,9 +78,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
-        # Orientation around z-axis (YAW) with respect to frame
+        # Orientation around z-axis (YAW) with respect to the frame
         self.T_sy = np.identity(4)
-        # Translation matrix with respect to the frame
+        # Transformation matrix with respect to the frame
         self.T_yb = np.identity(4)
         self.update_T_yb()
         self.core.get_node().create_subscription(
@@ -124,19 +115,12 @@ class XSArmRobot(InterbotixManipulatorXS):
     def update_T_yb(self) -> None:
         """
         Calculate the pose of the end-effector w.r.t. T_y.
-        
-        Specifically calculates the orientation around the z-axis,
-        this method is only used to update T_yb to contain the orientation of
-        the end-effector?
         """
-        self.core.get_node().get_logger().info(f'Before update: T_yb: \n {self.T_yb}')
+        # Get the latest command
         T_sb = self.arm.get_ee_pose_command()
         rpy = ang.rotation_matrix_to_euler_angles(T_sb[:3, :3])
-        # get rotation matrix from yaw
         self.T_sy[:2, :2] = ang.yaw_to_rotation_matrix(rpy[2])
-        # update T_yb to 
         self.T_yb = np.dot(ang.trans_inv(self.T_sy), T_sb)
-        self.core.get_node().get_logger().info(f'After update: T_yb: \n {self.T_yb}')
 
     def joy_control_cb(self, msg: ArmJoy) -> None:
         """
@@ -189,10 +173,12 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
             elif (msg.pose_cmd == ArmJoy.SLEEP_POSE):
                 self.arm.go_to_sleep_pose(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == 50):
+            elif (msg.pose_cmd == ArmJoy.START_LIFT):
                 self.arm.start_lift(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == 60):
+            elif (msg.pose_cmd == ArmJoy.LIFT):
                 self.arm.lift(moving_time=0.5, accel_time=0.75)
+            elif (msg.pose_cmd == 70):
+                self.move_forward()
             self.update_T_yb()
             self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
 
@@ -263,7 +249,7 @@ class XSArmRobot(InterbotixManipulatorXS):
 
             T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
 
-        # Get desired transformation matrix of the end-effector w.r.t. the base frame
+        # Get desired transformation matrix of the end-effector w.r.t. the world frame
         T_sd = np.dot(self.T_sy, T_yb)
         _, success = self.arm.set_ee_pose_matrix(
             T_sd=T_sd,
@@ -273,11 +259,31 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=0.1,
             blocking=False)
         if success:
-            self.core.get_node().get_logger().info(f'T_sy: \n {self.T_sy}')
-            self.core.get_node().get_logger().info(f'T_yb: \n {T_yb}')
-            self.core.get_node().get_logger().info(f'T_sd: \n {T_sd}')
-            self.core.get_node().get_logger().info(f'Theta list:\n{_}')
             self.T_yb = np.array(T_yb)
+
+    def grip(self, force_threshold):
+        """
+        A method that will contain a loop that calls move_forward()
+        until a certain threshold is reached.
+        """
+
+    def move_forward(self):
+        """Moves the arm a small distance forward"""
+        T_yb = np.array(self.T_yb)
+        translate_step = 1e-2
+        T_yb[0, 3] += translate_step
+        # Get desired transformation matrix of the end-effector w.r.t. the world frame
+        T_sd = np.dot(self.T_sy, T_yb)
+        _, success = self.arm.set_ee_pose_matrix(
+            T_sd=T_sd,
+            custom_guess=self.arm.get_joint_commands(),
+            execute=True,
+            moving_time=1.5,
+            accel_time=0.75,
+            blocking=False)
+        if success:
+            self.T_yb = np.array(T_yb)
+        
 
 def main(args=None):
     p = argparse.ArgumentParser()
