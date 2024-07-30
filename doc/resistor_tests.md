@@ -8,3 +8,6 @@ its maximum value for most of the time that the robots were in contact with the 
 
 ### Test with 470k Ohm Resistor on Ross and 10k Ohm Resistor on Monica
 ![470k Ohm Resistor on Ross](images/470k_ohm_resistor.png) 
+
+### Test with 470k Ohm Resistor on Ross and varying weights
+![Weights on Ross](images/weights_on_ross.png)
