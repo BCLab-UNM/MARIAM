@@ -10,4 +10,6 @@ its maximum value for most of the time that the robots were in contact with the 
 ![470k Ohm Resistor on Ross](images/470k_ohm_resistor.png) 
 
 ### Test with 470k Ohm Resistor on Ross and varying weights
+For this test, I used different weights placed on top of the force sensor (where the arm was pointing upwards). The most sloping force data came from the 50 g resistor, but due to the drift of the sensor, it was not stable. 
+The force sensor was not able to detect force for all the weights less than 50 g (20g, 10 g, 5 g), and it maxed out for all the weights above 50 g (100 g, 200 g, 500 g, and 1k g) as soon as they were placed on it.
 ![Weights on Ross](images/weights_on_ross.png)
