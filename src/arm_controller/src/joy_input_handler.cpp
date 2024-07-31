@@ -222,7 +222,7 @@ class JoyInputHandler : public rclcpp::Node
     }
 
     /**
-     * 
+     * Hanldes controller input from the topic /commands/joy_raw
      * @msg: controller input
      */
     void raw_joy_handler(const sensor_msgs::msg::Joy::SharedPtr msg)
@@ -377,7 +377,7 @@ class JoyInputHandler : public rclcpp::Node
       {
         pub_joy_cmd->publish(joy_cmd);
       }
-      prev_joy_cmd = joy_cmd;
+      this->prev_joy_cmd = joy_cmd;
     }
 
     /**
