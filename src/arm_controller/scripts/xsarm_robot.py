@@ -306,14 +306,13 @@ class XSArmRobot(InterbotixManipulatorXS):
         tol = 0.05
 
         while not np.allclose(a=T_sd, b=desired_matrix, atol=tol):
-            self.rotate_waist(desired_rpy[2], tol)
+            self.rotate_waist(desired_rpy[2])
             T_yb = self.translation(
                 T_yb,
                 # pass coordinates relative to the base frame without yaw angle
-                np.linalg.inv(desired_rotation) @ desired_matrix,
-                tol
+                np.linalg.inv(desired_rotation) @ desired_matrix
             )
-            T_yb = self.rotate_ee(T_yb, desired_rpy, tol)
+            T_yb = self.rotate_ee(T_yb, desired_rpy)
             
             T_sd = self.T_sy @ T_yb
             self.core.get_node().get_logger().info(f'T_d\n{desired_matrix}')
@@ -322,8 +321,8 @@ class XSArmRobot(InterbotixManipulatorXS):
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
                 execute=True,
-                moving_time=0.2,
-                accel_time=0.1,
+                moving_time=1.5,
+                accel_time=0.75,
                 blocking=False)
             if success:
                 self.T_yb = np.array(T_yb)
