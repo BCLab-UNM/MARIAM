@@ -303,7 +303,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().get_logger().info(f'Desired matrix:\n{desired_matrix}')
         T_yb = np.array(self.T_yb)
         T_sd = np.eye(4)
-        tol = 1e-2
+        tol = 0.05
 
         while not np.allclose(a=T_sd, b=desired_matrix, atol=tol):
             self.rotate_waist(desired_rpy[2], tol)
@@ -333,10 +333,10 @@ class XSArmRobot(InterbotixManipulatorXS):
         waist_position = self.arm.get_single_joint_command('waist')
         error = desired - waist_position
         # self.core.get_node().get_logger().info(f'Error: {error}')
-        if (error > 0):
-            waist_position += self.waist_step*(error**2)
-        elif (error < 0):
-            waist_position -= self.waist_step*(error**2)
+        if error > 0:
+            waist_position += self.waist_step
+        elif error < 0:
+            waist_position -= self.waist_step
 
         success = self.arm.set_single_joint_position(
             joint_name='waist',
@@ -344,7 +344,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             moving_time=0.2,
             accel_time=0.1,
             blocking=False)
-        self.core.get_node().get_logger().info(f'In rotate_waist() {success}')
+        # self.core.get_node().get_logger().info(f'In rotate_waist() {success}')
         if (not success and waist_position != self.waist_ul):
             self.arm.set_single_joint_position(
                 joint_name='waist',
@@ -363,22 +363,22 @@ class XSArmRobot(InterbotixManipulatorXS):
         error2 = T_d[2, 3] - T[2, 3]
         step2 = error2**2
         if error1 > 0:
-            T[0, 3] += step1
+            T[0, 3] += self.translate_step
         elif error1 < 0:
-            T[0, 3] -= step1
+            T[0, 3] -= self.translate_step
         if error2 > 0:
-            T[2, 3] += step2
+            T[2, 3] += self.translate_step
         elif error2 < 0:
-            T[2, 3] -= step2
+            T[2, 3] -= self.translate_step
         return T
 
     def rotate_ee(self, T, desired_rpy, tolerance) -> np.ndarray:
         rpy = ang.rotation_matrix_to_euler_angles(T)
         error = desired_rpy[1] - rpy[1]
         if error > tolerance:
-            rpy[1] += self.rotate_step*(error**2)
+            rpy[1] += self.rotate_step
         elif error < tolerance:
-            rpy[1] -= self.rotate_step*(error**2)
+            rpy[1] -= self.rotate_step
         T[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         return T
 
