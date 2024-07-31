@@ -329,7 +329,7 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.T_yb = np.array(T_yb)
 
 
-    def rotate_waist(self, desired, tolerance):
+    def rotate_waist(self, desired):
         waist_position = self.arm.get_single_joint_command('waist')
         error = desired - waist_position
         # self.core.get_node().get_logger().info(f'Error: {error}')
@@ -355,7 +355,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         
         self.update_T_yb()
 
-    def translation(self, T, T_d, tolerance) -> np.ndarray:
+    def translation(self, T, T_d) -> np.ndarray:
         # self.core.get_node().get_logger().info(f'T\n{T}')
         # self.core.get_node().get_logger().info(f'T_d\n{T_d}')
         error1 = T_d[0, 3]- T[0, 3]
@@ -372,12 +372,12 @@ class XSArmRobot(InterbotixManipulatorXS):
             T[2, 3] -= self.translate_step
         return T
 
-    def rotate_ee(self, T, desired_rpy, tolerance) -> np.ndarray:
+    def rotate_ee(self, T, desired_rpy) -> np.ndarray:
         rpy = ang.rotation_matrix_to_euler_angles(T)
         error = desired_rpy[1] - rpy[1]
-        if error > tolerance:
+        if error > 0:
             rpy[1] += self.rotate_step
-        elif error < tolerance:
+        elif error < 0:
             rpy[1] -= self.rotate_step
         T[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         return T
