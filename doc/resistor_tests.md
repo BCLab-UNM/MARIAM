@@ -1,7 +1,13 @@
 # Resistor Tests with the Force Sensor
+## Update: 8/1/24
+According to the test below, having a smaller value resistor on Ross gave us a better range of values. In this test, Monica was overloaded, but Ross was not. Will need to test more to see if saturating the FSR corresponds with the servo overload.
+
+### Test with 1k Ohm Resistor on Ross and 10k Ohm Resistor on Monica
+![1k Ohm Resistor on Ross](images/1k_ohm_on_ross.png)
+
+-----------------------------------------------------------------------------
 The Interlink 406 Force Sensing Resistor does not appear to be sensitive enough for our experiments. We originally attached a 10k Ohm Resistor to the Teensy on both robots, but when looking at the force data in the ROS bags, it appeared to be at
 its maximum value for most of the time that the robots were in contact with the object. I switched the resistor on Ross to a 100k Ohm one and then a 470k Ohm resistor, and the results were nearly the same. The force measurement is along the y-axis and time is along the bottom. 
-
 ### Test with 100k Ohm Resistor on Ross and 10k Ohm Resistor on Monica
 ![100k Ohm Resistor on Ross](images/100k_ohm_resistor.png "100k Ohm Resistor Test")
 
