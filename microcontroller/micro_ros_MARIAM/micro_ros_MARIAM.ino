@@ -219,9 +219,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     else { move.rotateRight(speedL, speedR*-1); }  
 
     update_odometry(left_ticks.data, right_ticks.data);
-    force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
-    force.data = exp(force.data); 
-    force.data = -0.00000008099*pow(force.data, 5) + 0.000013687*pow(force.data, 4) 
+    force.data = analogRead(A5)
+    //force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
+    //force.data = exp(force.data); 
+    //force.data = -0.00000008099*pow(force.data, 5) + 0.000013687*pow(force.data, 4) 
                  - 0.00068314*pow(force.data, 3) + 0.011707*pow(force.data, 2) 
                  - 0.0081636*force.data + 0.0098014; // to force
 
