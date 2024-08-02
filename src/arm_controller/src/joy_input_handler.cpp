@@ -22,8 +22,7 @@ using namespace interbotix_xs_msgs::msg;
 // Xbox 360 Controller button mappings
 static std::map<std::string, int> btn_map = 
 {
-  // TODO: update these entries to publish poses for lifting
-  // {"GRIPPER_PWM_DEC", 0},  // buttons start here
+  {"TEST", 0},  // buttons start here
   {"MOVE_FORWARD", 1}, // B
   {"LIFT", 2},       // X
   {"START_LIFT", 3}, // Y
@@ -363,6 +362,11 @@ class JoyInputHandler : public rclcpp::Node
       {
         joy_cmd.pose_cmd = 70;
       }
+      else if (msg->buttons.at(btn_map["TEST"]) == 1)
+      {
+        joy_cmd.pose_cmd = 80;
+      }
+      
 
       // Only publish a ArmJoy message if any of the following fields have changed.
       if (

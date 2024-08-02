@@ -187,6 +187,22 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.arm.lift(moving_time=1.5, accel_time=0.75)
             elif (msg.pose_cmd == 70):
                 self.go_to()
+            elif (msg.pose_cmd == 80):
+                T_sd = np.array([
+                    [0, -1, 0, 0],
+                    [1, 0, 0, 0.233],
+                    [0, 0, 1, 0.098],
+                    [0, 0, 0, 1]
+                ])
+                _, success = self.arm.set_ee_pose_matrix(
+                    T_sd=T_sd,
+                    custom_guess=[1.7, 0.5, 0.6, -1.17],
+                    execute=True,
+                    moving_time=0.2,
+                    accel_time=0.1,
+                    blocking=False)
+                if success:
+                    self.T_yb = np.array(T_yb)
             self.update_T_yb()
             self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
 
