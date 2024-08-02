@@ -2,6 +2,7 @@
 Different modes of control for the end effector of the PX100 robotic arm.
 
 ## Table of commands for xsarm_joy.launch.py
+This launch file requires the modern robotics package be installed using pip: `pip3 install modern-robotics`
 Documentation: https://wiki.ros.org/joy#Microsoft_Xbox_360_Wired_Controller_for_Linux
 
 Note: the buttons on the controller fall under two categories: buttons and axes. The following table documents which category each button falls under and the action it will perform when pressed.
