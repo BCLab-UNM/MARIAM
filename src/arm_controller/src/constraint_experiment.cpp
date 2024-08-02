@@ -35,7 +35,7 @@ class ConstraintExperiment : public rclcpp::Node
 
       pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
-        10
+        1
       );
 
       timer_ = this->create_wall_timer(
@@ -55,6 +55,7 @@ class ConstraintExperiment : public rclcpp::Node
       if(use_first_pose) msg.pose = pose1;
       else msg.pose = pose2;
       msg.use_plane_constraint = true;
+      msg.pose_name = "none";
       RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
       pose_publisher_->publish(msg);
       use_first_pose = !use_first_pose;
