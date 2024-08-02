@@ -52,7 +52,7 @@ class JoyMoveitConstrained : public rclcpp::Node
             std::bind(&JoyMoveitConstrained::targetPoseCallback, this, std::placeholders::_1)
           );
       
-      market_pub_ = this->create_publisher<Marker>(
+      marker_pub_ = this->create_publisher<Marker>(
         "plane_constraint",
         10
       );
@@ -75,6 +75,8 @@ class JoyMoveitConstrained : public rclcpp::Node
     {
       move_group = 
           new MoveGroupInterface(shared_from_this(), "interbotix_arm");
+      
+      move_group->setPlannerId("LIN");
     }
     
     ~JoyMoveitConstrained() 
@@ -85,7 +87,7 @@ class JoyMoveitConstrained : public rclcpp::Node
   private:
     MoveGroupInterface *move_group = nullptr;
 
-    rclcpp::Publisher<Marker>::SharedPtr market_pub_;
+    rclcpp::Publisher<Marker>::SharedPtr marker_pub_;
     rclcpp::Publisher<PathAndExecutionTiming>::SharedPtr timing_pub_;
     rclcpp::Subscription<ConstrainedPose>::SharedPtr pose_sub_;
 
@@ -119,16 +121,16 @@ class JoyMoveitConstrained : public rclcpp::Node
       auto target_pose = msg->pose;
       moveit_msgs::msg::Constraints constraints;
       
-      if(msg->use_plane_constraint)
-      {
-        Pose curr_pose = getEndEffectorPose(end_effector_link);
-        constraints = createConstraints(
-          curr_pose,
-          pose_ref_frame,
-          end_effector_link
-        );
-        move_group->setPathConstraints(constraints);
-      }
+      // if(msg->use_plane_constraint)
+      // {
+      //   Pose curr_pose = getEndEffectorPose(end_effector_link);
+      //   constraints = createConstraints(
+      //     curr_pose,
+      //     pose_ref_frame,
+      //     end_effector_link
+      //   );
+      //   move_group->setPathConstraints(constraints);
+      // }
 
       MoveGroupInterface::Plan plan;
       if(pose_name.compare("none") != 0)
@@ -186,7 +188,7 @@ class JoyMoveitConstrained : public rclcpp::Node
       marker.color.g = 0.05;
       marker.color.b = 0.05;
       marker.pose    = plane_pose;
-      market_pub_->publish(marker);
+      marker_pub_->publish(marker);
     }
 
     void publishPlanAndExecuteTiming(double planning_time, double execution_time)
