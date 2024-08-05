@@ -22,16 +22,16 @@ class ConstraintExperiment : public rclcpp::Node
       pose1.position.z = 0.098;
       pose1.orientation.x =  0.000;
       pose1.orientation.y =  0.000;
-      pose1.orientation.z =  0.000;
-      pose1.orientation.w =  1.000;
+      pose1.orientation.z =  0.707;
+      pose1.orientation.w =  0.707;
 
       pose2.position.x = 0.250048;
       pose2.position.y = 0;
       pose2.position.z = 0.244;
       pose2.orientation.x =  0.000;
       pose2.orientation.y =  0.000;
-      pose2.orientation.z =  0.000;
-      pose2.orientation.w =  1.000;
+      pose2.orientation.z =  0.707;
+      pose2.orientation.w =  0.707;
 
       pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
@@ -39,13 +39,13 @@ class ConstraintExperiment : public rclcpp::Node
       );
 
       timer_ = this->create_wall_timer(
-        15s, std::bind(&ConstraintExperiment::run_experiment, this));
+        this->FREQUENCY, 
+        std::bind(&ConstraintExperiment::run_experiment, this)
+      );
       
       stop_timer_ = this->create_wall_timer(
-        publish_duration_, std::bind(
-          &ConstraintExperiment::stop_experiment,
-          this
-        )
+        this->PUBLISH_DURATION,
+        std::bind(&ConstraintExperiment::stop_experiment, this)
       );
     }
 
@@ -72,7 +72,8 @@ class ConstraintExperiment : public rclcpp::Node
 
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
-    seconds publish_duration_ = 300s;
+    const seconds PUBLISH_DURATION = 300s;
+    const seconds FREQUENCY = 2s;
     bool use_first_pose = true;
     
     // poses for testing the arm's motion

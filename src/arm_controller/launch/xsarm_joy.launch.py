@@ -36,8 +36,8 @@ def launch_setup(context, *args, **kwargs):
 
     experiment_node = Node(
         package='arm_controller',
-        executable='constraint_experiment',
-        name='constraint_experiment',
+        executable='experiment',
+        name='experiment',
         output='screen',
         condition=IfCondition(experiment_launch_arg)
     )

@@ -85,19 +85,19 @@ install(TARGETS joy_input_handler
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable constraint_experiment.cpp
-add_executable(constraint_experiment src/constraint_experiment.cpp)
-target_include_directories(constraint_experiment PUBLIC
+# For executable experiment.cpp
+add_executable(experiment src/experiment.cpp)
+target_include_directories(experiment PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(constraint_experiment PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(experiment PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  constraint_experiment
+  experiment
   "moveit_ros_planning_interface"
   "rclcpp"
   "std_msgs"
 )
-install(TARGETS constraint_experiment
+install(TARGETS experiment
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -133,7 +133,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 
 target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
 target_link_libraries(joy_input_handler "${cpp_typesupport_target}")
-target_link_libraries(constraint_experiment "${cpp_typesupport_target}")
+target_link_libraries(experiment "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
