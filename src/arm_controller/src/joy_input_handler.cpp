@@ -358,14 +358,14 @@ class JoyInputHandler : public rclcpp::Node
       {
         joy_cmd.pose_cmd = ArmJoy::LIFT;
       }
-      else if (msg->buttons.at(btn_map["MOVE_FORWARD"]) == 1)
-      {
-        joy_cmd.pose_cmd = 70;
-      }
-      else if (msg->buttons.at(btn_map["TEST"]) == 1)
-      {
-        joy_cmd.pose_cmd = 80;
-      }
+      // else if (msg->buttons.at(btn_map["MOVE_FORWARD"]) == 1)
+      // {
+      //   joy_cmd.pose_cmd = 70;
+      // }
+      // else if (msg->buttons.at(btn_map["TEST"]) == 1)
+      // {
+      //   joy_cmd.pose_cmd = 80;
+      // }
       
 
       // Only publish a ArmJoy message if any of the following fields have changed.

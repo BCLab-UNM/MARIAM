@@ -38,6 +38,8 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 ## Launch Files
 
 ### xsarm_joy.launch.py
+Add `experiments:=true` to launch a node that will publish target poses for 5 minutes.
+
 Launch command (with fake hardware):
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py

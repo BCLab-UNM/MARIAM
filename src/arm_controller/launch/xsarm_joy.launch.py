@@ -12,8 +12,7 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
-    PathJoinSubstitution,
-    PythonExpression
+    PathJoinSubstitution
 )
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node

@@ -192,24 +192,23 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.arm.start_lift(moving_time=1.5, accel_time=0.75)
             elif (msg.pose_cmd == ArmJoy.LIFT):
                 self.arm.lift(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == 70):
-                self.go_to()
-            elif (msg.pose_cmd == 80):
-                T_sd = np.array([
-                    [0, -1, 0, 0],
-                    [1, 0, 0, 0.233],
-                    [0, 0, 1, 0.098],
-                    [0, 0, 0, 1]
-                ])
-                _, success = self.arm.set_ee_pose_matrix(
-                    T_sd=T_sd,
-                    custom_guess=[1.7, 0.5, 0.6, -1.17],
-                    execute=True,
-                    moving_time=0.2,
-                    accel_time=0.1,
-                    blocking=False)
-                if success:
-                    self.T_yb = np.array(T_yb)
+            # elif (msg.pose_cmd == 80):
+                # Used for testing IK solver
+                # T_sd = np.array([
+                #     [0, -1, 0, 0],
+                #     [1, 0, 0, 0.233],
+                #     [0, 0, 1, 0.098],
+                #     [0, 0, 0, 1]
+                # ])
+                # _, success = self.arm.set_ee_pose_matrix(
+                #     T_sd=T_sd,
+                #     custom_guess=[1.7, 0.5, 0.6, -1.17],
+                #     execute=True,
+                #     moving_time=0.2,
+                #     accel_time=0.1,
+                #     blocking=False)
+                # if success:
+                #     self.T_yb = np.array(T_yb)
             self.update_T_yb()
             self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
 
@@ -282,9 +281,9 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         # Get desired transformation matrix of the end-effector w.r.t. the base frame
         T_sd = self.T_sy @ T_yb
-        self.core.get_node().get_logger().info(f'T_sy:\n{self.T_sy}')
-        self.core.get_node().get_logger().info(f'T_yb:\n{T_yb}')
-        self.core.get_node().get_logger().info(f'T_sd:\n{T_sd}')
+        # self.core.get_node().get_logger().info(f'T_sy:\n{self.T_sy}')
+        # self.core.get_node().get_logger().info(f'T_yb:\n{T_yb}')
+        # self.core.get_node().get_logger().info(f'T_sd:\n{T_sd}')
         _, success = self.arm.set_ee_pose_matrix(
             T_sd=T_sd,
             custom_guess=self.arm.get_joint_commands(),
@@ -317,12 +316,13 @@ class XSArmRobot(InterbotixManipulatorXS):
         desired_matrix[0, 3] = pose.position.x
         desired_matrix[1, 3] = pose.position.y
         desired_matrix[2, 3] = pose.position.z
-        self.core.get_node().get_logger().info(f'Desired matrix:\n{desired_matrix}')
+        self.core.get_node().get_logger().info('Moving to goal pose...')
+        success = True
         T_yb = np.array(self.T_yb)
         T_sd = np.eye(4)
         tol = 0.05
 
-        while not np.allclose(a=T_sd, b=desired_matrix, atol=tol):
+        while not np.allclose(a=T_sd, b=desired_matrix, atol=tol) and success:
             self.rotate_waist(desired_rpy[2])
             T_yb = self.translation(
                 T_yb,
@@ -332,8 +332,8 @@ class XSArmRobot(InterbotixManipulatorXS):
             T_yb = self.rotate_ee(T_yb, desired_rpy)
             
             T_sd = self.T_sy @ T_yb
-            self.core.get_node().get_logger().info(f'T_d\n{desired_matrix}')
-            self.core.get_node().get_logger().info(f'T_sd\n{T_sd}')
+            # self.core.get_node().get_logger().info(f'T_d\n{desired_matrix}')
+            # self.core.get_node().get_logger().info(f'T_sd\n{T_sd}')
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
@@ -343,12 +343,13 @@ class XSArmRobot(InterbotixManipulatorXS):
                 blocking=False)
             if success:
                 self.T_yb = np.array(T_yb)
+            else:
+                self.core.get_node().get_logger().info('Failed to move to goal pose.')
 
 
     def rotate_waist(self, desired):
-        waist_position = self.arm.get_single_joint_command('waist')
+        waist_position: float = self.arm.get_single_joint_command('waist')
         error = desired - waist_position
-        # self.core.get_node().get_logger().info(f'Error: {error}')
         if error > 0:
             waist_position += self.waist_step
         elif error < 0:
@@ -360,7 +361,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             moving_time=0.2,
             accel_time=0.1,
             blocking=False)
-        # self.core.get_node().get_logger().info(f'In rotate_waist() {success}')
         if (not success and waist_position != self.waist_ul):
             self.arm.set_single_joint_position(
                 joint_name='waist',
@@ -372,8 +372,6 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.update_T_yb()
 
     def translation(self, T, T_d) -> np.ndarray:
-        # self.core.get_node().get_logger().info(f'T\n{T}')
-        # self.core.get_node().get_logger().info(f'T_d\n{T_d}')
         error1 = T_d[0, 3]- T[0, 3]
         step1 = error1**2
         error2 = T_d[2, 3] - T[2, 3]
