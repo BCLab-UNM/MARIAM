@@ -13,6 +13,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression
 )
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
@@ -31,6 +32,16 @@ def launch_setup(context, *args, **kwargs):
     use_sim_launch_arg = LaunchConfiguration('use_sim')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
+
+    experiment_launch_arg = LaunchConfiguration('experiment')
+
+    experiment_node = Node(
+        package='arm_controller',
+        executable='constraint_experiment',
+        name='constraint_experiment',
+        output='screen',
+        condition=IfCondition(experiment_launch_arg)
+    )
 
     joy_node = Node(
         package='joy',
@@ -92,6 +103,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
+        experiment_node,
         joy_node,
         joy_input_handler_node,
         xsarm_robot_node,
@@ -161,6 +173,14 @@ def generate_launch_description():
                 "if `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's"
                 ' motion; if `false`, the real DYNAMIXEL driver node is run.'
             ),
+        ),
+        DeclareLaunchArgument(
+            'experiment',
+            default_value='false',
+            choices=('true', 'false'),
+            description=(
+                "If `true`, runs the constraint_experiment node."
+            )
         )
     ]
     declared_arguments.extend(

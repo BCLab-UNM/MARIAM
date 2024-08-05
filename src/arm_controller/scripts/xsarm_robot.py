@@ -35,7 +35,8 @@ from threading import Lock
 import time
 
 from interbotix_common_modules.common_robot.robot import (
-    robot_shutdown, robot_startup)
+    robot_shutdown, robot_startup
+)
 from interbotix_common_modules.angle_manipulation import angle_manipulation as ang
 from interbotix_xs_modules.xs_robot.arm import InterbotixManipulatorXS
 from interbotix_xs_msgs.msg import ArmJoy
@@ -43,8 +44,8 @@ import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose
-from tf_transformations import quaternion_matrix
 from scipy.spatial.transform import Rotation as R
+from arm_controller.msg import ConstrainedPose
 
 
 class XSArmRobot(InterbotixManipulatorXS):
@@ -83,7 +84,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         # Measures the rotation of the ee w.r.t. the base frame's z-axis (yaw angle)
         self.T_sy = np.identity(4)
         # Measures the orientation and position of the ee w.r.t. the base frame
-        # (not including base frame's z-axis)
+        # (not including the orientation around the z-axis)
         self.T_yb = np.identity(4)
         self.update_T_yb()
         self.core.get_node().create_subscription(
@@ -91,6 +92,12 @@ class XSArmRobot(InterbotixManipulatorXS):
             'commands/joy_processed',
             self.joy_control_cb,
             10,
+        )
+        self.core.get_node().create_subscription(
+            ConstrainedPose,
+            '/joy_target_pose',
+            self.go_to,
+            1
         )
         time.sleep(0.5)
         self.core.get_node().loginfo('Ready to receive processed joystick commands.')
@@ -288,24 +295,18 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
-    def go_to(self):
+    def go_to(self, msg: ConstrainedPose) -> None:
         """
         This method uses iteration to move the arm into a desired pose.
         """
-        test_pose: Pose = Pose()
-        test_pose.position.x    = 0.0
-        test_pose.position.y    = 0.223
-        test_pose.position.z    = 0.098
-        test_pose.orientation.w =  0.707
-        test_pose.orientation.x =  0.0
-        test_pose.orientation.y =  0.0
-        test_pose.orientation.z =  0.707
+        self.core.get_node().get_logger().info(f'Msg: {msg}')
+        pose: Pose = msg.pose
 
         rotation_extract = R.from_quat([
-            test_pose.orientation.x,
-            test_pose.orientation.y,
-            test_pose.orientation.z,
-            test_pose.orientation.w,
+            pose.orientation.x,
+            pose.orientation.y,
+            pose.orientation.z,
+            pose.orientation.w,
         ]).as_matrix()
         desired_rpy = ang.rotation_matrix_to_euler_angles(rotation_extract)
         desired_rotation = np.eye(4)
@@ -313,9 +314,9 @@ class XSArmRobot(InterbotixManipulatorXS):
     
         desired_matrix = np.eye(4)
         desired_matrix[:3, :3] = desired_rotation[:3, :3]
-        desired_matrix[0, 3] = test_pose.position.x
-        desired_matrix[1, 3] = test_pose.position.y
-        desired_matrix[2, 3] = test_pose.position.z
+        desired_matrix[0, 3] = pose.position.x
+        desired_matrix[1, 3] = pose.position.y
+        desired_matrix[2, 3] = pose.position.z
         self.core.get_node().get_logger().info(f'Desired matrix:\n{desired_matrix}')
         T_yb = np.array(self.T_yb)
         T_sd = np.eye(4)
