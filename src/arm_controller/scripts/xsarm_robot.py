@@ -322,6 +322,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         T_sd = np.eye(4)
         tol = 0.05
 
+        start_time = self.core.get_node().get_clock().now()
         while not np.allclose(a=T_sd, b=desired_matrix, atol=tol) and success:
             self.rotate_waist(desired_rpy[2])
             T_yb = self.translation(
@@ -338,13 +339,19 @@ class XSArmRobot(InterbotixManipulatorXS):
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
                 execute=True,
-                moving_time=1.5,
-                accel_time=0.75,
+                moving_time=0.2,
+                accel_time=0.1,
                 blocking=False)
             if success:
                 self.T_yb = np.array(T_yb)
             else:
                 self.core.get_node().get_logger().info('Failed to move to goal pose.')
+        end_time = self.core.get_node().get_clock().now()
+        
+        if success:
+            self.core.get_node().get_logger().info(
+                f'Time taken: {(end_time-start_time).nanoseconds / 1e9}'
+            )
 
 
     def rotate_waist(self, desired):
