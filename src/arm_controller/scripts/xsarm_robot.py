@@ -72,12 +72,10 @@ class XSArmRobot(InterbotixManipulatorXS):
             self,
             robot_model=pargs.robot_model,
             robot_name=pargs.robot_name,
-            robot_description=pargs.urdf,
             moving_time=0.2,
             accel_time=0.1,
             args=args,
         )
-        self.core.get_node().get_logger().info(f'{pargs.robot_model}')
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
         self.num_joints = self.arm.group_info.num_joints
         self.waist_index = self.arm.group_info.joint_names.index('waist')
@@ -228,7 +226,6 @@ class XSArmRobot(InterbotixManipulatorXS):
                         moving_time=0.2,
                         accel_time=0.1,
                         blocking=False)
-            self.core.get_node().get_logger().info(f'Joints:\n{self.arm.get_joint_commands()}')
             self.update_T_yb()
 
         position_changed = msg.ee_x_cmd + msg.ee_z_cmd
@@ -267,9 +264,6 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         # Get desired transformation matrix of the end-effector w.r.t. the base frame
         T_sd = self.T_sy @ T_yb
-        self.core.get_node().get_logger().info(f'T_sy:\n{self.T_sy}')
-        self.core.get_node().get_logger().info(f'T_yb:\n{T_yb}')
-        # self.core.get_node().get_logger().info(f'T_sd:\n{T_sd}')
         _, success = self.arm.set_ee_pose_matrix(
             T_sd=T_sd,
             custom_guess=self.arm.get_joint_commands(),
@@ -278,7 +272,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=0.1,
             blocking=False)
         if success:
-            self.core.get_node().get_logger().info(f'Joints:\n{_}')
             self.T_yb = np.array(T_yb)
 
     def go_to(self, msg: ConstrainedPose) -> None:
@@ -288,23 +281,22 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().get_logger().info(f'Msg: {msg}')
         pose: Pose = msg.pose
 
-        rotation_extract = R.from_quat([
+        desired_rotation = np.eye(4)
+        desired_rotation[:3, :3] = R.from_quat([
             pose.orientation.x,
             pose.orientation.y,
             pose.orientation.z,
             pose.orientation.w,
         ]).as_matrix()
 
-        desired_rpy = ang.rotation_matrix_to_euler_angles(rotation_extract)
-        desired_rotation = np.eye(4)
-        desired_rotation[:3, :3] = rotation_extract
+        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
     
         desired_matrix = np.eye(4)
         desired_matrix[:3, :3] = desired_rotation[:3, :3]
         desired_matrix[0, 3] = pose.position.x
         desired_matrix[1, 3] = pose.position.y
         desired_matrix[2, 3] = pose.position.z
-        self.core.get_node().get_logger().info('Moving to goal pose...')
+        self.core.get_node().get_logger().info('Moving to goal pose')
         success = True
         T_sd = np.eye(4)
         tol = 0.03
@@ -316,7 +308,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         while not np.allclose(a=T_sd, b=desired_matrix, atol=tol) and success:
             T_yb = self.translation(
                 T_yb,
-                # pass coordinates relative to the base frame without yaw angle
+                # pass coordinates relative to the base frame
                 np.linalg.inv(desired_rotation) @ desired_matrix,
                 tol
             )
@@ -348,13 +340,8 @@ class XSArmRobot(InterbotixManipulatorXS):
         success = True
         waist_position = self.arm.get_single_joint_command('waist')
         error = desired - waist_position
-        self.core.get_node().get_logger().info(f'{error}')
         while abs(error) > tolerance and success:
-            self.core.get_node().get_logger().info('Iterating')
-            if error > 0:
-                waist_position += self.waist_step
-            elif error < 0:
-                waist_position -= self.waist_step
+            waist_position += self.sign(error) * self.waist_step
 
             success = self.arm.set_single_joint_position(
                 joint_name='waist',
@@ -375,74 +362,35 @@ class XSArmRobot(InterbotixManipulatorXS):
 
     def translation(self, T, T_d, tolerance) -> np.ndarray:
         error1 = T_d[0, 3]- T[0, 3]
-        step1 = error1**2
         error2 = T_d[2, 3] - T[2, 3]
-        step2 = error2**2
-        if error1 > 0 and error1 > tolerance:
-            T[0, 3] += self.translate_step
-        elif error1 < 0 and -error1 > tolerance:
-            T[0, 3] -= self.translate_step
-        if error2 > 0 and error2 > tolerance:
-            T[2, 3] += self.translate_step
-        elif error2 < 0 and -error2 > tolerance:
-            T[2, 3] -= self.translate_step
+        if abs(error1) > tolerance:
+            T[0, 3] += self.sign(error1) * self.translate_step
+            
+        if abs(error2) > tolerance:
+            T[2, 3] += self.sign(error2) * self.translate_step
         return T
 
     def rotate_ee(self, T, desired_rpy, tolerance) -> np.ndarray:
         rpy = ang.rotation_matrix_to_euler_angles(T)
         error = desired_rpy[1] - rpy[1]
-        if error > 0 and error > tolerance:
-            rpy[1] += self.rotate_step
-        elif error < 0 and -error > tolerance:
-            rpy[1] -= self.rotate_step
+        if abs(error) > tolerance:
+            rpy[1] += self.sign(error) * self.rotate_step
+        
         T[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         return T
-
-    def move_forward(self):
-        """Moves the arm a small distance forward"""
-        T_yb = np.array(self.T_yb)
-        translate_step = 1e-2
-        T_yb[0, 3] += translate_step
-        # Get desired transformation matrix of the end-effector w.r.t. the world frame
-        T_sd = np.dot(self.T_sy, T_yb)
-        _, success = self.arm.set_ee_pose_matrix(
-            T_sd=T_sd,
-            custom_guess=self.arm.get_joint_commands(),
-            execute=True,
-            moving_time=1.5,
-            accel_time=0.75,
-            blocking=True)
-        if success:
-            self.T_yb = np.array(T_yb)
-
-    def lift(self):
-        """
-        This method will be used to get the robots to lift
-        an object.
-        """
-        T_yb = np.array(self.T_yb)
-        max_z_pos = 0
-        while T_yb[2, 3] != max_z_pos:
-            translate_step = 1e-2
-            T_yb[2, 3] += translate_step
-            # Get desired transformation matrix of the end-effector w.r.t. the world frame
-            T_sd = np.dot(self.T_sy, T_yb)
-            _, success = self.arm.set_ee_pose_matrix(
-                T_sd=T_sd,
-                custom_guess=self.arm.get_joint_commands(),
-                execute=True,
-                moving_time=1.5,
-                accel_time=0.75,
-                blocking=True)
-            if success:
-                self.T_yb = np.array(T_yb)
-        
+    
+    def sign(self, x):
+        if x > 0:
+            return 1
+        elif x < 0:
+            return -1
+        else:
+            return 0
 
 def main(args=None):
     p = argparse.ArgumentParser()
     p.add_argument('--robot_model')
     p.add_argument('--robot_name', default=None)
-    p.add_argument('--urdf')
     p.add_argument('args', nargs=argparse.REMAINDER)
 
     command_line_args = remove_ros_args(args=sys.argv)[1:]

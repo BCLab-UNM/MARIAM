@@ -73,7 +73,7 @@ class ConstraintExperiment : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
     const seconds PUBLISH_DURATION = 300s;
-    const nanoseconds FREQUENCY = 2000000ns;
+    const seconds FREQUENCY = 5s;
     bool use_first_pose = true;
     
     // poses for testing the arm's motion
