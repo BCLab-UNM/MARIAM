@@ -319,7 +319,7 @@ class XSArmRobot(InterbotixManipulatorXS):
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
                 execute=True,
-                moving_time=0.2,
+                moving_time=0.7,
                 accel_time=0.2,
                 blocking=False)
             if success:
@@ -346,15 +346,15 @@ class XSArmRobot(InterbotixManipulatorXS):
             success = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
-                moving_time=0.2,
-                accel_time=0.1,
+                moving_time=0.7,
+                accel_time=0.2,
                 blocking=False)            
             if (not success and waist_position != self.waist_ul):
                 self.arm.set_single_joint_position(
                     joint_name='waist',
                     position=self.waist_ul,
-                    moving_time=0.2,
-                    accel_time=0.1,
+                    moving_time=0.7,
+                    accel_time=0.2,
                     blocking=False)
             
             self.update_T_yb()
