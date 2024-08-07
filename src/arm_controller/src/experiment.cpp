@@ -68,7 +68,7 @@ class HighFreqExperiment
     HighFreqExperiment()
     {
       pose1.position.x = 0.0;
-      pose1.position.y = 0.1555;
+      pose1.position.y = 0.15;
       pose1.position.z = 0.098;
       pose1.orientation.x =  0.000;
       pose1.orientation.y =  0.000;
@@ -76,7 +76,7 @@ class HighFreqExperiment
       pose1.orientation.w =  0.707;
       
       pose2.position.x = 0.0;
-      pose2.position.y = 0.3;
+      pose2.position.y = 0.244;
       pose2.position.z = 0.098;
       pose2.orientation.x =  0.000;
       pose2.orientation.y =  0.000;
@@ -116,7 +116,7 @@ class HighFreqExperiment
   private:
     bool use_first_pose = true;
     int ticks = 0;
-    const int MAX_TICKS = 100;
+    const int MAX_TICKS = 1000;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -134,7 +134,7 @@ class Experiment : public rclcpp::Node
 
       pose_publisher2_ = this->create_publisher<Pose>(
         "high_freq_publisher",
-        10
+        1
       );
 
       timer_ = this->create_wall_timer(

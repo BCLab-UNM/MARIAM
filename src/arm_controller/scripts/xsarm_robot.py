@@ -96,7 +96,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             Pose,
             '/high_freq_publisher',
             self.go_to,
-            10
+            1
         )
         time.sleep(0.5)
         self.core.get_node().loginfo('Ready to receive processed joystick commands.')
@@ -273,11 +273,12 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
-    def go_to_(self, msg: Pose) -> None:
+    def go_to(self, msg: Pose) -> None:
         """
         This method uses iteration to move the arm into a desired pose.
         """
         self.core.get_node().get_logger().info(f'Msg: {msg}')
+        inc = 0.1
         
         desired_rotation = np.eye(4)
         desired_rotation[:3, :3] = R.from_quat([
@@ -297,21 +298,56 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().get_logger().info('Moving to goal pose')
         success = True
         T_sd = np.eye(4)
-        tol = 0.03
+        tol = 0.009
 
         start_time = self.core.get_node().get_clock().now()
-        self.rotate_waist(desired_rpy[2], tol)
+        # update waist joint angle
+        success_waist = True
+        waist_position = self.arm.get_single_joint_command('waist')
+        error = desired_rpy[2] - waist_position
+        while abs(error) > tol and success_waist:
+            self.core.get_node().get_logger().info(
+                f'Waist error:\n: {error}')
+            waist_position += self.sign(error) * self.waist_step * inc
+
+            success_waist = self.arm.set_single_joint_position(
+                joint_name='waist',
+                position=waist_position,
+                moving_time=0.7,
+                accel_time=0.2,
+                blocking=False)
+            if (not success_waist and waist_position != self.waist_ul):
+                self.arm.set_single_joint_position(
+                    joint_name='waist',
+                    position=self.waist_ul,
+                    moving_time=0.7,
+                    accel_time=0.2,
+                    blocking=False)
+
+            self.update_T_yb()
+            error = desired_rpy[2] - waist_position
 
         T_yb = np.array(self.T_yb)
         while not np.allclose(a=T_sd, b=desired_matrix, atol=tol) and success:
-            T_yb = self.translation(
-                T_yb,
-                # pass coordinates relative to the base frame
-                np.linalg.inv(desired_rotation) @ desired_matrix,
-                tol
-            )
-            T_yb = self.rotate_ee(T_yb, desired_rpy, tol)
-    
+            # update the x and z position of end-effector
+            T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
+            error1 = T_yd[0, 3] - T_yb[0, 3]
+            error2 = T_yd[2, 3] - T_yb[2, 3]
+            if abs(error1) > tol:
+                T_yb[0, 3] += self.sign(error1) * self.translate_step * inc
+
+            if abs(error2) > tol:
+                T_yb[2, 3] += self.sign(error2) * self.translate_step * inc
+
+            # update the pitch angle of end-effector
+            rpy = ang.rotation_matrix_to_euler_angles(T_yb)
+            error = desired_rpy[1] - rpy[1]
+            if abs(error) > tol:
+                rpy[1] += self.sign(error) * self.rotate_step * inc
+
+            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+
+            self.core.get_node().get_logger().info(f'Position errors:\nTranslate: {error1}\n{error2}\nPitch: {error}')
             T_sd = self.T_sy @ T_yb
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
@@ -333,50 +369,6 @@ class XSArmRobot(InterbotixManipulatorXS):
         else:
             self.core.get_node().get_logger().info("Couldn't move to target pose")
 
-
-    def rotate_waist(self, desired, tolerance):
-        success = True
-        waist_position = self.arm.get_single_joint_command('waist')
-        error = desired - waist_position
-        while abs(error) > tolerance and success:
-            waist_position += self.sign(error) * self.waist_step
-
-            success = self.arm.set_single_joint_position(
-                joint_name='waist',
-                position=waist_position,
-                moving_time=0.7,
-                accel_time=0.5,
-                blocking=False)            
-            if (not success and waist_position != self.waist_ul):
-                self.arm.set_single_joint_position(
-                    joint_name='waist',
-                    position=self.waist_ul,
-                    moving_time=0.7,
-                    accel_time=0.5,
-                    blocking=False)
-            
-            self.update_T_yb()
-            error = desired - waist_position
-
-    def translation(self, T, T_d, tolerance) -> np.ndarray:
-        error1 = T_d[0, 3]- T[0, 3]
-        error2 = T_d[2, 3] - T[2, 3]
-        if abs(error1) > tolerance:
-            T[0, 3] += self.sign(error1) * self.translate_step
-            
-        if abs(error2) > tolerance:
-            T[2, 3] += self.sign(error2) * self.translate_step
-        return T
-
-    def rotate_ee(self, T, desired_rpy, tolerance) -> np.ndarray:
-        rpy = ang.rotation_matrix_to_euler_angles(T)
-        error = desired_rpy[1] - rpy[1]
-        if abs(error) > tolerance:
-            rpy[1] += self.sign(error) * self.rotate_step
-        
-        T[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
-        return T
-    
     def sign(self, x):
         if x > 0:
             return 1
