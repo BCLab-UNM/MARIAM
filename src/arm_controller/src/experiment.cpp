@@ -151,7 +151,7 @@ class Experiment : public rclcpp::Node
     void run_experiment()
     {
       RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
-      high_freq_exp->publish(this->pose_publisher2_);
+      high_freq_exp.publish(this->pose_publisher2_);
     }
 
     void stop_experiment()
@@ -162,10 +162,9 @@ class Experiment : public rclcpp::Node
 
   private:
     rclcpp::Publisher<ConstrainedPose>::SharedPtr pose_publisher_;
-    // ConstraintExperiment constraint_experiment;
+    ConstraintExperiment constraint_experiment;
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
-    std::shared_ptr<HighFreqExperiment> high_freq_exp 
-      = std::make_shared<HighFreqExperiment>();
+    HighFreqExperiment high_freq_exp;
 
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;

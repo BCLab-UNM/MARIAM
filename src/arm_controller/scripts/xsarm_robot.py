@@ -95,7 +95,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().create_subscription(
             Pose,
             '/high_freq_publisher',
-            self.go_to,
+            self.contol_loop_cb,
             1
         )
         time.sleep(0.5)
@@ -273,12 +273,15 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
-    def go_to(self, msg: Pose) -> None:
+    def contol_loop_cb(self, msg: Pose) -> None:
         """
         This method uses iteration to move the arm into a desired pose.
         """
         self.core.get_node().get_logger().info(f'Msg: {msg}')
         inc = 0.1
+        tol = 0.009
+        moving_time = 0.2
+        accel_time = 0.1
         
         desired_rotation = np.eye(4)
         desired_rotation[:3, :3] = R.from_quat([
@@ -298,77 +301,59 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().get_logger().info('Moving to goal pose')
         success = True
         T_sd = np.eye(4)
-        tol = 0.009
 
-        start_time = self.core.get_node().get_clock().now()
         # update waist joint angle
-        success_waist = True
         waist_position = self.arm.get_single_joint_command('waist')
         error = desired_rpy[2] - waist_position
-        while abs(error) > tol and success_waist:
-            self.core.get_node().get_logger().info(
-                f'Waist error:\n: {error}')
-            waist_position += self.sign(error) * self.waist_step * inc
+        waist_position += self.sign(error) * self.waist_step * inc
 
-            success_waist = self.arm.set_single_joint_position(
+        success_waist = self.arm.set_single_joint_position(
+            joint_name='waist',
+            position=waist_position,
+            moving_time=moving_time,
+            accel_time=accel_time,
+            blocking=False)
+        if (not success_waist and waist_position != self.waist_ul):
+            self.arm.set_single_joint_position(
                 joint_name='waist',
-                position=waist_position,
-                moving_time=0.7,
-                accel_time=0.2,
+                position=self.waist_ul,
+                moving_time=moving_time,
+                accel_time=accel_time,
                 blocking=False)
-            if (not success_waist and waist_position != self.waist_ul):
-                self.arm.set_single_joint_position(
-                    joint_name='waist',
-                    position=self.waist_ul,
-                    moving_time=0.7,
-                    accel_time=0.2,
-                    blocking=False)
-
-            self.update_T_yb()
-            error = desired_rpy[2] - waist_position
+        self.update_T_yb()
 
         T_yb = np.array(self.T_yb)
-        while not np.allclose(a=T_sd, b=desired_matrix, atol=tol) and success:
-            # update the x and z position of end-effector
-            T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
-            error1 = T_yd[0, 3] - T_yb[0, 3]
-            error2 = T_yd[2, 3] - T_yb[2, 3]
-            if abs(error1) > tol:
-                T_yb[0, 3] += self.sign(error1) * self.translate_step * inc
+        # update the x and z position of end-effector
+        T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
+        error1 = T_yd[0, 3] - T_yb[0, 3]
+        error2 = T_yd[2, 3] - T_yb[2, 3]
+        if abs(error1) > tol:
+            T_yb[0, 3] += self.sign(error1) * self.translate_step * inc
 
-            if abs(error2) > tol:
-                T_yb[2, 3] += self.sign(error2) * self.translate_step * inc
+        if abs(error2) > tol:
+            T_yb[2, 3] += self.sign(error2) * self.translate_step * inc
 
-            # update the pitch angle of end-effector
-            rpy = ang.rotation_matrix_to_euler_angles(T_yb)
-            error = desired_rpy[1] - rpy[1]
-            if abs(error) > tol:
-                rpy[1] += self.sign(error) * self.rotate_step * inc
+        # update the pitch angle of end-effector
+        rpy = ang.rotation_matrix_to_euler_angles(T_yb)
+        error = desired_rpy[1] - rpy[1]
+        if abs(error) > tol:
+            rpy[1] += self.sign(error) * self.rotate_step * inc
 
-            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+        T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
 
-            self.core.get_node().get_logger().info(f'Position errors:\nTranslate: {error1}\n{error2}\nPitch: {error}')
-            T_sd = self.T_sy @ T_yb
-            _, success = self.arm.set_ee_pose_matrix(
-                T_sd=T_sd,
-                custom_guess=self.arm.get_joint_commands(),
-                execute=True,
-                moving_time=0.7,
-                accel_time=0.5,
-                blocking=False)
-            if success:
-                self.T_yb = np.array(T_yb)
-            else:
-                self.core.get_node().get_logger().info('Failed to move to goal pose.')
-        end_time = self.core.get_node().get_clock().now()
-        
+        T_sd = self.T_sy @ T_yb
+        _, success = self.arm.set_ee_pose_matrix(
+            T_sd=T_sd,
+            custom_guess=self.arm.get_joint_commands(),
+            execute=True,
+            moving_time=moving_time,
+            accel_time=accel_time,
+            blocking=False)
         if success:
-            self.core.get_node().get_logger().info(
-                f'Time taken: {(end_time-start_time).nanoseconds / 1e9}'
-            )
+            self.T_yb = np.array(T_yb)
         else:
-            self.core.get_node().get_logger().info("Couldn't move to target pose")
-
+            self.core.get_node().get_logger().info('Failed to move to goal pose.')
+        
     def sign(self, x):
         if x > 0:
             return 1
