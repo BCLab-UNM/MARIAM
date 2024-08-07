@@ -81,10 +81,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
-        # Measures the rotation of the ee w.r.t. the base frame's z-axis (yaw angle)
+        # The transformation matrix between the space frame and the virtual frame
         self.T_sy = np.identity(4)
-        # Measures the orientation and position of the ee w.r.t. the base frame
-        # (not including the orientation around the z-axis)
+        # The transformation matrix between the virtual frame and the body frame
         self.T_yb = np.identity(4)
         self.update_T_yb()
         self.core.get_node().create_subscription(
@@ -94,10 +93,10 @@ class XSArmRobot(InterbotixManipulatorXS):
             10,
         )
         self.core.get_node().create_subscription(
-            ConstrainedPose,
-            '/joy_target_pose',
+            Pose,
+            '/high_freq_publisher',
             self.go_to,
-            1
+            10
         )
         time.sleep(0.5)
         self.core.get_node().loginfo('Ready to receive processed joystick commands.')
@@ -274,28 +273,27 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
-    def go_to(self, msg: ConstrainedPose) -> None:
+    def go_to_(self, msg: Pose) -> None:
         """
         This method uses iteration to move the arm into a desired pose.
         """
         self.core.get_node().get_logger().info(f'Msg: {msg}')
-        pose: Pose = msg.pose
-
+        
         desired_rotation = np.eye(4)
         desired_rotation[:3, :3] = R.from_quat([
-            pose.orientation.x,
-            pose.orientation.y,
-            pose.orientation.z,
-            pose.orientation.w,
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w,
         ]).as_matrix()
 
         desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
     
         desired_matrix = np.eye(4)
         desired_matrix[:3, :3] = desired_rotation[:3, :3]
-        desired_matrix[0, 3] = pose.position.x
-        desired_matrix[1, 3] = pose.position.y
-        desired_matrix[2, 3] = pose.position.z
+        desired_matrix[0, 3] = msg.position.x
+        desired_matrix[1, 3] = msg.position.y
+        desired_matrix[2, 3] = msg.position.z
         self.core.get_node().get_logger().info('Moving to goal pose')
         success = True
         T_sd = np.eye(4)
@@ -320,7 +318,7 @@ class XSArmRobot(InterbotixManipulatorXS):
                 custom_guess=self.arm.get_joint_commands(),
                 execute=True,
                 moving_time=0.7,
-                accel_time=0.2,
+                accel_time=0.5,
                 blocking=False)
             if success:
                 self.T_yb = np.array(T_yb)
@@ -347,14 +345,14 @@ class XSArmRobot(InterbotixManipulatorXS):
                 joint_name='waist',
                 position=waist_position,
                 moving_time=0.7,
-                accel_time=0.2,
+                accel_time=0.5,
                 blocking=False)            
             if (not success and waist_position != self.waist_ul):
                 self.arm.set_single_joint_position(
                     joint_name='waist',
                     position=self.waist_ul,
                     moving_time=0.7,
-                    accel_time=0.2,
+                    accel_time=0.5,
                     blocking=False)
             
             self.update_T_yb()
