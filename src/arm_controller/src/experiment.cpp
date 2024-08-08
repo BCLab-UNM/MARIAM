@@ -82,44 +82,57 @@ class HighFreqExperiment
       pose2.orientation.y =  0.000;
       pose2.orientation.z =  0.707;
       pose2.orientation.w =  0.707;
+
+      pose3.position.x = 0.0;
+      pose3.position.y = 0.244;
+      pose3.position.z = 0.244;
+      pose3.orientation.x =  0.000;
+      pose3.orientation.y =  0.000;
+      pose3.orientation.z =  0.707;
+      pose3.orientation.w =  0.707;
+
+      srand(42);
     }
 
     void publish(rclcpp::Publisher<Pose>::SharedPtr pub)
     {
       auto msg = Pose();
 
-      if(use_first_pose)
+      switch (pose_num)
       {
-        msg.position.x = pose1.position.x;
-        msg.position.y = pose1.position.y;
-        msg.position.z = pose1.position.z;
-        msg.orientation.w = pose1.orientation.w;
-        msg.orientation.x = pose1.orientation.x;
-        msg.orientation.y = pose1.orientation.y;
-        msg.orientation.z = pose1.orientation.z;
-      }
-      else 
-      {
-        msg.position = pose2.position;
-        msg.orientation = pose2.orientation;
+        case 1:
+          msg.position = pose1.position;
+          msg.orientation = pose1.orientation;
+          break;
+        
+        case 2:
+          msg.position = pose2.position;
+          msg.orientation = pose2.orientation;
+          break;
+        
+        case 3:
+          msg.position = pose3.position;
+          msg.orientation = pose3.orientation;
+          break;
       }
 
       pub->publish(msg);
       if(ticks == MAX_TICKS)
       {
         ticks = 0;
-        use_first_pose = !use_first_pose;
+        pose_num = 1 + (rand() % 3);
       }
       else ticks++;
     }
 
   private:
-    bool use_first_pose = true;
+    int pose_num = 0;
     int ticks = 0;
     const int MAX_TICKS = 1000;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
+    geometry_msgs::msg::Pose pose3;
 };
 
 class Experiment : public rclcpp::Node
@@ -137,11 +150,21 @@ class Experiment : public rclcpp::Node
         1
       );
 
+      delay_ = this->create_wall_timer(
+        this->DELAY,
+        std::bind(&Experiment::start_timer, this)
+      );
+    }
+
+    void start_timer()
+    {
+      delay_->cancel();
+
       timer_ = this->create_wall_timer(
         this->FREQUENCY, 
         std::bind(&Experiment::run_experiment, this)
       );
-      
+
       stop_timer_ = this->create_wall_timer(
         this->PUBLISH_DURATION,
         std::bind(&Experiment::stop_experiment, this)
@@ -166,8 +189,10 @@ class Experiment : public rclcpp::Node
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
     HighFreqExperiment high_freq_exp;
 
+    rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
+    const seconds DELAY = 10s;
     const seconds PUBLISH_DURATION = 300s;
     const nanoseconds FREQUENCY = 2000000ns;
 };
