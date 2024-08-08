@@ -38,8 +38,6 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 ## Launch Files
 
 ### xsarm_joy.launch.py
-Add `experiments:=true` to launch a node that will publish target poses for 5 minutes.
-
 Launch command (with fake hardware):
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py
@@ -49,6 +47,17 @@ Launch command (with actual hardware):
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
 ```
+
+Additional parameters:
+- experiment: Can be `true` or `false`. When `true`, launches the experiment node to publish poses on a constant rate. For now, this node will publish poses at a rate of 500Hz after an initial delay of 10 seconds, for 5 minutes. Default is `false`.
+
+- threshold: Value from 0 to 1 defining joystick sensitivity; a larger number means the joystick will be less sensitive. Default is 0.75.
+
+- use_rviz: Can be `true` or `false`. Launches RViz if set to `true`. Default is `true`.
+
+- use_sim: Can be `true` or `false`. If `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's motion; if `false`, the real DYNAMIXEL driver node is run. This is used to run a simulation of the arm instead of using an actual arm. Default is `true`.
+
+Best practices when moving the arm using the Python-ROS interface: https://docs.trossenrobotics.com/interbotix_xsarms_docs/python_ros_interface.html#tips-best-practices
 
 ### moveit_joy_constrained.launch.py
 Launch with:
