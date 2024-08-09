@@ -126,9 +126,9 @@ class HighFreqExperiment
     }
 
   private:
-    int pose_num = 0;
-    int ticks = 0;
-    const int MAX_TICKS = 1000;
+    int pose_num = 1;
+    int ticks = 500;
+    const int MAX_TICKS = 0;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -147,7 +147,7 @@ class Experiment : public rclcpp::Node
 
       pose_publisher2_ = this->create_publisher<Pose>(
         "high_freq_publisher",
-        1
+        10
       );
 
       delay_ = this->create_wall_timer(
@@ -192,7 +192,7 @@ class Experiment : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
-    const seconds DELAY = 10s;
+    const seconds DELAY = 5s;
     const seconds PUBLISH_DURATION = 300s;
     const nanoseconds FREQUENCY = 2000000ns;
 };

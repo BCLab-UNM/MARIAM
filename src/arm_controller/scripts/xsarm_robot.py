@@ -45,7 +45,6 @@ import rclpy
 from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose
 from scipy.spatial.transform import Rotation as R
-from arm_controller.msg import ConstrainedPose
 
 
 class XSArmRobot(InterbotixManipulatorXS):
@@ -95,8 +94,8 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().create_subscription(
             Pose,
             '/high_freq_publisher',
-            self.contol_loop_cb,
-            1
+            self.test_cb,
+            10
         )
         time.sleep(0.5)
         self.core.get_node().loginfo('Ready to receive processed joystick commands.')
@@ -277,6 +276,37 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
+    def test_cb(self, msg: Pose) -> None:
+        self.core.get_node().get_logger().info(
+            f'MSG: {msg}')
+        pos = [
+            msg.position.x,
+            msg.position.y,
+            msg.position.z,
+        ]
+
+        desired_rotation = R.from_quat([
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w,
+        ]).as_matrix()
+        self.core.get_node().get_logger().info(f'desired rotation: {desired_rotation}')
+
+        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
+        self.core.get_node().get_logger().info(f'desired RPY: {desired_rpy}')
+        start_time = self.core.get_node().get_clock().now()
+        self.arm.set_ee_pose(
+            target_position=pos,
+            target_orientation=desired_rpy,
+            orientation_mode="Z",
+            moving_time=1.5,
+            accel_time=0.75,
+            blocking=False
+        )
+        end_time = self.core.get_node().get_clock().now()
+        self.core.get_node().get_logger().info(f'Time: {(end_time-start_time).nanoseconds / 1e9}')
+
     def contol_loop_cb(self, msg: Pose) -> None:
         """
         Slightly moves the end-effector towards the desired pose.
@@ -290,7 +320,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         accel_time = 0.1
         
         desired_rotation = np.eye(4)
-        desired_rotation[:3, :3] = R.from_quat([
+        desired_rotation[:3, :3] = R.from_quat([ 
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
