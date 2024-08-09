@@ -11,7 +11,7 @@
 
 using namespace arm_controller::msg;
 using namespace geometry_msgs::msg;
-using namespace std::chrono;
+using namespace std::chrono_literals;
 using std::placeholders::_1;
 
 /**
@@ -127,8 +127,8 @@ class HighFreqExperiment
 
   private:
     int pose_num = 1;
-    int ticks = 500;
-    const int MAX_TICKS = 0;
+    int ticks = 0;
+    const int MAX_TICKS = 1000;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -150,23 +150,36 @@ class Experiment : public rclcpp::Node
         10
       );
 
+      /* Parameter */
+      this->declare_parameter("delay", 5.0);
+      this->declare_parameter("duration", 300.0);
+      this->declare_parameter("frequency", 5.0);
+
+      this->get_parameter("delay", delay_in_seconds);
+      this->get_parameter("duration", duration_in_seconds);
+      this->get_parameter("frequency", frequency_in_seconds);
+
+      delay = std::chrono::duration<double>(delay_in_seconds);
+      duration = std::chrono::duration<double>(duration_in_seconds);
+      frequency = std::chrono::duration<double>(frequency_in_seconds);
+
       delay_ = this->create_wall_timer(
-        this->DELAY,
+        std::chrono::duration_cast<std::chrono::seconds>(delay),
         std::bind(&Experiment::start_timer, this)
       );
-    }
+    }    
 
     void start_timer()
     {
       delay_->cancel();
 
       timer_ = this->create_wall_timer(
-        this->FREQUENCY, 
+        std::chrono::duration_cast<std::chrono::seconds>(frequency), 
         std::bind(&Experiment::run_experiment, this)
       );
 
       stop_timer_ = this->create_wall_timer(
-        this->PUBLISH_DURATION,
+        std::chrono::duration_cast<std::chrono::seconds>(duration), 
         std::bind(&Experiment::stop_experiment, this)
       );
     }
@@ -192,9 +205,14 @@ class Experiment : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr stop_timer_;
-    const seconds DELAY = 5s;
-    const seconds PUBLISH_DURATION = 300s;
-    const nanoseconds FREQUENCY = 2000000ns;
+
+    double delay_in_seconds;
+    double duration_in_seconds;
+    double frequency_in_seconds;
+
+    std::chrono::duration<double> delay;
+    std::chrono::duration<double> duration;
+    std::chrono::duration<double> frequency;
 };
 
 int main(int argc, char * argv[])
