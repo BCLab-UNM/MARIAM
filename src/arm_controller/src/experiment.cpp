@@ -94,7 +94,10 @@ class HighFreqExperiment
       srand(42);
     }
 
-    void publish(rclcpp::Publisher<Pose>::SharedPtr pub)
+    void publish(
+      rclcpp::Publisher<Pose>::SharedPtr pub,
+      const rclcpp::Logger LOGGER
+    )
     {
       auto msg = Pose();
 
@@ -103,16 +106,19 @@ class HighFreqExperiment
         case 1:
           msg.position = pose1.position;
           msg.orientation = pose1.orientation;
+          RCLCPP_INFO(LOGGER, "Publishing pose 1");
           break;
         
         case 2:
           msg.position = pose2.position;
           msg.orientation = pose2.orientation;
+          RCLCPP_INFO(LOGGER, "Publishing pose 2");
           break;
         
         case 3:
           msg.position = pose3.position;
           msg.orientation = pose3.orientation;
+          RCLCPP_INFO(LOGGER, "Publishing pose 3");
           break;
       }
 
@@ -128,7 +134,7 @@ class HighFreqExperiment
   private:
     int pose_num = 1;
     int ticks = 0;
-    const int MAX_TICKS = 1000;
+    const int MAX_TICKS = 100000;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -186,8 +192,8 @@ class Experiment : public rclcpp::Node
 
     void run_experiment()
     {
-      RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
-      high_freq_exp.publish(this->pose_publisher2_);
+      // RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
+      high_freq_exp.publish(this->pose_publisher2_, LOGGER);
     }
 
     void stop_experiment()
@@ -213,6 +219,8 @@ class Experiment : public rclcpp::Node
     std::chrono::duration<double> delay;
     std::chrono::duration<double> duration;
     std::chrono::duration<double> frequency;
+
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment"); 
 };
 
 int main(int argc, char * argv[])

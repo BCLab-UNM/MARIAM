@@ -32,7 +32,8 @@ def launch_setup(context, *args, **kwargs):
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
 
-    experiment_launch_arg = LaunchConfiguration('experiment')
+    # experiment launch arguments
+    experiment_launch_arg = LaunchConfiguration('experiment')    
 
     experiment_node = Node(
         package='arm_controller',

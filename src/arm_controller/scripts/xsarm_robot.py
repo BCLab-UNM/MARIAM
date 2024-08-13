@@ -94,7 +94,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().create_subscription(
             Pose,
             '/high_freq_publisher',
-            self.test_cb,
+            self.contol_loop_cb,
             10
         )
         time.sleep(0.5)
@@ -105,6 +105,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             moving_time=1.5,
             accel_time=0.75
         )
+        self.update_T_yb()
         try:
             robot_startup()
             while rclpy.ok():
@@ -261,7 +262,6 @@ class XSArmRobot(InterbotixManipulatorXS):
                 rpy[1] += self.rotate_step
             elif (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_UP):
                 rpy[1] -= self.rotate_step
-
             T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
 
         # Get desired transformation matrix of the end-effector w.r.t. the base frame
@@ -277,35 +277,62 @@ class XSArmRobot(InterbotixManipulatorXS):
             self.T_yb = np.array(T_yb)
 
     def test_cb(self, msg: Pose) -> None:
-        self.core.get_node().get_logger().info(
-            f'MSG: {msg}')
+        tol = 0.001
         pos = [
             msg.position.x,
             msg.position.y,
             msg.position.z,
         ]
 
-        desired_rotation = R.from_quat([
+        desired_rotation = np.eye(4)
+        desired_rotation[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.core.get_node().get_logger().info(f'desired rotation: {desired_rotation}')
 
         desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
-        self.core.get_node().get_logger().info(f'desired RPY: {desired_rpy}')
-        start_time = self.core.get_node().get_clock().now()
+
+        desired_matrix = np.eye(4)
+        desired_matrix[:3, :3] = desired_rotation[:3, :3]
+        desired_matrix[0, 3] = msg.position.x
+        desired_matrix[1, 3] = msg.position.y
+        desired_matrix[2, 3] = msg.position.z
+        T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
+
+        T_sb = self.arm.get_ee_pose()
+
+        # Errors
+        waist_position = self.arm.get_single_joint_command('waist')
+        waist_error = desired_rpy[2] - waist_position
+
+        x_pos_error = T_yd[0, 3] - self.T_yb[0, 3]
+        z_pos_error = T_yd[2, 3] - self.T_yb[2, 3]
+        
+        rpy = ang.rotation_matrix_to_euler_angles(self.T_yb)
+        ee_pitch_error = desired_rpy[1] - rpy[1]
+        
+        if  abs(waist_error) <= tol and \
+            abs(x_pos_error) <= tol and \
+            abs(z_pos_error) <= tol and \
+            abs(ee_pitch_error) <= tol:
+            self.core.get_node().get_logger().info('Same position, not executing')
+            return
+
+        # start_time = self.core.get_node().get_clock().now()
         self.arm.set_ee_pose(
             target_position=pos,
             target_orientation=desired_rpy,
             orientation_mode="Z",
-            moving_time=1.5,
-            accel_time=0.75,
+            moving_time=1.7,
+            accel_time=0.15,
             blocking=False
         )
-        end_time = self.core.get_node().get_clock().now()
-        self.core.get_node().get_logger().info(f'Time: {(end_time-start_time).nanoseconds / 1e9}')
+        # end_time = self.core.get_node().get_clock().now()
+        # self.core.get_node().get_logger().info(
+        #     f'Time: {(end_time-start_time).nanoseconds / 1e9}'
+        # )
 
     def contol_loop_cb(self, msg: Pose) -> None:
         """
@@ -314,11 +341,14 @@ class XSArmRobot(InterbotixManipulatorXS):
         msg: the desired pose.
         """
         # self.core.get_node().get_logger().info(f'Msg: {msg}')
-        inc = 0.1
-        tol = 0.009
-        moving_time = 0.2
-        accel_time = 0.1
+        waist_step = 0.005
+        translate_step = 0.001
+        ee_pitch_step = 0.06
+        tol = 0.002
+        moving_time = 0.8
+        accel_time = 0.15
         
+        # convert pose into desired transformation matrices
         desired_rotation = np.eye(4)
         desired_rotation[:3, :3] = R.from_quat([ 
             msg.orientation.x,
@@ -339,7 +369,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         waist_position = self.arm.get_single_joint_command('waist')
         waist_error = desired_rpy[2] - waist_position
         if abs(waist_error) > tol:
-            waist_position += self.sign(waist_error) * self.waist_step * inc
+            waist_position += self.sign(waist_error) * waist_step
             success_waist = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
@@ -355,23 +385,23 @@ class XSArmRobot(InterbotixManipulatorXS):
                     blocking=False)
             self.update_T_yb()
 
-        # update the position of end-effector
+        # update the position of end-effector w.r.t. base frame
         T_yb = np.array(self.T_yb)
         T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
         x_pos_error = T_yd[0, 3] - T_yb[0, 3]
         z_pos_error = T_yd[2, 3] - T_yb[2, 3]
 
         if abs(x_pos_error) > tol:
-            T_yb[0, 3] += self.sign(x_pos_error) * self.translate_step * inc
+            T_yb[0, 3] += self.sign(x_pos_error) * translate_step
 
         if abs(z_pos_error) > tol:
-            T_yb[2, 3] += self.sign(z_pos_error) * self.translate_step * inc
+            T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
-        # update the pitch angle of end-effector
+        # update the pitch angle of end-effector w.r.t. base frame
         rpy = ang.rotation_matrix_to_euler_angles(T_yb)
         ee_pitch_error = desired_rpy[1] - rpy[1]
         if abs(ee_pitch_error) > tol:
-            rpy[1] += self.sign(ee_pitch_error) * self.rotate_step * inc
+            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
         T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
         T_sd = self.T_sy @ T_yb
