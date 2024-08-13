@@ -343,8 +343,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         # self.core.get_node().get_logger().info(f'Msg: {msg}')
         waist_step = 0.005
         translate_step = 0.001
-        ee_pitch_step = 0.06
-        tol = 0.002
+        ee_pitch_step = 1e-6
+        tol = 8e-4
+        ee_tol = 1e-6
         moving_time = 0.8
         accel_time = 0.15
         
@@ -399,9 +400,15 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         # update the pitch angle of end-effector w.r.t. base frame
         rpy = ang.rotation_matrix_to_euler_angles(T_yb)
-        ee_pitch_error = desired_rpy[1] - rpy[1]
-        if abs(ee_pitch_error) > tol:
+        des_rpy = ang.rotation_matrix_to_euler_angles(T_yd)
+        # self.core.get_node().get_logger().info(f'RPY:\n{rpy}')
+        # self.core.get_node().get_logger().info(f'desired RPY:\n{des_rpy}')
+        ee_pitch_error = des_rpy[1] - rpy[1]
+        ee_yaw_error = des_rpy[2] - rpy[2]
+        if abs(ee_pitch_error) > ee_tol:
             rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
+        if abs(ee_yaw_error) > ee_tol:
+            rpy[2] += self.sign(ee_yaw_error) * ee_pitch_step
         T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
         T_sd = self.T_sy @ T_yb
