@@ -341,13 +341,15 @@ class XSArmRobot(InterbotixManipulatorXS):
         msg: the desired pose.
         """
         # self.core.get_node().get_logger().info(f'Msg: {msg}')
+        start_time = self.core.get_node().get_clock().now()
         waist_step = 0.005
         translate_step = 0.001
-        ee_pitch_step = 1e-6
-        tol = 8e-4
-        ee_tol = 1e-6
+        ee_pitch_step = 0.002
+        tol = 8e-3
+        ee_tol = 8e-3
         moving_time = 0.8
         accel_time = 0.15
+        set_ee_pose = False
         
         # convert pose into desired transformation matrices
         desired_rotation = np.eye(4)
@@ -393,36 +395,42 @@ class XSArmRobot(InterbotixManipulatorXS):
         z_pos_error = T_yd[2, 3] - T_yb[2, 3]
 
         if abs(x_pos_error) > tol:
+            set_ee_pose = True
+            # self.core.get_node().get_logger().info(f'x_pos_error: {x_pos_error}')
             T_yb[0, 3] += self.sign(x_pos_error) * translate_step
 
         if abs(z_pos_error) > tol:
+            set_ee_pose = True
+            # self.core.get_node().get_logger().info(f'z_pos_error: {z_pos_error}')
             T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
         # update the pitch angle of end-effector w.r.t. base frame
         rpy = ang.rotation_matrix_to_euler_angles(T_yb)
-        des_rpy = ang.rotation_matrix_to_euler_angles(T_yd)
-        # self.core.get_node().get_logger().info(f'RPY:\n{rpy}')
-        # self.core.get_node().get_logger().info(f'desired RPY:\n{des_rpy}')
-        ee_pitch_error = des_rpy[1] - rpy[1]
-        ee_yaw_error = des_rpy[2] - rpy[2]
+        ee_pitch_error = desired_rpy[1] - rpy[1]
         if abs(ee_pitch_error) > ee_tol:
+            set_ee_pose = True
+            # self.core.get_node().get_logger().info(f'ee_pitch_error: {ee_pitch_error}')
             rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
-        if abs(ee_yaw_error) > ee_tol:
-            rpy[2] += self.sign(ee_yaw_error) * ee_pitch_step
-        T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
-        T_sd = self.T_sy @ T_yb
-        _, success = self.arm.set_ee_pose_matrix(
-            T_sd=T_sd,
-            custom_guess=self.arm.get_joint_commands(),
-            execute=True,
-            moving_time=moving_time,
-            accel_time=accel_time,
-            blocking=False)
-        if success:
-            self.T_yb = np.array(T_yb)
-        else:
-            self.core.get_node().get_logger().info('Failed to move to goal pose.')
+        if set_ee_pose:
+            T_sd = self.T_sy @ T_yb
+            _, success = self.arm.set_ee_pose_matrix(
+                T_sd=T_sd,
+                custom_guess=self.arm.get_joint_commands(),
+                execute=True,
+                moving_time=moving_time,
+                accel_time=accel_time,
+                blocking=False)
+            if success:
+                self.T_yb = np.array(T_yb)
+                # self.core.get_node().get_logger().info(f'Joint angles:\n{_}')
+            else:
+                self.core.get_node().get_logger().info('Failed to move to goal pose.')
+        end_time = self.core.get_node().get_clock().now()
+        self.core.get_node().get_logger().info(
+            f'Time (arm): {(end_time-start_time).nanoseconds / 1e9}'
+        )
 
     def sign(self, x):
         if x > 0:
