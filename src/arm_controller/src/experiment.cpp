@@ -11,7 +11,6 @@
 
 using namespace arm_controller::msg;
 using namespace geometry_msgs::msg;
-using namespace std::chrono_literals;
 using std::placeholders::_1;
 
 /**
@@ -100,7 +99,6 @@ class HighFreqExperiment
     )
     {
       auto msg = Pose();
-
       switch (pose_num)
       {
         case 1:
@@ -123,18 +121,18 @@ class HighFreqExperiment
       }
 
       pub->publish(msg);
+      ticks++;
       if(ticks == MAX_TICKS)
       {
         ticks = 0;
         pose_num = 1 + (rand() % 3);
       }
-      else ticks++;
     }
 
   private:
     int pose_num = 1;
     int ticks = 0;
-    const int MAX_TICKS = 100000;
+    const int MAX_TICKS = 15000;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -170,7 +168,7 @@ class Experiment : public rclcpp::Node
       frequency = std::chrono::duration<double>(frequency_in_seconds);
 
       delay_ = this->create_wall_timer(
-        std::chrono::duration_cast<std::chrono::seconds>(delay),
+        std::chrono::duration_cast<std::chrono::duration<double>>(delay),
         std::bind(&Experiment::start_timer, this)
       );
     }    
@@ -180,12 +178,12 @@ class Experiment : public rclcpp::Node
       delay_->cancel();
 
       timer_ = this->create_wall_timer(
-        std::chrono::duration_cast<std::chrono::seconds>(frequency), 
+        std::chrono::duration_cast<std::chrono::duration<double>>(frequency),
         std::bind(&Experiment::run_experiment, this)
       );
 
       stop_timer_ = this->create_wall_timer(
-        std::chrono::duration_cast<std::chrono::seconds>(duration), 
+        std::chrono::duration_cast<std::chrono::duration<double>>(duration), 
         std::bind(&Experiment::stop_experiment, this)
       );
     }
