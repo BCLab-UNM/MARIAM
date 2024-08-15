@@ -2,6 +2,7 @@
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <cmath>
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
@@ -139,6 +140,70 @@ class HighFreqExperiment
     geometry_msgs::msg::Pose pose3;
 };
 
+
+class CircleTraceExperiment
+{
+  public:
+    CircleTraceExperiment(){}
+
+    void publish(
+      rclcpp::Publisher<Pose>::SharedPtr pub,
+      const rclcpp::Logger LOGGER
+    )
+    {
+      // calculating next pose
+      auto msg = Pose();
+      msg.position.x = (1/8) * cos(theta);
+      msg.position.y = 0.223;
+      msg.position.z = (1/16) * cos(theta) + 0.1605;
+      msg.orientation.x =  0.0;
+      msg.orientation.y =  0.0;
+      msg.orientation.z =  sin(orientation_angle/2);
+      msg.orientation.w =  cos(orientation_angle/2);
+      RCLCPP_INFO(LOGGER, "Sending pose with angle %f and angle %f", 
+      theta, orientation_angle);
+      RCLCPP_INFO(LOGGER,
+                  "Position:\n<%f, %f, %f>",
+                  msg.position.x,
+                  msg.position.y,
+                  msg.position.z);
+      RCLCPP_INFO(LOGGER,
+                  "Quaternion:\n<%f, %f, %f, %f>",
+                  msg.orientation.x,
+                  msg.orientation.y,
+                  msg.orientation.z,
+                  msg.orientation.w);
+      pub->publish(msg);
+
+      if (ticks == MAX_TICKS)
+      {
+        ticks = 0;
+        if (theta >= 2 * M_PI) theta = 0;
+        else theta += theta_step;
+        
+        if (
+          orientation_angle + orientation_angle_sign * orientation_angle_step >= M_PI_2 ||
+          abs(orientation_angle + orientation_angle_sign * orientation_angle_step) > MAX_RANGE
+        )
+        {
+          orientation_angle_sign = -1*orientation_angle_sign;
+        }
+        orientation_angle += orientation_angle_step*orientation_angle_sign;
+      }
+      else ticks++;
+    }
+
+  private:
+    const double MAX_RANGE = 1.784;
+    double orientation_angle = atan(MAX_RANGE);
+    double orientation_angle_sign = 1;
+    double orientation_angle_step = atan(MAX_RANGE) / 8;
+    double theta = 0;
+    double theta_step = M_PI_4 / 2;
+    int ticks = 0;
+    int MAX_TICKS = 500;
+};
+
 class Experiment : public rclcpp::Node
 {
   public:
@@ -191,7 +256,9 @@ class Experiment : public rclcpp::Node
     void run_experiment()
     {
       // RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
-      high_freq_exp.publish(this->pose_publisher2_, LOGGER);
+      // high_freq_exp.publish(this->pose_publisher2_, LOGGER);
+      circ_trace_exp.publish(this->pose_publisher2_, LOGGER);
+
     }
 
     void stop_experiment()
@@ -205,6 +272,7 @@ class Experiment : public rclcpp::Node
     ConstraintExperiment constraint_experiment;
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
     HighFreqExperiment high_freq_exp;
+    CircleTraceExperiment circ_trace_exp;
 
     rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
