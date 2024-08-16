@@ -153,15 +153,16 @@ class CircleTraceExperiment
     {
       // calculating next pose
       auto msg = Pose();
-      msg.position.x = (1/8) * cos(theta);
+      msg.position.x = (1.0/8.0) * cos(theta2);
       msg.position.y = 0.223;
-      msg.position.z = (1/16) * cos(theta) + 0.1605;
+      msg.position.z = (1.0/16.0) * sin(theta2) + 0.1605;
       msg.orientation.x =  0.0;
       msg.orientation.y =  0.0;
-      msg.orientation.z =  sin(orientation_angle/2);
-      msg.orientation.w =  cos(orientation_angle/2);
-      RCLCPP_INFO(LOGGER, "Sending pose with angle %f and angle %f", 
-      theta, orientation_angle);
+      msg.orientation.z =  sin(theta1/2);
+      msg.orientation.w =  cos(theta1/2);
+      RCLCPP_INFO(LOGGER,
+        "Sending pose with angles (%f, %f)", 
+        theta1, theta2);
       RCLCPP_INFO(LOGGER,
                   "Position:\n<%f, %f, %f>",
                   msg.position.x,
@@ -178,30 +179,32 @@ class CircleTraceExperiment
       if (ticks == MAX_TICKS)
       {
         ticks = 0;
-        if (theta >= 2 * M_PI) theta = 0;
-        else theta += theta_step;
+        if (theta2 >= 2 * M_PI) theta2 = 0;
+        else theta2 += theta2_step;
         
-        if (
-          orientation_angle + orientation_angle_sign * orientation_angle_step >= M_PI_2 ||
-          abs(orientation_angle + orientation_angle_sign * orientation_angle_step) > MAX_RANGE
-        )
+        // change direction
+        if (theta1 > MAX_RANGE || theta1 < MIN_RANGE)
         {
-          orientation_angle_sign = -1*orientation_angle_sign;
+          theta1_step_sign = -1*theta1_step_sign;
         }
-        orientation_angle += orientation_angle_step*orientation_angle_sign;
+        theta1 += theta1_step_sign*theta1_step;
       }
       else ticks++;
     }
 
   private:
-    const double MAX_RANGE = 1.784;
-    double orientation_angle = atan(MAX_RANGE);
-    double orientation_angle_sign = 1;
-    double orientation_angle_step = atan(MAX_RANGE) / 8;
-    double theta = 0;
-    double theta_step = M_PI_4 / 2;
+    const double ANGLE = 1.784;
+    const double MIN_RANGE = atan(ANGLE);
+    const double MAX_RANGE = atan(1.0/ANGLE) + M_PI_2;
+    // angle the waist needs to be in (basically yaw angle)
+    double theta1 = atan(ANGLE);
+    double theta1_step = atan(ANGLE) / 256;
+    int theta1_step_sign = 1;
+    // The position on the ellipse
+    double theta2 = 0;
+    double theta2_step = M_PI / 128;
     int ticks = 0;
-    int MAX_TICKS = 500;
+    int MAX_TICKS = 100;
 };
 
 class Experiment : public rclcpp::Node
