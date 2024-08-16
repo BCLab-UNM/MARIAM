@@ -144,7 +144,9 @@ class HighFreqExperiment
 class CircleTraceExperiment
 {
   public:
-    CircleTraceExperiment(){}
+    CircleTraceExperiment(){
+      waist_angle = compute_waist_position();
+    }
 
     void publish(
       rclcpp::Publisher<Pose>::SharedPtr pub,
@@ -153,16 +155,16 @@ class CircleTraceExperiment
     {
       // calculating next pose
       auto msg = Pose();
-      msg.position.x = (1.0/8.0) * cos(theta2);
+      msg.position.x = (1.0/8.0) * cos(theta);
       msg.position.y = 0.223;
-      msg.position.z = (1.0/16.0) * sin(theta2) + 0.1605;
+      msg.position.z = (1.0/16.0) * sin(theta) + 0.1605;
       msg.orientation.x =  0.0;
       msg.orientation.y =  0.0;
-      msg.orientation.z =  sin(theta1/2);
-      msg.orientation.w =  cos(theta1/2);
+      msg.orientation.z =  sin(waist_angle/2);
+      msg.orientation.w =  cos(waist_angle/2);
       RCLCPP_INFO(LOGGER,
         "Sending pose with angles (%f, %f)", 
-        theta1, theta2);
+        theta, waist_angle);
       RCLCPP_INFO(LOGGER,
                   "Position:\n<%f, %f, %f>",
                   msg.position.x,
@@ -179,32 +181,28 @@ class CircleTraceExperiment
       if (ticks == MAX_TICKS)
       {
         ticks = 0;
-        if (theta2 >= 2 * M_PI) theta2 = 0;
-        else theta2 += theta2_step;
-        
-        // change direction
-        if (theta1 > MAX_RANGE || theta1 < MIN_RANGE)
-        {
-          theta1_step_sign = -1*theta1_step_sign;
-        }
-        theta1 += theta1_step_sign*theta1_step;
+        if (theta >= 2 * M_PI) theta = 0;
+        else theta += theta_step;
+        waist_angle = compute_waist_position();
       }
       else ticks++;
     }
 
   private:
-    const double ANGLE = 1.784;
-    const double MIN_RANGE = atan(ANGLE);
-    const double MAX_RANGE = atan(1.0/ANGLE) + M_PI_2;
-    // angle the waist needs to be in (basically yaw angle)
-    double theta1 = atan(ANGLE);
-    double theta1_step = atan(ANGLE) / 256;
-    int theta1_step_sign = 1;
     // The position on the ellipse
-    double theta2 = 0;
-    double theta2_step = M_PI / 128;
+    double theta = 0;
+    double theta_step = M_PI / 64;
+    // angle the waist needs to be in (basically yaw angle)
+    double waist_angle;
     int ticks = 0;
-    int MAX_TICKS = 100;
+    int MAX_TICKS = 500;
+
+
+    double compute_waist_position() {
+      double num = (1.0/8.0) * std::cos(theta);
+      double dem = std::sqrt((1.0/64.0) * std::cos(theta) + (0.223*0.223));
+      return std::acos((double) num / dem);
+    }
 };
 
 class Experiment : public rclcpp::Node
