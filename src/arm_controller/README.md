@@ -35,6 +35,18 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 |   7   | Cross key (up/down)    | Change speed            |
 
 
+## Experiment node arguments
+The experiment node has four arguments that can be specified before running the node.
+Parameters:
+- delay: the amount of time in seconds to wait before publishing poses.
+- duration: the amount of time in seconds to publish poses for.
+- frequency: the amount of time in seconds to wait before publishing another pose.
+- max_ticks: the number of ticks before switching to a different pose.
+
+NOTE: delay, duration, and frequency need to be specified as floating point values (for example: use 1.0 instead of 1).
+
+Example: `ros2 run arm_controller experiment --ros-args -p delay:=1.0 duration:=150.0 frequency:=0.002 max_ticks:=200`
+
 ## Launch Files
 
 ### xsarm_joy.launch.py

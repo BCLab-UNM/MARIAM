@@ -429,7 +429,7 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.core.get_node().get_logger().info('Failed to move to goal pose.')
         end_time = self.core.get_node().get_clock().now()
         self.core.get_node().get_logger().info(
-            f'Time (arm): {(end_time-start_time).nanoseconds / 1e9}'
+            f'Time: {(end_time-start_time).nanoseconds / 1e9}'
         )
 
     def sign(self, x):

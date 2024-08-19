@@ -144,8 +144,12 @@ class HighFreqExperiment
 class CircleTraceExperiment
 {
   public:
-    CircleTraceExperiment(){
+    CircleTraceExperiment() {
       waist_angle = compute_waist_position();
+    }
+
+    void set_max_ticks(int max_ticks) {
+      this->max_ticks = max_ticks;
     }
 
     void publish(
@@ -178,8 +182,9 @@ class CircleTraceExperiment
                   msg.orientation.w);
       pub->publish(msg);
 
-      if (ticks == MAX_TICKS)
+      if (ticks == max_ticks)
       {
+        // RCLCPP_INFO(LOGGER, "Reached max ticks");
         ticks = 0;
         if (theta >= 2 * M_PI) theta = 0;
         else theta += theta_step;
@@ -191,11 +196,11 @@ class CircleTraceExperiment
   private:
     // The position on the ellipse
     double theta = 0;
-    double theta_step = M_PI / 64;
+    double theta_step = M_PI / 256.0;
     // angle the waist needs to be in (basically yaw angle)
     double waist_angle;
     int ticks = 0;
-    int MAX_TICKS = 500;
+    int max_ticks = 500;
 
 
     double compute_waist_position() {
@@ -210,6 +215,8 @@ class Experiment : public rclcpp::Node
   public:
     Experiment() : Node("experiment")
     {
+      int max_ticks = 500;
+
       pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
         1
@@ -220,14 +227,17 @@ class Experiment : public rclcpp::Node
         10
       );
 
-      /* Parameter */
-      this->declare_parameter("delay", 5.0);
-      this->declare_parameter("duration", 300.0);
+      this->declare_parameter("delay",     5.0);
+      this->declare_parameter("duration",  300.0);
       this->declare_parameter("frequency", 5.0);
+      this->declare_parameter("max_ticks", 500);
 
-      this->get_parameter("delay", delay_in_seconds);
-      this->get_parameter("duration", duration_in_seconds);
+      this->get_parameter("delay",     delay_in_seconds);
+      this->get_parameter("duration",  duration_in_seconds);
       this->get_parameter("frequency", frequency_in_seconds);
+      this->get_parameter("max_ticks", max_ticks);
+
+      circ_trace_exp.set_max_ticks(max_ticks);
 
       delay = std::chrono::duration<double>(delay_in_seconds);
       duration = std::chrono::duration<double>(duration_in_seconds);
@@ -272,8 +282,6 @@ class Experiment : public rclcpp::Node
     rclcpp::Publisher<ConstrainedPose>::SharedPtr pose_publisher_;
     ConstraintExperiment constraint_experiment;
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
-    HighFreqExperiment high_freq_exp;
-    CircleTraceExperiment circ_trace_exp;
 
     rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
@@ -286,6 +294,8 @@ class Experiment : public rclcpp::Node
     std::chrono::duration<double> delay;
     std::chrono::duration<double> duration;
     std::chrono::duration<double> frequency;
+
+    CircleTraceExperiment circ_trace_exp;
 
     const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment"); 
 };
