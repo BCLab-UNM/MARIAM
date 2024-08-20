@@ -41,11 +41,16 @@ Parameters:
 - delay: the amount of time in seconds to wait before publishing poses.
 - duration: the amount of time in seconds to publish poses for.
 - frequency: the amount of time in seconds to wait before publishing another pose.
-- max_ticks: the number of ticks before switching to a different pose.
+- max_ticks: the number of ticks before switching to a different pose, point, etc.
+- exp_type: sets the type of experiment you want to perform.
+  - `exp_type:=constraint-exp` will start publishing poses to the topic "/joy_target_pose" and was used for testing constrained path planning with moveit2. Does not use the max_ticks parameter.
+  - `exp_type:=ellipse-trace` will start publishing waypoints along an ellipse to the "/high_freq_publisher" topic. max_ticks will affect the amount of time that will pass before publishing the next waypoint.
+  - `exp_type:=force-exp` will start publishing floating point values to the topic "/force". When `max_ticks` is reached, the value will get incremented by a random value, or get reset back to zero if it's greater than or equal to 2.
+  - If a value is not provided, then three poses will start getting published to "/high_freq_publisher".
 
 NOTE: delay, duration, and frequency need to be specified as floating point values (for example: use 1.0 instead of 1).
 
-Example: `ros2 run arm_controller experiment --ros-args -p delay:=1.0 duration:=150.0 frequency:=0.002 max_ticks:=200`
+Example command: `ros2 run arm_controller experiment --ros-args -p delay:=1.0 duration:=150.0 frequency:=0.002 max_ticks:=200 --exp_type:=ellipse-trace`
 
 ## Launch Files
 
