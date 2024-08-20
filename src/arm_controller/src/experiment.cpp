@@ -7,24 +7,24 @@
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <std_msgs/std_msgs/msg/float64.hpp>
 #include "arm_controller/msg/path_and_execution_timing.hpp"
 #include "arm_controller/msg/constrained_pose.hpp"
 
 using namespace arm_controller::msg;
 using namespace geometry_msgs::msg;
+using namespace std_msgs::msg;
 using std::placeholders::_1;
 
 /**
  * Experiment behavior interface.
  */
-class ExpBehavior
+enum ExperimentBehavior
 {
-  public:
-    virtual void publish(
-      rclcpp::Publisher<Pose>::SharedPtr pub,
-      const rclcpp::Logger LOGGER
-    ) = 0;
-    virtual ~ExpBehavior() = default;
+  CONSTRAINT_EXP,
+  HIGH_FREQ_EXP,
+  ELLIPSE_TRACE_EXP,
+  FORCE_SENSOR_EXP
 };
 
 /**
@@ -75,7 +75,7 @@ class ConstraintExperiment
  * This class contains poses that test the arm's trajectory
  * when a high number of goal poses are published.
  */
-class HighFreqExperiment : public ExpBehavior
+class HighFreqExperiment
 {
   public:
     HighFreqExperiment()
@@ -159,7 +159,7 @@ class HighFreqExperiment : public ExpBehavior
 };
 
 
-class CircleTraceExperiment : public ExpBehavior
+class CircleTraceExperiment
 {
   public:
     CircleTraceExperiment() {
@@ -229,6 +229,49 @@ class CircleTraceExperiment : public ExpBehavior
     }
 };
 
+/**
+ * This class will publish random values to represent the
+ * force being applied to the arm.
+ */
+class ForceSensorExperiment
+{
+  public:
+    ForceSensorExperiment(){}
+
+    void set_max_ticks(int max_ticks) {
+      this->max_ticks = max_ticks;
+    }
+
+    void publish(
+      rclcpp::Publisher<Float64>::SharedPtr pub,
+      const rclcpp::Logger LOGGER
+    )
+    {
+      auto msg = Float64();
+      if(ticks == max_ticks)
+      {
+        ticks = 0;
+        if(current_force >= 2) {
+          current_force = 0;
+        }
+        else {
+          double increment = (double) rand() / RAND_MAX;
+          current_force += increment;
+          RCLCPP_INFO(LOGGER, "Increasing force by %f", increment);
+        }
+      }
+      else ticks++;
+      msg.data = current_force;
+      RCLCPP_INFO(LOGGER, "Publishing value F = %f", current_force);
+      pub->publish(msg);
+    }
+
+  private:
+    double current_force = 0;
+    int ticks = 0;
+    int max_ticks = 500;
+};
+
 class Experiment : public rclcpp::Node
 {
   public:
@@ -237,13 +280,18 @@ class Experiment : public rclcpp::Node
       int max_ticks = 500;
       std::string exp_type = "";
 
-      pose_publisher_ = this->create_publisher<ConstrainedPose>(
+      constraint_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
         1
       );
 
-      pose_publisher2_ = this->create_publisher<Pose>(
+      pose_publisher_ = this->create_publisher<Pose>(
         "high_freq_publisher",
+        10
+      );
+
+      force_publisher_ = this->create_publisher<Float64>(
+        "force",
         10
       );
 
@@ -259,7 +307,7 @@ class Experiment : public rclcpp::Node
       this->get_parameter("max_ticks", max_ticks);
       this->get_parameter("exp_type", exp_type);
 
-      this->expBehavior = this->factoryMethod(exp_type, max_ticks);
+      this->factoryMethod(exp_type, max_ticks);
 
       delay = std::chrono::duration<double>(delay_in_seconds);
       duration = std::chrono::duration<double>(duration_in_seconds);
@@ -288,10 +336,27 @@ class Experiment : public rclcpp::Node
 
     void run_experiment()
     {
-      // RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
-      // high_freq_exp.publish(this->pose_publisher2_, LOGGER);
-      expBehavior->publish(this->pose_publisher2_, LOGGER);
+      switch (expBehavior)
+      {
+      case CONSTRAINT_EXP:
+        constraint_exp.publish(constraint_publisher_);
+        break;
+      
+      case HIGH_FREQ_EXP:
+        high_freq_exp.publish(pose_publisher_, LOGGER);
+        break;
+      
+      case ELLIPSE_TRACE_EXP:
+        circ_trace_exp.publish(pose_publisher_, LOGGER);
+        break;
 
+      case FORCE_SENSOR_EXP:
+        force_sensor_exp.publish(force_publisher_, LOGGER);
+        break;
+
+      default:
+        break;
+      }
     }
 
     void stop_experiment()
@@ -301,8 +366,9 @@ class Experiment : public rclcpp::Node
     }
 
   private:
-    rclcpp::Publisher<ConstrainedPose>::SharedPtr pose_publisher_;
-    rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
+    rclcpp::Publisher<ConstrainedPose>::SharedPtr constraint_publisher_;
+    rclcpp::Publisher<Pose>::SharedPtr pose_publisher_;
+    rclcpp::Publisher<Float64>::SharedPtr force_publisher_;
 
     rclcpp::TimerBase::SharedPtr delay_;
     rclcpp::TimerBase::SharedPtr timer_;
@@ -316,7 +382,12 @@ class Experiment : public rclcpp::Node
     std::chrono::duration<double> duration;
     std::chrono::duration<double> frequency;
 
-    std::unique_ptr<ExpBehavior> expBehavior;
+    ExperimentBehavior expBehavior;
+
+    ConstraintExperiment constraint_exp;
+    HighFreqExperiment high_freq_exp;
+    CircleTraceExperiment circ_trace_exp;
+    ForceSensorExperiment force_sensor_exp;
 
     const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment");
 
@@ -324,23 +395,32 @@ class Experiment : public rclcpp::Node
     /**
      * Returns the desired experiment type.
      */
-    std::unique_ptr<ExpBehavior> factoryMethod(
+    void factoryMethod(
       std::string exp_type, int max_ticks
     )
     {
-      if (exp_type.compare("ellipse-trace") == 0)
+      if (exp_type.compare("constraint-exp") == 0)
       {
-        std::unique_ptr<CircleTraceExperiment> circ_exp 
-          = std::make_unique<CircleTraceExperiment>();
-        circ_exp->set_max_ticks(max_ticks);
-        return circ_exp;
+        constraint_exp = ConstraintExperiment();
+        expBehavior = CONSTRAINT_EXP;
+      }
+      else if (exp_type.compare("ellipse-trace") == 0)
+      {
+        circ_trace_exp = CircleTraceExperiment();
+        circ_trace_exp.set_max_ticks(max_ticks);
+        expBehavior = ELLIPSE_TRACE_EXP;
+      }
+      else if (exp_type.compare("force-exp") == 0)
+      {
+        force_sensor_exp = ForceSensorExperiment();
+        force_sensor_exp.set_max_ticks(max_ticks);
+        expBehavior = FORCE_SENSOR_EXP;
       }
       else
       {
-        std::unique_ptr<HighFreqExperiment> high_freq_exp 
-          = std::make_unique<HighFreqExperiment>();
-        high_freq_exp->set_max_ticks(max_ticks);
-        return high_freq_exp;
+        high_freq_exp = HighFreqExperiment();
+        high_freq_exp.set_max_ticks(max_ticks);
+        expBehavior = HIGH_FREQ_EXP;
       }
     }
 };
