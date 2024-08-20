@@ -15,6 +15,19 @@ using namespace geometry_msgs::msg;
 using std::placeholders::_1;
 
 /**
+ * Experiment behavior interface.
+ */
+class ExpBehavior
+{
+  public:
+    virtual void publish(
+      rclcpp::Publisher<Pose>::SharedPtr pub,
+      const rclcpp::Logger LOGGER
+    ) = 0;
+    virtual ~ExpBehavior() = default;
+};
+
+/**
  * This class contains poses for testing the trajectory
  * of the arm when moving up and down.
  */
@@ -62,7 +75,7 @@ class ConstraintExperiment
  * This class contains poses that test the arm's trajectory
  * when a high number of goal poses are published.
  */
-class HighFreqExperiment
+class HighFreqExperiment : public ExpBehavior
 {
   public:
     HighFreqExperiment()
@@ -94,6 +107,11 @@ class HighFreqExperiment
       srand(42);
     }
 
+    void set_max_ticks(int max_ticks)
+    {
+      this->max_ticks = max_ticks;
+    }
+
     void publish(
       rclcpp::Publisher<Pose>::SharedPtr pub,
       const rclcpp::Logger LOGGER
@@ -123,7 +141,7 @@ class HighFreqExperiment
 
       pub->publish(msg);
       ticks++;
-      if(ticks == MAX_TICKS)
+      if(ticks == max_ticks)
       {
         ticks = 0;
         pose_num = 1 + (rand() % 3);
@@ -133,7 +151,7 @@ class HighFreqExperiment
   private:
     int pose_num = 1;
     int ticks = 0;
-    const int MAX_TICKS = 15000;
+    int max_ticks = 500;
     // poses for testing the arm's motion
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
@@ -141,7 +159,7 @@ class HighFreqExperiment
 };
 
 
-class CircleTraceExperiment
+class CircleTraceExperiment : public ExpBehavior
 {
   public:
     CircleTraceExperiment() {
@@ -203,7 +221,8 @@ class CircleTraceExperiment
     int max_ticks = 500;
 
 
-    double compute_waist_position() {
+    double compute_waist_position() 
+    {
       double num = (1.0/8.0) * std::cos(theta);
       double dem = std::sqrt((1.0/64.0) * std::cos(theta) + (0.223*0.223));
       return std::acos((double) num / dem);
@@ -216,6 +235,7 @@ class Experiment : public rclcpp::Node
     Experiment() : Node("experiment")
     {
       int max_ticks = 500;
+      std::string exp_type = "";
 
       pose_publisher_ = this->create_publisher<ConstrainedPose>(
         "joy_target_pose",
@@ -231,13 +251,15 @@ class Experiment : public rclcpp::Node
       this->declare_parameter("duration",  300.0);
       this->declare_parameter("frequency", 5.0);
       this->declare_parameter("max_ticks", 500);
+      this->declare_parameter("exp_type", "");
 
       this->get_parameter("delay",     delay_in_seconds);
       this->get_parameter("duration",  duration_in_seconds);
       this->get_parameter("frequency", frequency_in_seconds);
       this->get_parameter("max_ticks", max_ticks);
+      this->get_parameter("exp_type", exp_type);
 
-      circ_trace_exp.set_max_ticks(max_ticks);
+      this->expBehavior = this->factoryMethod(exp_type, max_ticks);
 
       delay = std::chrono::duration<double>(delay_in_seconds);
       duration = std::chrono::duration<double>(duration_in_seconds);
@@ -268,7 +290,7 @@ class Experiment : public rclcpp::Node
     {
       // RCLCPP_INFO(this->get_logger(), "Publishing a new pose");
       // high_freq_exp.publish(this->pose_publisher2_, LOGGER);
-      circ_trace_exp.publish(this->pose_publisher2_, LOGGER);
+      expBehavior->publish(this->pose_publisher2_, LOGGER);
 
     }
 
@@ -280,7 +302,6 @@ class Experiment : public rclcpp::Node
 
   private:
     rclcpp::Publisher<ConstrainedPose>::SharedPtr pose_publisher_;
-    ConstraintExperiment constraint_experiment;
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher2_;
 
     rclcpp::TimerBase::SharedPtr delay_;
@@ -295,9 +316,33 @@ class Experiment : public rclcpp::Node
     std::chrono::duration<double> duration;
     std::chrono::duration<double> frequency;
 
-    CircleTraceExperiment circ_trace_exp;
+    std::unique_ptr<ExpBehavior> expBehavior;
 
-    const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment"); 
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment");
+
+    /* Factory methods */
+    /**
+     * Returns the desired experiment type.
+     */
+    std::unique_ptr<ExpBehavior> factoryMethod(
+      std::string exp_type, int max_ticks
+    )
+    {
+      if (exp_type.compare("ellipse-trace") == 0)
+      {
+        std::unique_ptr<CircleTraceExperiment> circ_exp 
+          = std::make_unique<CircleTraceExperiment>();
+        circ_exp->set_max_ticks(max_ticks);
+        return circ_exp;
+      }
+      else
+      {
+        std::unique_ptr<HighFreqExperiment> high_freq_exp 
+          = std::make_unique<HighFreqExperiment>();
+        high_freq_exp->set_max_ticks(max_ticks);
+        return high_freq_exp;
+      }
+    }
 };
 
 int main(int argc, char * argv[])
