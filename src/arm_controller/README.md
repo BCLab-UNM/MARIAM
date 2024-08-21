@@ -66,8 +66,6 @@ ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
 ```
 
 Additional parameters:
-- experiment: Can be `true` or `false`. When `true`, launches the experiment node to publish poses on a constant rate. For now, this node will publish poses at a rate of 500Hz after an initial delay of 10 seconds, for 5 minutes. Default is `false`.
-
 - threshold: Value from 0 to 1 defining joystick sensitivity; a larger number means the joystick will be less sensitive. Default is 0.75.
 
 - use_rviz: Can be `true` or `false`. Launches RViz if set to `true`. Default is `true`.

@@ -32,17 +32,6 @@ def launch_setup(context, *args, **kwargs):
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
 
-    # experiment launch arguments
-    experiment_launch_arg = LaunchConfiguration('experiment')    
-
-    experiment_node = Node(
-        package='arm_controller',
-        executable='experiment',
-        name='experiment',
-        output='screen',
-        condition=IfCondition(experiment_launch_arg)
-    )
-
     joy_node = Node(
         package='joy',
         executable='joy_node',
@@ -103,7 +92,6 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        experiment_node,
         joy_node,
         joy_input_handler_node,
         xsarm_robot_node,

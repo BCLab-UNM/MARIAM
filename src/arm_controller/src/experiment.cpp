@@ -16,9 +16,6 @@ using namespace geometry_msgs::msg;
 using namespace std_msgs::msg;
 using std::placeholders::_1;
 
-/**
- * Experiment behavior interface.
- */
 enum ExperimentBehavior
 {
   CONSTRAINT_EXP,
@@ -159,10 +156,10 @@ class HighFreqExperiment
 };
 
 
-class CircleTraceExperiment
+class EllipseTraceExperiment
 {
   public:
-    CircleTraceExperiment() {
+    EllipseTraceExperiment() {
       waist_angle = compute_waist_position();
     }
 
@@ -272,6 +269,10 @@ class ForceSensorExperiment
     int max_ticks = 500;
 };
 
+/**
+ * This class contains three timers that are used
+ * to publish data for a given duration at a given frequency.
+ */
 class Experiment : public rclcpp::Node
 {
   public:
@@ -286,7 +287,7 @@ class Experiment : public rclcpp::Node
       );
 
       pose_publisher_ = this->create_publisher<Pose>(
-        "high_freq_publisher",
+        "high_freq_target_pose",
         10
       );
 
@@ -386,7 +387,7 @@ class Experiment : public rclcpp::Node
 
     ConstraintExperiment constraint_exp;
     HighFreqExperiment high_freq_exp;
-    CircleTraceExperiment circ_trace_exp;
+    EllipseTraceExperiment circ_trace_exp;
     ForceSensorExperiment force_sensor_exp;
 
     const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment");
@@ -406,7 +407,7 @@ class Experiment : public rclcpp::Node
       }
       else if (exp_type.compare("ellipse-trace") == 0)
       {
-        circ_trace_exp = CircleTraceExperiment();
+        circ_trace_exp = EllipseTraceExperiment();
         circ_trace_exp.set_max_ticks(max_ticks);
         expBehavior = ELLIPSE_TRACE_EXP;
       }

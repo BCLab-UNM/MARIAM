@@ -93,7 +93,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         )
         self.core.get_node().create_subscription(
             Pose,
-            '/high_freq_publisher',
+            '/high_freq_target_pose',
             self.contol_loop_cb,
             10
         )
