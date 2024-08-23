@@ -21,7 +21,8 @@ enum ExperimentBehavior
   CONSTRAINT_EXP,
   HIGH_FREQ_EXP,
   ELLIPSE_TRACE_EXP,
-  FORCE_SENSOR_EXP
+  FORCE_SENSOR_EXP,
+  FORCE_AND_POSE_EXP
 };
 
 /**
@@ -248,9 +249,7 @@ class ForceSensorExperiment
       if(ticks == max_ticks)
       {
         ticks = 0;
-        if(current_force >= 2) {
-          current_force = 0;
-        }
+        if(current_force >= 2) current_force = 0;
         else {
           double increment = (double) rand() / RAND_MAX;
           current_force += increment;
@@ -269,6 +268,63 @@ class ForceSensorExperiment
     int max_ticks = 500;
 };
 
+
+class ForceAndPoseExperiment
+{
+  public:
+    ForceAndPoseExperiment(){
+      virtual_pose.position.x = 0.0;
+      virtual_pose.position.y = 0.4;
+      virtual_pose.position.z = 0.098;
+      virtual_pose.orientation.x =  0.000;
+      virtual_pose.orientation.y =  0.000;
+      virtual_pose.orientation.z =  0.707;
+      virtual_pose.orientation.w =  0.707;
+    }
+
+    void publish(
+      rclcpp::Publisher<Pose>::SharedPtr pose_publisher,
+      rclcpp::Publisher<Float64>::SharedPtr force_publisher,
+      const rclcpp::Logger LOGGER
+    )
+    {
+      if(ticks == max_ticks)
+      {
+        ticks = 0;
+        if(force_output >= 2) force_output -= 0.005;
+        else force_output += 0.005;
+      }
+      else ticks++;
+      
+      auto pose_msg = Pose();
+      pose_msg.position = virtual_pose.position;
+      pose_msg.orientation = virtual_pose.orientation;
+      auto force_msg = Float64();
+      force_msg.data = force_output;
+      
+      RCLCPP_INFO(
+        LOGGER,
+        "Publishing virtual pose and force (%f)",
+        force_output
+      );
+      force_publisher->publish(force_msg);
+      pose_publisher->publish(pose_msg);
+    }
+
+    void set_max_ticks(int max_ticks)
+    {
+      this->max_ticks = max_ticks;
+    }
+
+
+  private:
+    int ticks = 0;
+    int max_ticks = 500;
+    Pose virtual_pose;
+    double force_output = 0;
+};
+
+
 /**
  * This class contains three timers that are used
  * to publish data for a given duration at a given frequency.
@@ -281,32 +337,17 @@ class Experiment : public rclcpp::Node
       int max_ticks = 500;
       std::string exp_type = "";
 
-      constraint_publisher_ = this->create_publisher<ConstrainedPose>(
-        "joy_target_pose",
-        1
-      );
-
-      pose_publisher_ = this->create_publisher<Pose>(
-        "high_freq_target_pose",
-        10
-      );
-
-      force_publisher_ = this->create_publisher<Float64>(
-        "force",
-        10
-      );
-
       this->declare_parameter("delay",     5.0);
       this->declare_parameter("duration",  300.0);
       this->declare_parameter("frequency", 5.0);
       this->declare_parameter("max_ticks", 500);
-      this->declare_parameter("exp_type", "");
+      this->declare_parameter("exp_type",  "");
 
       this->get_parameter("delay",     delay_in_seconds);
       this->get_parameter("duration",  duration_in_seconds);
       this->get_parameter("frequency", frequency_in_seconds);
       this->get_parameter("max_ticks", max_ticks);
-      this->get_parameter("exp_type", exp_type);
+      this->get_parameter("exp_type",  exp_type);
 
       this->factoryMethod(exp_type, max_ticks);
 
@@ -355,6 +396,13 @@ class Experiment : public rclcpp::Node
         force_sensor_exp.publish(force_publisher_, LOGGER);
         break;
 
+      case FORCE_AND_POSE_EXP:
+        force_and_pose_exp.publish(
+          pose_publisher_,
+          force_publisher_,
+          LOGGER);
+        break;
+
       default:
         break;
       }
@@ -389,6 +437,7 @@ class Experiment : public rclcpp::Node
     HighFreqExperiment high_freq_exp;
     EllipseTraceExperiment circ_trace_exp;
     ForceSensorExperiment force_sensor_exp;
+    ForceAndPoseExperiment force_and_pose_exp;
 
     const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment");
 
@@ -402,23 +451,53 @@ class Experiment : public rclcpp::Node
     {
       if (exp_type.compare("constraint-exp") == 0)
       {
+        constraint_publisher_ = this->create_publisher<ConstrainedPose>(
+          "joy_target_pose",
+          1
+        );
         constraint_exp = ConstraintExperiment();
         expBehavior = CONSTRAINT_EXP;
       }
       else if (exp_type.compare("ellipse-trace") == 0)
       {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_target_pose",
+          10
+        );
         circ_trace_exp = EllipseTraceExperiment();
         circ_trace_exp.set_max_ticks(max_ticks);
         expBehavior = ELLIPSE_TRACE_EXP;
       }
       else if (exp_type.compare("force-exp") == 0)
       {
+        force_publisher_ = this->create_publisher<Float64>(
+          "force",
+          10
+        );
         force_sensor_exp = ForceSensorExperiment();
         force_sensor_exp.set_max_ticks(max_ticks);
         expBehavior = FORCE_SENSOR_EXP;
       }
+      else if (exp_type.compare("pose-and-force") == 0)
+      {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_target_pose",
+          10
+        );
+        force_publisher_ = this->create_publisher<Float64>(
+          "force",
+          10
+        );
+        force_and_pose_exp = ForceAndPoseExperiment();
+        force_and_pose_exp.set_max_ticks(max_ticks);
+        expBehavior = FORCE_AND_POSE_EXP;
+      }
       else
       {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_target_pose",
+          10
+        );
         high_freq_exp = HighFreqExperiment();
         high_freq_exp.set_max_ticks(max_ticks);
         expBehavior = HIGH_FREQ_EXP;
