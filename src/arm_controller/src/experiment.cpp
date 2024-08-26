@@ -274,7 +274,7 @@ class ForceAndPoseExperiment
   public:
     ForceAndPoseExperiment(){
       virtual_pose.position.x = 0.0;
-      virtual_pose.position.y = 0.4;
+      virtual_pose.position.y = 0.25;
       virtual_pose.position.z = 0.098;
       virtual_pose.orientation.x =  0.000;
       virtual_pose.orientation.y =  0.000;

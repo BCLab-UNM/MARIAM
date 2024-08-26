@@ -12,7 +12,8 @@ from launch.actions import (
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
-    PathJoinSubstitution
+    PathJoinSubstitution,
+    PythonExpression
 )
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
@@ -31,6 +32,8 @@ def launch_setup(context, *args, **kwargs):
     use_sim_launch_arg = LaunchConfiguration('use_sim')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
+
+    ikpy_launch_arg = LaunchConfiguration('use_ikpy')
 
     joy_node = Node(
         package='joy',
@@ -68,6 +71,32 @@ def launch_setup(context, *args, **kwargs):
             '--robot_model', robot_model_launch_arg.perform(context),
             '--robot_name', robot_name_launch_arg.perform(context),
         ],
+        condition=IfCondition(
+            PythonExpression([
+                "'",ikpy_launch_arg,
+                "' == 'false'"
+            ])
+        )
+    )
+
+    xsarm_ikpy_robot_node = Node(
+        name='xsarm_ikpy_robot_node',
+        package='arm_controller',
+        executable='xsarm_ikpy_robot.py',
+        namespace=robot_name_launch_arg,
+        parameters=[{
+            'robot_model': robot_model_launch_arg,
+        }],
+        arguments=[
+            '--robot_model', robot_model_launch_arg.perform(context),
+            '--robot_name', robot_name_launch_arg.perform(context),
+        ],
+        condition=IfCondition(
+            PythonExpression([
+                "'",ikpy_launch_arg,
+                "' == 'true'"
+            ])
+        )
     )
 
     xsarm_control_launch = IncludeLaunchDescription(
@@ -95,6 +124,7 @@ def launch_setup(context, *args, **kwargs):
         joy_node,
         joy_input_handler_node,
         xsarm_robot_node,
+        xsarm_ikpy_robot_node,
         xsarm_control_launch
     ]
 
@@ -163,11 +193,11 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            'experiment',
+            'use_ikpy',
             default_value='false',
             choices=('true', 'false'),
             description=(
-                "If `true`, runs the constraint_experiment node."
+                "If true, launches a node that uses IKPy as the IK solver."
             )
         )
     ]

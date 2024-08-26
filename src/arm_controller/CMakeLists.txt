@@ -113,6 +113,7 @@ install(
 install(
   PROGRAMS
     scripts/xsarm_robot.py
+    scripts/xsarm_ikpy_robot.py
   DESTINATION
     lib/${PROJECT_NAME}
 )
