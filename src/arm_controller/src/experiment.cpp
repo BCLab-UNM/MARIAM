@@ -274,7 +274,7 @@ class ForceAndPoseExperiment
   public:
     ForceAndPoseExperiment(){
       virtual_pose.position.x = 0.0;
-      virtual_pose.position.y = 0.25;
+      virtual_pose.position.y = 0.26;
       virtual_pose.position.z = 0.098;
       virtual_pose.orientation.x =  0.000;
       virtual_pose.orientation.y =  0.000;
@@ -291,8 +291,8 @@ class ForceAndPoseExperiment
       if(ticks == max_ticks)
       {
         ticks = 0;
-        if(force_output >= 2) force_output -= 0.005;
-        else force_output += 0.005;
+        if(force_output >= 2) force_output = 0;
+        else force_output += 0.05;
       }
       else ticks++;
       
@@ -481,7 +481,7 @@ class Experiment : public rclcpp::Node
       else if (exp_type.compare("pose-and-force") == 0)
       {
         pose_publisher_ = this->create_publisher<Pose>(
-          "high_freq_target_pose",
+          "high_freq_virtual_pose",
           10
         );
         force_publisher_ = this->create_publisher<Float64>(

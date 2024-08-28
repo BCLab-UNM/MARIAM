@@ -53,10 +53,10 @@ class XSArmRobot(InterbotixManipulatorXS):
         urdf_file_path = os.path.join(os.getcwd(), 'px100.urdf')
         if os.path.isfile(urdf_file_path):
             self.arm_chain = ikpy.chain.Chain.from_urdf_file(
-                urdf_file='/home/xavier/projects/MARIAM/px100.urdf',
+                urdf_file=urdf_file_path,
                 base_elements=['px100/base_link'],
-                active_links_mask=[False, True,
-                                   True, True, True, False, False],
+                active_links_mask=[False,
+                                   True, True, True, True],
                 symbolic=True
             )
         self.log_info(f'Arm chain: {self.arm_chain}')
@@ -262,15 +262,14 @@ class XSArmRobot(InterbotixManipulatorXS):
             self.T_yb = np.array(T_yb)
 
     def control_loop_cb(self, msg: Pose) -> None:
-        tol = 0.001
+        start_time = self.core.get_node().get_clock().now()
         position = [
             msg.position.x,
             msg.position.y,
             msg.position.z,
         ]
 
-        desired_rotation = np.eye(4)
-        desired_rotation[:3, :3] = R.from_quat([
+        desired_rotation = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
@@ -278,38 +277,24 @@ class XSArmRobot(InterbotixManipulatorXS):
         ]).as_matrix()
 
         desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
-
-        desired_matrix = np.eye(4)
-        desired_matrix[:3, :3] = desired_rotation[:3, :3]
-        desired_matrix[0, 3] = msg.position.x
-        desired_matrix[1, 3] = msg.position.y
-        desired_matrix[2, 3] = msg.position.z
         
-        start_time = self.core.get_node().get_clock().now()
         joint_angles = self.arm_chain.inverse_kinematics(
             target_position=position,
             target_orientation=desired_rpy,
-            orientation_mode="Z"
+            orientation_mode="Z",
         )
         joint_angles = joint_angles[1:5]
         self.arm.set_joint_positions(
             joint_positions=joint_angles,
-            moving_time=1.7,
-            accel_time=0.15,
+            moving_time=0.75,
+            accel_time=0.2,
             blocking=False
         )
         end_time = self.core.get_node().get_clock().now()
-        self.core.get_node().get_logger().info(
+        self.log_info(
             f'Time: {(end_time-start_time).nanoseconds / 1e9}'
         )
-
-    def sign(self, x):
-        if x > 0:
-            return 1
-        elif x < 0:
-            return -1
-        else:
-            return 0
+        self.update_T_yb()
         
     def log_info(self, msg):
         self.core.get_node().get_logger().info(msg)

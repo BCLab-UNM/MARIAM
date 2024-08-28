@@ -282,7 +282,6 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         msg: the desired pose.
         """
-        # self.core.get_node().get_logger().info(f'Msg: {msg}')
         start_time = self.core.get_node().get_clock().now()
         waist_step = 0.005
         translate_step = 0.001
@@ -338,12 +337,10 @@ class XSArmRobot(InterbotixManipulatorXS):
 
         if abs(x_pos_error) > tol:
             set_ee_pose = True
-            # self.core.get_node().get_logger().info(f'x_pos_error: {x_pos_error}')
             T_yb[0, 3] += self.sign(x_pos_error) * translate_step
 
         if abs(z_pos_error) > tol:
             set_ee_pose = True
-            # self.core.get_node().get_logger().info(f'z_pos_error: {z_pos_error}')
             T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
         # update the pitch angle of end-effector w.r.t. base frame
@@ -351,7 +348,6 @@ class XSArmRobot(InterbotixManipulatorXS):
         ee_pitch_error = desired_rpy[1] - rpy[1]
         if abs(ee_pitch_error) > ee_tol:
             set_ee_pose = True
-            # self.core.get_node().get_logger().info(f'ee_pitch_error: {ee_pitch_error}')
             rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
             T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
@@ -366,11 +362,10 @@ class XSArmRobot(InterbotixManipulatorXS):
                 blocking=False)
             if success:
                 self.T_yb = np.array(T_yb)
-                # self.core.get_node().get_logger().info(f'Joint angles:\n{_}')
             else:
-                self.core.get_node().get_logger().info('Failed to move to goal pose.')
+                self.log_info('Failed to move to goal pose.')
         end_time = self.core.get_node().get_clock().now()
-        self.core.get_node().get_logger().info(
+        self.log_info(
             f'Time: {(end_time-start_time).nanoseconds / 1e9}'
         )
 
@@ -381,6 +376,9 @@ class XSArmRobot(InterbotixManipulatorXS):
             return -1
         else:
             return 0
+
+    def log_info(self, msg):
+        self.core.get_node().get_logger().info(f'{msg}')
 
 def main(args=None):
     p = argparse.ArgumentParser()
