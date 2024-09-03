@@ -25,6 +25,7 @@ enum ExperimentBehavior
   FORCE_AND_POSE_EXP
 };
 
+
 /**
  * This class contains poses for testing the trajectory
  * of the arm when moving up and down.
@@ -68,6 +69,7 @@ class ConstraintExperiment
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
 };
+
 
 /**
  * This class contains poses that test the arm's trajectory
@@ -349,7 +351,53 @@ class Experiment : public rclcpp::Node
       this->get_parameter("max_ticks", max_ticks);
       this->get_parameter("exp_type",  exp_type);
 
-      this->factoryMethod(exp_type, max_ticks);
+      if (exp_type.compare("constraint-exp") == 0)
+      {
+        constraint_publisher_ = this->create_publisher<ConstrainedPose>(
+          "joy_target_pose",
+          1
+        );
+        expBehavior = CONSTRAINT_EXP;
+      }
+      else if (exp_type.compare("ellipse-trace") == 0)
+      {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_target_pose",
+          10
+        );
+        expBehavior = ELLIPSE_TRACE_EXP;
+      }
+      else if (exp_type.compare("force-exp") == 0)
+      {
+        force_publisher_ = this->create_publisher<Float64>(
+          "force",
+          10
+        );
+        force_sensor_exp.set_max_ticks(max_ticks);
+        expBehavior = FORCE_SENSOR_EXP;
+      }
+      else if (exp_type.compare("pose-and-force") == 0)
+      {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_virtual_pose",
+          10
+        );
+        force_publisher_ = this->create_publisher<Float64>(
+          "force",
+          10
+        );
+        force_and_pose_exp.set_max_ticks(max_ticks);
+        expBehavior = FORCE_AND_POSE_EXP;
+      }
+      else
+      {
+        pose_publisher_ = this->create_publisher<Pose>(
+          "high_freq_target_pose",
+          10
+        );
+        high_freq_exp.set_max_ticks(max_ticks);
+        expBehavior = HIGH_FREQ_EXP;
+      }
 
       delay = std::chrono::duration<double>(delay_in_seconds);
       duration = std::chrono::duration<double>(duration_in_seconds);
@@ -440,69 +488,6 @@ class Experiment : public rclcpp::Node
     ForceAndPoseExperiment force_and_pose_exp;
 
     const rclcpp::Logger LOGGER = rclcpp::get_logger("experiment");
-
-    /* Factory methods */
-    /**
-     * Returns the desired experiment type.
-     */
-    void factoryMethod(
-      std::string exp_type, int max_ticks
-    )
-    {
-      if (exp_type.compare("constraint-exp") == 0)
-      {
-        constraint_publisher_ = this->create_publisher<ConstrainedPose>(
-          "joy_target_pose",
-          1
-        );
-        constraint_exp = ConstraintExperiment();
-        expBehavior = CONSTRAINT_EXP;
-      }
-      else if (exp_type.compare("ellipse-trace") == 0)
-      {
-        pose_publisher_ = this->create_publisher<Pose>(
-          "high_freq_target_pose",
-          10
-        );
-        circ_trace_exp = EllipseTraceExperiment();
-        circ_trace_exp.set_max_ticks(max_ticks);
-        expBehavior = ELLIPSE_TRACE_EXP;
-      }
-      else if (exp_type.compare("force-exp") == 0)
-      {
-        force_publisher_ = this->create_publisher<Float64>(
-          "force",
-          10
-        );
-        force_sensor_exp = ForceSensorExperiment();
-        force_sensor_exp.set_max_ticks(max_ticks);
-        expBehavior = FORCE_SENSOR_EXP;
-      }
-      else if (exp_type.compare("pose-and-force") == 0)
-      {
-        pose_publisher_ = this->create_publisher<Pose>(
-          "high_freq_virtual_pose",
-          10
-        );
-        force_publisher_ = this->create_publisher<Float64>(
-          "force",
-          10
-        );
-        force_and_pose_exp = ForceAndPoseExperiment();
-        force_and_pose_exp.set_max_ticks(max_ticks);
-        expBehavior = FORCE_AND_POSE_EXP;
-      }
-      else
-      {
-        pose_publisher_ = this->create_publisher<Pose>(
-          "high_freq_target_pose",
-          10
-        );
-        high_freq_exp = HighFreqExperiment();
-        high_freq_exp.set_max_ticks(max_ticks);
-        expBehavior = HIGH_FREQ_EXP;
-      }
-    }
 };
 
 int main(int argc, char * argv[])
