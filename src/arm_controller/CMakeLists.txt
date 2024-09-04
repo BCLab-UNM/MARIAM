@@ -101,6 +101,21 @@ install(TARGETS experiment
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# For executable admittance_controller.cpp
+add_executable(admittance_controller src/admittance_controller.cpp)
+target_include_directories(admittance_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(admittance_controller PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  admittance_controller
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS admittance_controller
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # Add launch file to share folder
 install(
   DIRECTORY
@@ -135,6 +150,7 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
 target_link_libraries(joy_input_handler "${cpp_typesupport_target}")
 target_link_libraries(experiment "${cpp_typesupport_target}")
+target_link_libraries(admittance_controller "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
