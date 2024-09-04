@@ -20,13 +20,13 @@ class AdmittanceController : public rclcpp::Node {
       );
 
       virtual_pose_sub = this->create_subscription<Pose>(
-        "virtual_pose",
+        "high_freq_virtual_pose",
         10,
         std::bind(&AdmittanceController::callback, this, _1)
       );
 
       force_sub = this->create_subscription<Float64>(
-        "force_reading",
+        "force",
         10,
         std::bind(&AdmittanceController::force_callback, this, _1)
       );
@@ -38,6 +38,7 @@ class AdmittanceController : public rclcpp::Node {
     rclcpp::Subscription<Float64>::SharedPtr force_sub;
     double most_recent_force_reading = 0;
     const int STIFFNESS = 25;
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("admittance_controller");
 
     void callback(const Pose::SharedPtr msg) {
       auto new_msg = Pose();
@@ -45,6 +46,16 @@ class AdmittanceController : public rclcpp::Node {
       new_msg.orientation = msg->orientation;
       new_msg.position.y -= most_recent_force_reading / STIFFNESS;
       this->pose_publisher->publish(new_msg);
+      RCLCPP_INFO(LOGGER,
+        "published pose position:\n{%.4f,%.4f,%.4f}\nOrientation:\n{%.4f,%.4f,%.4f,%.4f}",
+        new_msg.position.x,
+        new_msg.position.y,
+        new_msg.position.z,
+        new_msg.orientation.w,
+        new_msg.orientation.x,
+        new_msg.orientation.y,
+        new_msg.orientation.z
+      );
     }
 
     void force_callback(const Float64::SharedPtr msg) {
