@@ -85,22 +85,6 @@ install(TARGETS joy_input_handler
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable experiment.cpp
-add_executable(experiment src/experiment.cpp)
-target_include_directories(experiment PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-target_compile_features(experiment PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
-ament_target_dependencies(
-  experiment
-  "moveit_ros_planning_interface"
-  "rclcpp"
-  "std_msgs"
-)
-install(TARGETS experiment
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # For executable admittance_controller.cpp
 add_executable(admittance_controller src/admittance_controller.cpp)
 target_include_directories(admittance_controller PUBLIC
@@ -113,6 +97,66 @@ ament_target_dependencies(
   "std_msgs"
 )
 install(TARGETS admittance_controller
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable virtual_pose_publisher.cpp
+add_executable(virtual_pose_publisher src/virtual_pose_publisher.cpp)
+target_include_directories(virtual_pose_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(virtual_pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  virtual_pose_publisher
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS virtual_pose_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable ellipse_publisher.cpp
+add_executable(ellipse_publisher src/ellipse_publisher.cpp)
+target_include_directories(ellipse_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(ellipse_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  ellipse_publisher
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS ellipse_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable force_publisher.cpp
+add_executable(force_publisher src/force_publisher.cpp)
+target_include_directories(force_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(force_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  force_publisher
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS force_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable high_freq_pose_publisher.cpp
+add_executable(high_freq_pose_publisher src/high_freq_pose_publisher.cpp)
+target_include_directories(high_freq_pose_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(high_freq_pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  high_freq_pose_publisher
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS high_freq_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -149,8 +193,11 @@ rosidl_get_typesupport_target(cpp_typesupport_target
 
 target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
 target_link_libraries(joy_input_handler "${cpp_typesupport_target}")
-target_link_libraries(experiment "${cpp_typesupport_target}")
 target_link_libraries(admittance_controller "${cpp_typesupport_target}")
+target_link_libraries(virtual_pose_publisher "${cpp_typesupport_target}")
+target_link_libraries(ellipse_publisher "${cpp_typesupport_target}")
+target_link_libraries(force_publisher "${cpp_typesupport_target}")
+target_link_libraries(high_freq_pose_publisher "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
