@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(robot_description)
+project(mariam_description)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -22,7 +22,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 install(
-  DIRECTORY config launch maps meshes models params rviz src worlds
+  DIRECTORY config launch maps meshes models models/mariam_description params rviz src worlds
   DESTINATION share/${PROJECT_NAME}
 )
 

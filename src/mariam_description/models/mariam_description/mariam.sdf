@@ -1,0 +1,427 @@
+<?xml version="1.0"?>
+<sdf version="1.5">
+  <model name="mariam">
+    <static>false</static>
+
+    <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
+    <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+    <link name="base_footprint"/>
+
+    <!-- ********************** ROBOT BASE *********************************  -->
+    <link name="base_link">
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <visual name="base_visual">
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.24 0.2 0.06</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>1.0 0.0 0.0 1.0</ambient>
+          <diffuse>1.0 0.0 0.0 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+      <collision name="base_collision">
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <geometry>
+          <box>
+            <size>0.24 0.2 0.06</size>
+          </box>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 1.57 0 1.57</pose>
+        <inertia>
+          <ixx>0.204</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.325</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.145</izz>
+        </inertia>
+        <mass>40.0</mass>
+      </inertial>
+    </link>
+
+    <joint name="base_joint" type="fixed">
+      <parent>base_footprint</parent>
+      <child>base_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+    </joint>
+
+    <!-- *********************** DRIVE WHEELS ******************************  -->
+    <link name="drivewheel_left_front_link">
+      <pose>0.09 0.14 -0.01 0.0 0.0 0.0</pose>
+      <visual name="drivewheel_left_front_link_visual">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </visual>
+      <collision name="drivewheel_left_front_link_collision">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <inertia>
+          <ixx>0.022</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.022</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.030</izz>
+        </inertia>
+        <mass>20.0</mass>
+      </inertial>
+    </link>
+    <joint name="drivewheel_left_front_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewheel_left_front_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <link name="drivewheel_right_front_link">
+      <pose>0.09 -0.14 -0.01 0.0 0.0 0.0</pose>
+      <visual name="drivewheel_right_front_visual">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </visual>
+      <collision name="drivewheel_right_front_collision">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <inertia>
+          <ixx>0.022</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.022</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.030</izz>
+        </inertia>
+        <mass>20.0</mass>
+      </inertial>
+    </link>
+    <joint name="drivewheel_right_front_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewheel_right_front_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <link name="drivewheel_left_back_link">
+      <pose>-0.09 0.14 -0.01 0.0 0.0 0.0</pose>
+      <visual name="drivewheel_left_back_visual">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </visual>
+      <collision name="drivewheel_left_back_collision">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <inertia>
+          <ixx>0.022</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.022</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.030</izz>
+        </inertia>
+        <mass>20.0</mass>
+      </inertial>
+    </link>
+    <joint name="drivewheel_left_back_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewheel_left_back_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <link name="drivewheel_right_back_link">
+      <pose>-0.09 -0.14 -0.01 0.0 0.0 0.0</pose>
+      <visual name="drivewheel_right_back_visual">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </visual>
+      <collision name="drivewheel_right_back_collision">
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.055</radius>
+            <length>0.065</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 1.57 0.0 0.0</pose>
+        <inertia>
+          <ixx>0.022</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.022</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.030</izz>
+        </inertia>
+        <mass>20.0</mass>
+      </inertial>
+    </link>
+    <joint name="drivewheel_right_back_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>drivewheel_right_back_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+      </axis>
+    </joint>
+
+    <!-- *********************** WHEEL ODOMETRY ***************************    -->
+    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <updateRate>30.0</updateRate>
+      <robotNamespace>/</robotNamespace>
+
+      <!-- wheels -->
+      <num_wheel_pairs>2</num_wheel_pairs>
+      <left_joint>drivewheel_left_front_joint</left_joint>
+      <left_joint>drivewheel_left_back_joint</left_joint>
+      <right_joint>drivewheel_right_back_joint</right_joint>
+      <right_joint>drivewheel_right_front_joint</right_joint>
+
+      <!-- kinematics -->
+      <wheel_separation>0.18</wheel_separation>
+      <wheel_diameter>0.11</wheel_diameter>
+
+      <!-- Limits -->
+      <max_wheel_torque>20.0</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+      <!-- Output -->
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>false</publish_odom_tf>
+      <update_rate>30.0</update_rate>
+
+      <!-- Odometry source, 0 for ENCODER, 1 for WORLD, defaults to WORLD -->
+      <odometry_source>1</odometry_source>
+
+      <ros>
+        <remapping>odom:=wheel/odometry</remapping>
+      </ros>
+    </plugin>
+
+    <!-- *********************** JOINT STATE PUBLISHER *********************   -->
+
+    <plugin name="mariam_agent_joint_state" filename="libgazebo_ros_joint_state_publisher.so">
+      <ros>
+        <remapping>~/out:=joint_states</remapping>
+      </ros>
+      <update_rate>30</update_rate>
+      <joint_name>drivewheel_left_back_joint</joint_name>
+      <joint_name>drivewheel_right_back_joint</joint_name>
+      <joint_name>drivewheel_left_front_joint</joint_name>
+      <joint_name>drivewheel_right_front_joint</joint_name>
+    </plugin>
+
+    <!-- *********************** REALSENSE SETUP **********************************  -->
+    <link name="camera_link">
+      <pose>-0.12 0 0.3 0.0 0.0 0.0</pose>
+      <visual name="camera_visual">
+        <geometry>
+          <box>
+            <size>0.029 0.124 0.027</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.5 0.5 0.5 1.0</ambient>
+          <diffuse>0.5 0.5 0.5 1.0</diffuse>
+          <specular>0.0 0.0 0.0 1.0</specular>
+          <emissive>0.0 0.0 0.0 1.0</emissive>
+        </material>
+      </visual>
+      <collision name="camera_collision">
+        <geometry>
+          <box>
+            <size>0.029 0.124 0.027</size>
+          </box>
+        </geometry>
+      </collision>
+      <inertial>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0.000</ixy>
+          <ixz>0.000</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0.000</iyz>
+          <izz>0.001</izz>
+        </inertia>
+        <mass>0.114</mass>
+      </inertial>
+
+      <sensor name="camera" type="depth">
+        <pose>0 0 0.0 0 0 0</pose>
+        <update_rate>30</update_rate>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov> 
+          <image>
+            <width>1280</width> 
+            <height>720</height> 
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.3</near> 
+            <far>100.0</far> 
+          </clip>
+        </camera>
+        <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+          <always_on>true</always_on>
+          <update_rate>30.0</update_rate>
+          <camera_name>camera</camera_name>
+          <image_topic_name>/camera/depth/image_raw</image_topic_name>
+          <camera_info_topic_name>/camera/depth/camera_info</camera_info_topic_name>
+          <frame_name>camera_link</frame_name>
+        </plugin>
+      </sensor>
+
+      <sensor name="mariam_imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <visualize>true</visualize>
+        <imu>
+          <orientation>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-3</stddev>
+              </noise>
+            </z>
+          </orientation>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>2e-4</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>1.7e-2</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="mariam_imu" filename="libgazebo_ros_imu_sensor.so">
+          <initial_orientation_as_reference>false</initial_orientation_as_reference>
+          <frame_name>camera_link</frame_name>
+          <ros>
+            <namespace>/imu</namespace>
+            <remapping>~/out:=data</remapping>
+          </ros>
+        </plugin>
+      </sensor>
+    </link>
+
+    <joint name="camera_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>camera_link</child>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+    </joint>
+
+    <!-- *********************** INTERBOTIX SETUP **********************************  -->
+    <!-- Include the robotic arm xacro file -->
+    <!-- <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/px100.urdf.xacro" -->
+    <!-- Attach the robotic arm to the base_link -->
+    <!-- <joint name="arm_base_joint" type="fixed">
+            <parent link="base_link"/>
+            <child link="px100/base_link"/>
+            <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/>
+        </joint> -->
+  </model>
+</sdf>

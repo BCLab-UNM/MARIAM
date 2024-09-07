@@ -9,14 +9,15 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
 
-  # Set the path to different files and folders.s
+  # Set the path to different files and folders.
   pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
-  pkg_share = FindPackageShare(package='robot_description').find('robot_description')
+  pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
   default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_model_path = os.path.join(pkg_share, 'models/mariam_agent.urdf')
+  default_urdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.urdf.xacro')
+  default_sdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.sdf')
+  robot_name = 'mariam'
   robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml') 
-  robot_name_in_urdf = 'mariam_agent'
-  default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_config.rviz')
+  default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_gazebo_config.rviz')
   world_file_name = 'mariam_agent_world/smalltown.world'
   world_path = os.path.join(pkg_share, 'worlds', world_file_name)
   
@@ -33,7 +34,7 @@ def generate_launch_description():
   # Declare the launch arguments  
   declare_model_path_cmd = DeclareLaunchArgument(
     name='model', 
-    default_value=default_model_path, 
+    default_value=default_urdf_model_path, 
     description='Absolute path to robot urdf file')
     
   declare_rviz_config_file_cmd = DeclareLaunchArgument(
@@ -77,13 +78,13 @@ def generate_launch_description():
   start_gazebo_server_cmd = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzserver.launch.py')),
     condition=IfCondition(use_simulator),
-    launch_arguments={'world': world}.items())
+    launch_arguments={'world': world, 'pause': 'true'}.items())
 
   # Start Gazebo client    
   start_gazebo_client_cmd = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')),
     condition=IfCondition(PythonExpression([use_simulator, ' and not ', headless])))
-
+  
   # Start robot localization using an Extended Kalman filter
   start_robot_localization_cmd = Node(
     package='robot_localization',
@@ -100,7 +101,7 @@ def generate_launch_description():
     executable='robot_state_publisher',
     parameters=[{'use_sim_time': use_sim_time, 
     'robot_description': Command(['xacro ', model])}],
-    arguments=[default_model_path])
+    arguments=[default_urdf_model_path])
 
   # Launch RViz
   start_rviz_cmd = Node(
@@ -109,8 +110,36 @@ def generate_launch_description():
     executable='rviz2',
     name='rviz2',
     output='screen',
-    arguments=['-d', rviz_config_file])    
+    arguments=['-d', rviz_config_file])
+  
+  # Spawn the robot into Gazebo
+  spawn_robot_cmd = Node(
+    package='gazebo_ros',
+    executable='spawn_entity.py',
+    arguments=['-entity', robot_name, '-file', default_sdf_model_path, '-x', '0', '-y', '0', '-z', '0.1'],
+    output='screen'
+  )
 
+  # Start Depth to LaserScan Node
+  # use 'LIBGL_ALWAYS_SOFTWARE=1 rviz2' if crashes
+  start_depth_to_laserscan_cmd = Node(
+    package='depthimage_to_laserscan',
+    executable='depthimage_to_laserscan_node',
+    name='depthimage_to_laserscan',
+    output='screen',
+    parameters=[
+        {'scan_time': 0.033},
+        {'range_min': 0.45},
+        {'range_max': 100.0},
+        {'scan_height': 1},
+        {'output_frame': 'camera_link'},
+    ],
+    remappings=[
+        ('depth', '/camera/depth/image_raw'),
+        ('depth_camera_info', '/camera/depth/camera_info'),
+        ('scan', '/scan'),
+    ]
+  )
   
   # Create the launch description and populate
   ld = LaunchDescription()
@@ -128,8 +157,10 @@ def generate_launch_description():
   # Add any actions
   ld.add_action(start_gazebo_server_cmd)
   ld.add_action(start_gazebo_client_cmd)
-  ld.add_action(start_robot_localization_cmd)
   ld.add_action(start_robot_state_publisher_cmd)
   ld.add_action(start_rviz_cmd)
+  ld.add_action(spawn_robot_cmd)
+  ld.add_action(start_robot_localization_cmd)
+  ld.add_action(start_depth_to_laserscan_cmd)
 
   return ld

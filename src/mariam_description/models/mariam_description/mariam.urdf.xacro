@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<robot name="mariam_agent" xmlns:xacro="http://ros.org/wiki/xacro">
+<robot name="mariam" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!-- ****************** ROBOT CONSTANTS *******************************  -->
   <!-- Define the size of the robot's main chassis in meters -->
@@ -47,7 +47,9 @@
 
   <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
   <!-- Define the center of the main robot chassis projected on the ground -->	
-  <link name="base_footprint"/>
+  <link name="base_footprint">
+    <xacro:box_inertia m="0.0" w="1" d="1" h="1"/> 
+  </link>
 
   <!-- The base footprint of the robot is located underneath the chassis -->
   <joint name="base_joint" type="fixed">
@@ -75,7 +77,6 @@
     </collision>
 
     <xacro:box_inertia m="40.0" w="${base_width}" d="${base_length}" h="${base_height}"/>
-    
   </link>
 
   <gazebo reference="base_link">
@@ -103,7 +104,7 @@
         </geometry>
       </collision>
       
-      <xacro:cylinder_inertia m="110.5" r="${wheel_radius}" h="${wheel_width}"/>
+      <xacro:cylinder_inertia m="20.0" r="${wheel_radius}" h="${wheel_width}"/>
       
     </link>
 
@@ -127,57 +128,40 @@
   <xacro:wheel prefix="drivewheel_left_back" x_reflect="-1" y_reflect="1" />
   <xacro:wheel prefix="drivewheel_right_back" x_reflect="-1" y_reflect="-1" />
 
-  <!-- *********************** IMU SETUP *********************************  -->
-  <!-- Each sensor must be attached to a link.                              --> 
-  
-  <joint name="imu_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="imu_link"/>
-    <origin xyz="-0.10 0 0.05" rpy="0 0 0"/>
-  </joint>
-
-  <link name="imu_link"/>
-
-  <!-- *********************** GPS SETUP **********************************  -->
-  <joint name="gps_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="gps_link"/>
-    <origin xyz="0.10 0 0.05" rpy="0 0 0"/>
-  </joint>
-
-  <link name="gps_link"/>
-
-  <!-- *********************** LIDAR SETUP **********************************  -->
-  <joint name="lidar_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="lidar_link"/>
-    <origin xyz="0 0 0.13" rpy="0 0 0"/>
-  </joint>
-
-  <link name="lidar_link">
-  
-    <collision>
-     <origin xyz="0 0 0" rpy="0 0 0"/>
-     <geometry>
-      <cylinder radius="0.0508" length="0.18"/>
-     </geometry>
-    </collision>
-    
+  <!-- *********************** REALSENSE SETUP **********************************  -->
+  <link name="camera_link">
     <visual>
-     <origin xyz="0 0 0" rpy="0 0 0"/>
-     <geometry>
-      <cylinder radius="0.0508" length="0.18"/>
-     </geometry>
-     <material name="Black">
-          <color rgba="${0/255} ${0/255} ${0/255} 1.0"/>
-     </material>
+      <geometry>
+        <box size=" 0.029 0.124 0.027"/>
+      </geometry>
+      <material name="Grey">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
     </visual>
-    
-    <inertial>
-      <mass value="0.114" />
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001" />
-    </inertial>
+    <collision>
+      <geometry>
+        <box size="0.029 0.124 0.027"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertia m="1.0" w="0.029" d="0.124" h="0.027"/> 
   </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="-${base_length/2} 0 0.3" rpy="0 0 0"/>
+  </joint>   
+
+  <!-- *********************** INTERBOTIX SETUP **********************************  -->
+
+  <!-- Include the robotic arm xacro file -->
+  <!-- <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/px100.urdf.xacro" /> -->
+  
+  <!-- Attach the robotic arm to the base_link -->
+  <!-- <joint name="arm_base_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="px100/base_link"/>
+    <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/>
+  </joint> -->
 
 </robot>
