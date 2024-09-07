@@ -2,7 +2,7 @@
 Current hardware on the MARIAM agents for reference
 
 - Teensy 4.0
-- Nuc _
+- Intel NUC i7
 - PincherX 100 Robot Arm (
     - https://www.trossenrobotics.com/pincherx-100-robot-arm.aspx
 - Realsense D455f

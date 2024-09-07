@@ -17,6 +17,7 @@ find_package(std_msgs REQUIRED)
 find_package(moveit_visual_tools REQUIRED)
 find_package(joy REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 
 # For executable pose_listener_moveit
@@ -49,7 +50,55 @@ ament_target_dependencies(
 )
 install(TARGETS joy_moveit
   DESTINATION lib/${PROJECT_NAME}
-) 
+)
+
+# For executable joy_moveit_constrained.cpp
+add_executable(joy_moveit_constrained src/joy_moveit_constrained.cpp)
+target_include_directories(joy_moveit_constrained PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(joy_moveit_constrained PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  joy_moveit_constrained
+  "moveit_ros_planning_interface"
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS joy_moveit_constrained
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable joy_input_handler.cpp
+add_executable(joy_input_handler src/joy_input_handler.cpp)
+target_include_directories(joy_input_handler PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(joy_input_handler PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  joy_input_handler
+  "moveit_ros_planning_interface"
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS joy_input_handler
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable constraint_experiment.cpp
+add_executable(constraint_experiment src/constraint_experiment.cpp)
+target_include_directories(constraint_experiment PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(constraint_experiment PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  constraint_experiment
+  "moveit_ros_planning_interface"
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS constraint_experiment
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Add launch file to share folder
 install(
@@ -58,6 +107,24 @@ install(
   DESTINATION
     share/${PROJECT_NAME}/
 )
+
+##### adding custom messages #####
+set(msg_files
+  "msg/ConstrainedPose.msg"
+  "msg/PathAndExecutionTiming.msg"
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+  DEPENDENCIES geometry_msgs
+)
+
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
+
+target_link_libraries(joy_moveit_constrained "${cpp_typesupport_target}")
+target_link_libraries(joy_input_handler "${cpp_typesupport_target}")
+target_link_libraries(constraint_experiment "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -70,5 +137,7 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()
