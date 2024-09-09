@@ -34,6 +34,7 @@ def launch_setup(context, *args, **kwargs):
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
 
     ikpy_launch_arg = LaunchConfiguration('use_ikpy')
+    admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
 
     joy_node = Node(
         package='joy',
@@ -120,12 +121,59 @@ def launch_setup(context, *args, **kwargs):
         condition=IfCondition(launch_driver_launch_arg)
     )
 
+    admittance_controller_node = Node(
+        name='admittance_controller_node',
+        package='arm_controller',
+        executable='admittance_controller',
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
+    virtual_pose_node = Node(
+        package='arm_controller',
+        executable='virtual_pose_publisher',
+        name='virtual_pose_publisher_node',
+        parameters=[{
+            'delay': 0.0,
+            'frequency': 0.002
+        }],
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
+    force_node = Node(
+        package='arm_controller',
+        executable='force_publisher',
+        name='force_publisher_node',
+        parameters=[{
+            'delay': 0.0,
+            'frequency': 0.002
+        }],
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
     return [
         joy_node,
         joy_input_handler_node,
         xsarm_robot_node,
         xsarm_ikpy_robot_node,
-        xsarm_control_launch
+        xsarm_control_launch,
+        admittance_controller_node,
+        virtual_pose_node,
+        force_node
     ]
 
 
@@ -199,6 +247,12 @@ def generate_launch_description():
             description=(
                 "If true, launches a node that uses IKPy as the IK solver."
             )
+        ),
+        DeclareLaunchArgument(
+            'use_admittance_control',
+            default_value='false',
+            choices=('true', 'false'),
+            description="Launches an admittance controller node when true."
         )
     ]
     declared_arguments.extend(
