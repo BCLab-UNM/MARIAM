@@ -36,18 +36,31 @@ class AdmittanceController : public rclcpp::Node {
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher;
     rclcpp::Subscription<Pose>::SharedPtr virtual_pose_sub;
     rclcpp::Subscription<Float64>::SharedPtr force_sub;
-    double most_recent_force_reading = 0;
-    const int STIFFNESS = 25;
+    double force_reading = 0;
+    double prev_pos = 0;
+    double prev_vel = 0;
+    double step_size = 0.002;
+    const double MASS = 0.9;
+    const double DAMPNESS = 15;
+    const double STIFFNESS = 25;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("admittance_controller");
 
     void callback(const Pose::SharedPtr msg) {
       auto new_msg = Pose();
       new_msg.position = msg->position;
       new_msg.orientation = msg->orientation;
-      new_msg.position.y -= most_recent_force_reading / STIFFNESS;
+      // Using hooke's law to compute desired position
+      // new_msg.position.y -= force_reading / STIFFNESS;
+      
+      // Using Euler's method to compute desired position
+      double pos_diff = prev_pos - msg->position.y;
+      double prev_accel = MASS*(force_reading-DAMPNESS*prev_vel-STIFFNESS*pos_diff);
+      double next_vel = prev_vel + step_size*prev_accel;
+      new_msg.position.y = prev_pos + step_size*next_vel;
+      
       this->pose_publisher->publish(new_msg);
       RCLCPP_INFO(LOGGER,
-        "published pose position:\n{%.4f,%.4f,%.4f}\nOrientation:\n{%.4f,%.4f,%.4f,%.4f}",
+        "Position:\n{%.4f,%.4f,%.4f}\nOrientation:\n{%.4f,%.4f,%.4f,%.4f}",
         new_msg.position.x,
         new_msg.position.y,
         new_msg.position.z,
@@ -56,10 +69,12 @@ class AdmittanceController : public rclcpp::Node {
         new_msg.orientation.y,
         new_msg.orientation.z
       );
+      prev_vel = next_vel;
+      prev_pos = new_msg.position.y;
     }
 
     void force_callback(const Float64::SharedPtr msg) {
-      most_recent_force_reading = msg->data;
+      force_reading = msg->data;
     }
 };
 
