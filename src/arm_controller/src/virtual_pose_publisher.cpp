@@ -70,7 +70,6 @@ class VirtualPosePublisher : public rclcpp::Node {
       }
 
       void callback() {
-        RCLCPP_INFO(LOGGER, "callback");
         auto msg = Pose();
         msg.position.x = x_pos;
         msg.position.y = y_pos;

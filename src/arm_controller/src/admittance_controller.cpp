@@ -37,12 +37,12 @@ class AdmittanceController : public rclcpp::Node {
     rclcpp::Subscription<Pose>::SharedPtr virtual_pose_sub;
     rclcpp::Subscription<Float64>::SharedPtr force_sub;
     double force_reading = 0;
-    double prev_pos = 0;
-    double prev_vel = 0;
+    double position = 0;
+    double velocity = 0;
     double step_size = 0.002;
-    const double MASS = 0.9;
+    const double MASS = 10;
     const double DAMPNESS = 15;
-    const double STIFFNESS = 25;
+    const double STIFFNESS = 15;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("admittance_controller");
 
     void callback(const Pose::SharedPtr msg) {
@@ -53,10 +53,11 @@ class AdmittanceController : public rclcpp::Node {
       // new_msg.position.y -= force_reading / STIFFNESS;
       
       // Using Euler's method to compute desired position
-      double pos_diff = prev_pos - msg->position.y;
-      double prev_accel = MASS*(force_reading-DAMPNESS*prev_vel-STIFFNESS*pos_diff);
-      double next_vel = prev_vel + step_size*prev_accel;
-      new_msg.position.y = prev_pos + step_size*next_vel;
+      // double pos_diff = position - msg->position.y;
+      double acceleration = (force_reading-DAMPNESS*velocity-STIFFNESS*position)/MASS;
+      velocity += step_size*acceleration;
+      position += step_size*velocity;
+      new_msg.position.y = position;
       
       this->pose_publisher->publish(new_msg);
       RCLCPP_INFO(LOGGER,
@@ -69,8 +70,12 @@ class AdmittanceController : public rclcpp::Node {
         new_msg.orientation.y,
         new_msg.orientation.z
       );
-      prev_vel = next_vel;
-      prev_pos = new_msg.position.y;
+      RCLCPP_INFO(LOGGER,
+        "Accel: %f\nVel: %f\nPos:%f",
+        acceleration,
+        velocity,
+        position
+      );
     }
 
     void force_callback(const Float64::SharedPtr msg) {
