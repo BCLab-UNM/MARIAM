@@ -141,7 +141,7 @@ def launch_setup(context, *args, **kwargs):
             'delay': 0.0,
             'frequency': 0.002,
             'x_pos': 0.0,
-            'y_pos': 0.55,
+            'y_pos': 0.25,
             'z_pos': 0.098
         }],
         condition=IfCondition(
@@ -158,7 +158,8 @@ def launch_setup(context, *args, **kwargs):
         name='force_publisher_node',
         parameters=[{
             'delay': 0.0,
-            'frequency': 0.002
+            'frequency': 0.002,
+            'max_ticks': 500
         }],
         condition=IfCondition(
             PythonExpression([

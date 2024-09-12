@@ -75,6 +75,7 @@ class ForcePublisher : public rclcpp::Node
         else {
           double increment = (double) rand() / RAND_MAX;
           current_force += increment;
+          // current_force = 2;
           RCLCPP_INFO(LOGGER, "Increasing force by %f", increment);
         }
       }

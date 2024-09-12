@@ -40,8 +40,8 @@ class AdmittanceController : public rclcpp::Node {
     double position = 0;
     double velocity = 0;
     double step_size = 0.002;
-    const double MASS = 10;
-    const double DAMPNESS = 15;
+    const double MASS = 5;
+    const double DAMPING = 10;
     const double STIFFNESS = 15;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("admittance_controller");
 
@@ -49,15 +49,15 @@ class AdmittanceController : public rclcpp::Node {
       auto new_msg = Pose();
       new_msg.position = msg->position;
       new_msg.orientation = msg->orientation;
-      // Using hooke's law to compute desired position
+      // Using Hooke's law to compute desired position
       // new_msg.position.y -= force_reading / STIFFNESS;
       
       // Using Euler's method to compute desired position
-      // double pos_diff = position - msg->position.y;
-      double acceleration = (force_reading-DAMPNESS*velocity-STIFFNESS*position)/MASS;
+      double pos_diff = position - msg->position.y;
+      double acceleration = (force_reading-DAMPING*velocity-STIFFNESS*position)/MASS;
       velocity += step_size*acceleration;
       position += step_size*velocity;
-      new_msg.position.y = position;
+      new_msg.position.y -= position;
       
       this->pose_publisher->publish(new_msg);
       RCLCPP_INFO(LOGGER,
