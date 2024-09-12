@@ -1,5 +1,5 @@
-#define NAMESPACE "monica"
-//#define NAMESPACE "ross"
+//#define NAMESPACE "monica"
+#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
@@ -219,12 +219,16 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     else { move.rotateRight(speedL, speedR*-1); }  
 
     update_odometry(left_ticks.data, right_ticks.data);
-    force.data = analogRead(A5)
-    //force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
-    //force.data = exp(force.data); 
+    force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
+    force.data = exp(force.data); 
+    force.data = 0.000202737650648992*pow(force.data,3) - 0.0185383982778069*pow(force.data,2) 
+                  + 0.382323209509275*force.data - 0.319972134658710; // cubic fit
+    //force.data = -0.00780713721008879*pow(force.data,5) + 0.221566137740627*pow(force.data,4)
+    //            - 1.71095277502554*pow(force.data,3) + 5.09536388393539*pow(force.data,2)
+    //            - 5.61974202197082*force.data + 2.03747967474919;
     //force.data = -0.00000008099*pow(force.data, 5) + 0.000013687*pow(force.data, 4) 
-                 - 0.00068314*pow(force.data, 3) + 0.011707*pow(force.data, 2) 
-                 - 0.0081636*force.data + 0.0098014; // to force
+    //             - 0.00068314*pow(force.data, 3) + 0.011707*pow(force.data, 2) 
+    //             - 0.0081636*force.data + 0.0098014; // to force
 
     RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
@@ -341,7 +345,7 @@ void setup() {
     
 
   // create timer,
-  const unsigned int timer_timeout = 30; // In miliseconds /// @TODO update this to slow down the publishers and test this `ros2 topic hz /Monica/right_ticks`
+  const unsigned int timer_timeout = 1; // In miliseconds /// @TODO update this to slow down the publishers and test this `ros2 topic hz /Monica/right_ticks`
   RCCHECK(rclc_timer_init_default(
     &timer,
     &support,
