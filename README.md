@@ -60,7 +60,7 @@ Here are the steps for **pulling** changes that others have made to submodules:
 ```bash
 cd ~/MARIAM
 git submodule init
-git submodule update
+git submodule update --init --recursive
 cd <path/to/submodule>
 git fetch origin
 git pull origin <branch>
@@ -86,5 +86,5 @@ git push origin main
 ## Experimentation
 All experiments are located in `doc/experiment_descriptions.md`.
 
-## Robot maintenance
+## Robot Maintenance
 Please check on swarmies at least once a semester and log battery states in https://docs.google.com/spreadsheets/d/1_3pMGXdnTmHs9H_7EAtQgZp_9tN-sKu-xCbLE7cxGMk/edit?gid=0#gid=0 for future reference.
