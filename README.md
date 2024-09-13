@@ -85,3 +85,6 @@ git push origin main
 
 ## Experimentation
 All experiments are located in `doc/experiment_descriptions.md`.
+
+## Robot maintenance
+Please check on swarmies at least once a semester and log battery states in https://docs.google.com/spreadsheets/d/1_3pMGXdnTmHs9H_7EAtQgZp_9tN-sKu-xCbLE7cxGMk/edit?gid=0#gid=0 for future reference.
