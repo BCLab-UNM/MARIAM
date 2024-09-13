@@ -87,4 +87,6 @@ git push origin main
 All experiments are located in `doc/experiment_descriptions.md`.
 
 ## Robot Maintenance
-Please check on swarmies at least once a semester and log battery states in https://docs.google.com/spreadsheets/d/1_3pMGXdnTmHs9H_7EAtQgZp_9tN-sKu-xCbLE7cxGMk/edit?gid=0#gid=0 for future reference.
+Please check on swarmies at least once a semester and log battery states in `doc/Swarmie_GiAnts, Dragonfly, Laptop & Desktop Inventory.xlsx` for future reference.
+
+"As I recall they are 4S batteries, each cell's "nominal" voltage (lowest voltage that you should run it at) is 3.8v so 15.2volts, fully charged they should be around 4.2v so fully charged you should read 16.8 volts." - C. Frost
