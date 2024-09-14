@@ -1,3 +1,4 @@
+// Topic defines
 #define NAMESPACE "monica"
 //#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
@@ -12,52 +13,52 @@
 #define RIGHT_SP_TOPIC_NAME NAMESPACE "/pid_right_sp"
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 
-/* Prior pid tuning 
-Kp=0.0075
-Ki=0.15
-Kd=0.002
-db=0.0
-st=0.0
-wu=3.0
-ff_l=0.0095
-ff_r=0.012
-*/
-
+// Misc libraries
 #include <micro_ros_arduino.h>
-
 #include <stdio.h>
+
+// ROS2 functions
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+#include <rcl/time.h>
 
+// ROS2 msgs
 #include <std_msgs/msg/float32.h>
 #include <std_msgs/msg/int32.h>
 #include <nav_msgs/msg/odometry.h>
 #include <geometry_msgs/msg/twist.h>
 #include <geometry_msgs/msg/point.h>
 
+// Motor control classes
 #include <Movement.h>
 #include <Encoder.h> // @TODO Test with and without this above #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <PID_v1.h>
 
-//Movement (VNH5019 Motor Driver Carrier)
-byte rightDirectionB = A9; //"counterclockwise" input
-byte rightDirectionA = A8; //"clockwise" input
-byte rightSpeedPin = 3; //PWM input
-byte leftDirectionB = A7; //"counterclockwise" input
-byte leftDirectionA = A6; //"clockwise" input
-byte leftSpeedPin = 4; //PWM input
+// Pin assignments (VNH5019 Motor Driver Carrier)
+byte rightDirectionB = A9; // "counterclockwise" input
+byte rightDirectionA = A8; // "clockwise" input
+byte rightSpeedPin = 3; // PWM input
+byte leftDirectionB = A7; // "counterclockwise" input
+byte leftDirectionA = A6; // "clockwise" input
+byte leftSpeedPin = 4; // PWM input
 
-//Odometry (8400 CPR Encoder)
+// Pin assignments for odometry (8400 CPR Encoder)
 byte rightEncoderA = 7;
 byte rightEncoderB = 6;
 byte leftEncoderA = 12;
 byte leftEncoderB = 11;
-Movement move = Movement(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, leftDirectionA, leftDirectionB);
-Encoder leftEncoder(leftEncoderA,leftEncoderB);
-Encoder rightEncoder(rightEncoderA,rightEncoderB);
 
+// Movement and Encoder classes manage motor control and encoder readings
+Movement move = Movement(
+  rightSpeedPin, rightDirectionA, rightDirectionB, 
+  leftSpeedPin, leftDirectionA, leftDirectionB
+);
+Encoder leftEncoder(leftEncoderA, leftEncoderB);
+Encoder rightEncoder(rightEncoderA, rightEncoderB);
+
+// Declare publishers
 rcl_publisher_t odom_publisher;
 rcl_publisher_t force_publisher;
 rcl_publisher_t data_publisher;
@@ -74,19 +75,24 @@ double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 heading;
 std_msgs__msg__Float32 force;
 double left_sp, right_sp, dleft, dright, speedL, speedR;
-// double Kp=750.0, Ki=0.0, Kd=0.0;
-double Kp=500.0, Ki=2000.0, Kd=0.0;//double Kp=0.0075, Ki=0.15, Kd=0.002; //double Kp=2, Ki=5, Kd=1;
+double Kp=500.0, Ki=2000.0, Kd=0.0;
+
+// Define PID controllers for each pair
 PID left_PID(&left_current_speed, &speedL, &left_sp, Kp, Ki, Kd, DIRECT);
 PID right_PID(&right_current_speed, &speedR, &right_sp, Kp, Ki, Kd, DIRECT);
 
-const double wheelBase = 0.3397; // OLD:0.278; //distance between left and right wheels (in M)
-const double leftWheelCircumference = 0.3613; // Hardwheels in meters
-const double rightWheelCircumference = 0.3613; // Hardwheels in meters
-const int cpr = 8400; //"cycles per revolution" -- number of encoder increments per one wheel revolution or 2094.625?
+// Physical measurements in meters
+const double wheelBase = 0.3397; // Distance between left and right wheels
+const double leftWheelCircumference = 0.3613;
+const double rightWheelCircumference = 0.3613;
+const int cpr = 8400; // "cycles per revolution" of encoder
 
+// Declare subscribers
 rcl_subscription_t subscriber;
 rcl_subscription_t subscriber_pid;
+
 geometry_msgs__msg__Twist msg;
+
 rclc_executor_t executor;
 rclc_executor_t executor_sub;
 rclc_executor_t executor_sub_pid;
@@ -102,11 +108,18 @@ double theta_heading = 0;
 unsigned int pid_compute_ticks = 0;
 bool estop = true;
 
+// Indicator light
 #define LED_PIN 13
+
+// Global variable to store the timestamp of the last /cmd_vel message
+rcl_time_point_value_t last_cmd_vel_time = 0;
+
+// =============================================================
+// =================== FUNCTION DECLARATIONS ===================
+// =============================================================
 
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
-
 
 void error_loop(){
   digitalWrite(LED_PIN, !digitalRead(LED_PIN));
@@ -151,26 +164,20 @@ double thetaToDiff(double theta) {
   return theta * wheelBase;
 }
 
-
 void update_rotation(float x, float y, float z) {
-    float c1 = cos(y);
-    float c2 = cos(z);
-    float c3 = cos(x);
-    float s1 = sin(y);
-    float s2 = sin(z);
-    float s3 = sin(x);
-    odom.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
-    odom.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
-    odom.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
-    odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
+  float c1 = cos(y);
+  float c2 = cos(z);
+  float c3 = cos(x);
+  float s1 = sin(y);
+  float s2 = sin(z);
+  float s3 = sin(x);
+  odom.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
+  odom.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
+  odom.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
+  odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
 }
 
-/*
-def get_rotation(self):
-    q = quaternion_from_euler(0, 0, self.th)
-    return Quaternion(x=q[0], y=q[1], z=q[2], w=q[3])
-  */ 
-
+// 
 void update_odometry(int ticks_left, int ticks_right){
   dleft = ticks_left / ticks_per_rotation * leftWheelCircumference;
   dright = ticks_right / ticks_per_rotation * rightWheelCircumference;
@@ -198,7 +205,23 @@ void update_odometry(int ticks_left, int ticks_right){
 } //end update_odometry function
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
+
+  // Only run if timer is available
   if (timer != NULL) {
+
+    // Get the current time
+    rcl_time_point_value_t current_time;
+    rcutils_system_time_now(&current_time);
+
+    // Check if more than 3 seconds have passed since the last /cmd_vel message
+    // Reset wheel speeds and e-stop
+    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000)) { // 3000 ms = 3 seconds
+      left_sp = 0;
+      right_sp = 0;
+      move.stop(); 
+      estop = true; 
+    }
+
     //Read & Reset encoders
     left_ticks.data = leftEncoder.readAndReset(); 
     right_ticks.data = -rightEncoder.readAndReset();
@@ -244,18 +267,30 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
   }
 }
 
-//twist message cb
+// Callback for /cmd_vel
 void subscription_callback(const void *msgin) {
+
+  // Read in callback msg
   const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
-  // if velocity in x direction is 0 turn off LED, if 1 turn on LED
+
+  // Update the timestamp of the last received command
+  rcutils_system_time_now(&last_cmd_vel_time);
+  
+  // If velocity in x direction is 0 turn off LED, if 1 turn on LED
   digitalWrite(LED_PIN, (msg->linear.x == 0) ? LOW : HIGH);
+
   double yaw = msg->angular.z;
   double linear_sp = msg->linear.x;
   double angular_sp = thetaToDiff(msg->angular.z);
   left_sp = msg->linear.x - angular_sp;
   right_sp = msg->linear.x + angular_sp;
-  if((msg->linear.x==0) && (msg->angular.z==0)) { move.stop(); estop = true;}
-  else{estop = false;}
+
+  // Activate e-stop if /cmd_vel is 0 overall
+  if((msg->linear.x == 0) && (msg->angular.z == 0)) { 
+    move.stop(); 
+    estop = true; 
+  }
+  else { estop = false; }
 }
 
 void subscription_pid_callback(const void *msgin) {
@@ -264,8 +299,13 @@ void subscription_pid_callback(const void *msgin) {
   left_PID.SetTunings(msg->x, msg->y, msg->z);
   //right_PID.SetTunings(double Kp, double Ki, double Kd, int POn)
   right_PID.SetTunings(msg->x, msg->y, msg->z);
-} // end subscription_pid_callback
-  
+}
+
+// =============================================================
+// ===================== MAIN CONTROL LOOP =====================
+// =============================================================
+
+// Initial microcontroller setup
 void setup() {
   set_microros_transports();
   
@@ -282,6 +322,9 @@ void setup() {
   delay(2000);
 
   allocator = rcl_get_default_allocator();
+
+  // Set initial time for last command received
+  rcutils_system_time_now(&last_cmd_vel_time);
 
   //create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
@@ -355,7 +398,7 @@ void setup() {
   right_PID.SetOutputLimits(-255,255);
   
 
-  // create executors
+  // Create executors
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_init(&executor_sub, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_init(&executor_sub_pid, &support.context, 1, &allocator));
@@ -364,9 +407,15 @@ void setup() {
   RCCHECK(rclc_executor_add_timer(&executor, &timer)); 
 }
 
+// Functions to be looped continiously
+// This results in close to a publish rate of 1khz and a sub rate of 100hz
 void loop() {
-  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100))); // Spin for in ns
-  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub, RCL_MS_TO_NS(1))); // Read cmd vel for 1ns then swich back
-  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10))); // Read pid values for 1ns then swich back
-  // This results in something close to a publish rate of 1khz and a sub rate of 100hz
+  // Spin for in ns
+  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100))); 
+
+  // Read cmd vel for 1ns then swich back
+  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub, RCL_MS_TO_NS(1))); 
+
+  // Read pid values for 1ns then swich back
+  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10))); 
 }
