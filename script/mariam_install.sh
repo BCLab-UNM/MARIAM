@@ -21,7 +21,10 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
     ros-humble-graph-msgs ros-humble-rviz-visual-tools ros-humble-hardware-interface \
     ros-humble-moveit ros-humble-tf-transformations ros-humble-joint-trajectory-controller \
     python3-rosdep python3-colcon-common-extensions python3-colcon-clean ros-humble-apriltag \
-    ros-humble-moveit-visual-tools python3-pip usb-cam domain-bridge apriltag-ros
+    ros-humble-moveit-visual-tools python3-pip ros-humble-usb-cam ros-humble-domain-bridge ros-humble-apriltag-ros \
+    ros-humble-navigation2 ros-humble-nav2-bringup \
+    ros-humble-joint-state-publisher-gui ros-humble-robot-state-publisher ros-humble-xacro \
+    ros-humble-gazebo-ros-pkgs ros-humble-gazebo-plugins \
 
 pip3 install transforms3d modern_robotics glob
 

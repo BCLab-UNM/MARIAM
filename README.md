@@ -60,7 +60,7 @@ Here are the steps for **pulling** changes that others have made to submodules:
 ```bash
 cd ~/MARIAM
 git submodule init
-git submodule update
+git submodule update --init --recursive
 cd <path/to/submodule>
 git fetch origin
 git pull origin <branch>
@@ -85,3 +85,8 @@ git push origin main
 
 ## Experimentation
 All experiments are located in `doc/experiment_descriptions.md`.
+
+## Robot Maintenance
+Please check on swarmies at least once a semester and log battery states in `doc/Swarmie_GiAnts, Dragonfly, Laptop & Desktop Inventory.xlsx` for future reference.
+
+"As I recall they are 4S batteries, each cell's "nominal" voltage (lowest voltage that you should run it at) is 3.8v so 15.2volts, fully charged they should be around 4.2v so fully charged you should read 16.8 volts." - C. Frost
