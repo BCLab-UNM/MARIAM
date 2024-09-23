@@ -221,8 +221,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     update_odometry(left_ticks.data, right_ticks.data);
     force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
     force.data = exp(force.data); 
+    //force.data = 0.0443985983762029*pow(force.data,3) - 0.0795803464123018*pow(force.data,2) 
+    //              + 0.696421722529724*force.data - 0.0107819005001269; // cubic fit - non exp
     force.data = 0.000202737650648992*pow(force.data,3) - 0.0185383982778069*pow(force.data,2) 
-                  + 0.382323209509275*force.data - 0.319972134658710; // cubic fit
+                  + 0.382323209509275*force.data - 0.319972134658710; // cubic exp fit
     //force.data = -0.00780713721008879*pow(force.data,5) + 0.221566137740627*pow(force.data,4)
     //            - 1.71095277502554*pow(force.data,3) + 5.09536388393539*pow(force.data,2)
     //            - 5.61974202197082*force.data + 2.03747967474919;
