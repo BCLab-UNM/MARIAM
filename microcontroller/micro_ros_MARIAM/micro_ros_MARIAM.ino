@@ -76,8 +76,6 @@ std_msgs__msg__Float32 heading;
 std_msgs__msg__Float32 force;
 double left_sp, right_sp, dleft, dright, speedL, speedR;
 double Kp=500.0, Ki=2000.0, Kd=0.0;
-
-// Define PID controllers for each pair
 PID left_PID(&left_current_speed, &speedL, &left_sp, Kp, Ki, Kd, DIRECT);
 PID right_PID(&right_current_speed, &speedR, &right_sp, Kp, Ki, Kd, DIRECT);
 
