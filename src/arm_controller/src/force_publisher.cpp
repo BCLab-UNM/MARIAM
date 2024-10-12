@@ -19,10 +19,10 @@ class ForcePublisher : public rclcpp::Node
         10
       );
 
-      this->declare_parameter("delay", 5.0);
-      this->declare_parameter("duration",    300.0);
-      this->declare_parameter("frequency",   5.0);
-      this->declare_parameter("max_ticks",   500);
+      this->declare_parameter("delay",     2.0);
+      this->declare_parameter("duration",  300.0);
+      this->declare_parameter("frequency", 0.002);
+      this->declare_parameter("max_ticks", 500);
 
       this->get_parameter("delay",     delay);
       this->get_parameter("duration",  duration);

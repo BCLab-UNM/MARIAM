@@ -24,7 +24,7 @@ class VirtualPosePublisher : public rclcpp::Node {
       this->declare_parameter("y", 0.0);
       this->declare_parameter("z", 0.707);
 
-      this->declare_parameter("delay",     5.0);
+      this->declare_parameter("delay",     2.0);
       this->declare_parameter("frequency", 1.0);
 
 

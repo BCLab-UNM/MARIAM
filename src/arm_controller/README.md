@@ -14,8 +14,8 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 |-------|--------------|--------------------------|
 |   0   | A            |                          |
 |   1   | B            |                          |
-|   2   | X            | Go to lift pose      |
-|   3   | Y            | Go to starting lift pose |
+|   2   | X            |       |
+|   3   | Y            |       |
 |   4   | LB           | Rotate waist counterclockwise |
 |   5   | RB           | Rotate waist clockwise   |
 |   6   | back         | Go to sleep pose         |
@@ -36,22 +36,22 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 |   6   | Cross key (left/right) | Change speed type       |
 |   7   | Cross key (up/down)    | Change speed            |
 
-Launch command (with fake hardware):
+Launch command with fake hardware:
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py
 ```
 
-Launch command (with actual hardware):
+Launch command with actual hardware:
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
 ```
 
-Launch command (with admittance control demo)
+Launch command for admittance control demo
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py use_admittance_control:=true
 ```
 
-Parameters:
+All parameters:
 - threshold: Value from 0 to 1 defining joystick sensitivity; a larger number means the joystick will be less sensitive. Default is 0.75.
 
 - use_rviz: Can be `true` or `false`. Launches RViz if set to `true`. Default is `true`.
@@ -109,13 +109,13 @@ This package has a few nodes that can be ran to publish data periodically. The c
 - `virtual_pose_publisher`
 
 Each one has the following optional parameters that can be specified before running the node:
-- delay: the amount of time in seconds to wait before publishing poses.
-- frequency: the amount of time in seconds to wait before publishing another pose.
-- max_ticks: the number of ticks before switching to a different pose, point, etc.
+- delay: the amount of time to wait, in seconds, before starting to publish data.
+- frequency: the time interval for publishing data. For example, if the frequency is 0.002, then the force publisher will publish a fake force reading every 0.002 seconds.
+- max_ticks: the number of times data will be published before it is modified. For example, if max_ticks=500 was set for the force publisher, then after publishing a value 500 times, the value is incremented or set back to zero.
 
 NOTE: delay and frequency need to be specified as floating point values. For example, use 1.0 instead of 1.
 
-Command example
+Example
 ```bash
 ros2 run arm_controller high_freq_pose_publisher --ros-args -p delay:=0.0 -p frequency:=0.002 -p max_ticks:=250
 ```

@@ -276,7 +276,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         if success:
             self.T_yb = np.array(T_yb)
 
-    def contol_loop_cb(self, msg: Pose) -> None:
+    def control_loop_cb(self, msg: Pose) -> None:
         """
         Slightly moves the end-effector towards the desired pose.
 

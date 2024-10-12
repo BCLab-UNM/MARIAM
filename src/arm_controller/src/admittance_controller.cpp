@@ -53,8 +53,11 @@ class AdmittanceController : public rclcpp::Node {
       // new_msg.position.y -= force_reading / STIFFNESS;
       
       // Using Euler's method to compute desired position
+      // acceleration is in meters per second squared
       double acceleration = (force_reading-DAMPING*velocity-STIFFNESS*position)/MASS;
+      // velocity is in meters per second
       velocity += step_size*acceleration;
+      // position is in meters
       position += step_size*velocity;
       new_msg.position.y -= position;
       
