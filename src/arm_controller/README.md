@@ -36,12 +36,12 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 |   6   | Cross key (left/right) | Change speed type       |
 |   7   | Cross key (up/down)    | Change speed            |
 
-Launch command with fake hardware:
+Launch command for fake hardware:
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py
 ```
 
-Launch command with actual hardware:
+Launch command for actual hardware:
 ```bash
 ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
 ```
