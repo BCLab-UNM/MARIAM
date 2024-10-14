@@ -62,22 +62,22 @@ class AdmittanceController : public rclcpp::Node {
       new_msg.position.y -= position;
       
       this->pose_publisher->publish(new_msg);
-      RCLCPP_INFO(LOGGER,
-        "Position:\n{%.4f,%.4f,%.4f}\nOrientation:\n{%.4f,%.4f,%.4f,%.4f}",
-        new_msg.position.x,
-        new_msg.position.y,
-        new_msg.position.z,
-        new_msg.orientation.w,
-        new_msg.orientation.x,
-        new_msg.orientation.y,
-        new_msg.orientation.z
-      );
-      RCLCPP_INFO(LOGGER,
-        "Accel: %f\nVel: %f\nPos:%f",
-        acceleration,
-        velocity,
-        position
-      );
+      // RCLCPP_INFO(LOGGER,
+      //   "Position:\n{%.4f,%.4f,%.4f}\nOrientation:\n{%.4f,%.4f,%.4f,%.4f}",
+      //   new_msg.position.x,
+      //   new_msg.position.y,
+      //   new_msg.position.z,
+      //   new_msg.orientation.w,
+      //   new_msg.orientation.x,
+      //   new_msg.orientation.y,
+      //   new_msg.orientation.z
+      // );
+      // RCLCPP_INFO(LOGGER,
+      //   "Accel: %f\nVel: %f\nPos:%f",
+      //   acceleration,
+      //   velocity,
+      //   position
+      // );
     }
 
     void force_callback(const Float64::SharedPtr msg) {

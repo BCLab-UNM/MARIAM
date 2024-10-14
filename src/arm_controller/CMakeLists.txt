@@ -18,7 +18,7 @@ find_package(moveit_visual_tools REQUIRED)
 find_package(joy REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-
+find_package(visualization_msgs REQUIRED)
 
 # For executable pose_listener_moveit
 add_executable(pose_listener_moveit src/pose_listener_moveit.cpp)
@@ -97,6 +97,23 @@ ament_target_dependencies(
   "std_msgs"
 )
 install(TARGETS admittance_controller
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# For executable admittance_rviz_markers.cpp
+add_executable(admittance_rviz_markers src/admittance_rviz_markers.cpp)
+target_include_directories(admittance_rviz_markers PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(admittance_rviz_markers PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  admittance_rviz_markers
+  "rclcpp"
+  "std_msgs"
+  "geometry_msgs"
+  "visualization_msgs"
+)
+install(TARGETS admittance_rviz_markers
   DESTINATION lib/${PROJECT_NAME}
 )
 

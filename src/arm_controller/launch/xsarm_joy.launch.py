@@ -65,6 +65,7 @@ def launch_setup(context, *args, **kwargs):
         package='arm_controller',
         executable='xsarm_robot.py',
         namespace=robot_name_launch_arg,
+        output='log', # change to 'screen' for messages
         parameters=[{
             'robot_model': robot_model_launch_arg,
         }],
@@ -133,6 +134,18 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
+    admittance_rviz_markers_node = Node(
+        name='admittance_rviz_markers_node',
+        package='arm_controller',
+        executable='admittance_rviz_markers',
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
     virtual_pose_node = Node(
         package='arm_controller',
         executable='virtual_pose_publisher',
@@ -176,6 +189,7 @@ def launch_setup(context, *args, **kwargs):
         xsarm_ikpy_robot_node,
         xsarm_control_launch,
         admittance_controller_node,
+        admittance_rviz_markers_node,
         virtual_pose_node,
         force_node
     ]
