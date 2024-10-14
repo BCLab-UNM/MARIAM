@@ -80,16 +80,16 @@ class VirtualPosePublisher : public rclcpp::Node {
         msg.orientation.y = y;
         msg.orientation.z = z;
         
-        RCLCPP_INFO(LOGGER,
-          "Publishing: (%f, %f, %f)\n(%f, %f, %f, %f)",
-          x_pos,
-          y_pos,
-          z_pos,
-          w,
-          x,
-          y,
-          z
-        );
+        // RCLCPP_INFO(LOGGER,
+        //   "Publishing: (%f, %f, %f)\n(%f, %f, %f, %f)",
+        //   x_pos,
+        //   y_pos,
+        //   z_pos,
+        //   w,
+        //   x,
+        //   y,
+        //   z
+        // );
 
         pose_publisher->publish(msg);
       }

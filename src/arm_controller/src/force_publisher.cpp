@@ -76,12 +76,12 @@ class ForcePublisher : public rclcpp::Node
           double increment = (double) rand() / RAND_MAX;
           current_force += increment;
           // current_force = 2;
-          RCLCPP_INFO(LOGGER, "Increasing force by %f", increment);
+          // RCLCPP_INFO(LOGGER, "Increasing force by %f", increment);
         }
       }
       else ticks++;
       msg.data = current_force;
-      RCLCPP_INFO(LOGGER, "Publishing value F = %f", current_force);
+      // RCLCPP_INFO(LOGGER, "Publishing value F = %f", current_force);
       force_publisher->publish(msg);
     }
 

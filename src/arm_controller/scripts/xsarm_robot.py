@@ -94,7 +94,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().create_subscription(
             Pose,
             '/high_freq_target_pose',
-            self.contol_loop_cb,
+            self.control_loop_cb,
             10
         )
         time.sleep(0.5)
@@ -365,9 +365,9 @@ class XSArmRobot(InterbotixManipulatorXS):
             else:
                 self.log_info('Failed to move to goal pose.')
         end_time = self.core.get_node().get_clock().now()
-        self.log_info(
-            f'Time: {(end_time-start_time).nanoseconds / 1e9}'
-        )
+        # self.log_info(
+        #     f'Time: {(end_time-start_time).nanoseconds / 1e9}'
+        # )
 
     def sign(self, x):
         if x > 0:
