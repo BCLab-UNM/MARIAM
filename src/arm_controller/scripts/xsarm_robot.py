@@ -93,12 +93,13 @@ class XSArmRobot(InterbotixManipulatorXS):
         )
         self.core.get_node().create_subscription(
             Pose,
-            '/high_freq_target_pose',
+            'high_freq_target_pose',
             self.control_loop_cb,
             10
         )
         time.sleep(0.5)
         self.core.get_node().loginfo('Ready to receive processed joystick commands.')
+        self.core.get_node().loginfo(f'{pargs.robot_name}')
 
     def start_robot(self) -> None:
         self.arm.go_to_home_pose(

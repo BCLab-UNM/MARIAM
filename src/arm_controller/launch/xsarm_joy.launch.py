@@ -6,19 +6,23 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
-    OpaqueFunction
+    OpaqueFunction,
+    GroupAction
 )
 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
-    PythonExpression
+    PythonExpression,
+    TextSubstitution
 )
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import Node
+from launch_ros.actions import (
+    Node,
+    PushRosNamespace
+)
 from launch.conditions import IfCondition
-
 
 def launch_setup(context, *args, **kwargs):
     robot_model_launch_arg = LaunchConfiguration('robot_model')
@@ -57,7 +61,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'threshold': threshold_launch_arg,
             'controller': controller_launch_arg
-        }],
+        }]
     )
 
     xsarm_robot_node = Node(
@@ -65,7 +69,7 @@ def launch_setup(context, *args, **kwargs):
         package='arm_controller',
         executable='xsarm_robot.py',
         namespace=robot_name_launch_arg,
-        output='log', # change to 'screen' for messages
+        output='screen', # change to 'screen' for messages
         parameters=[{
             'robot_model': robot_model_launch_arg,
         }],
@@ -102,30 +106,32 @@ def launch_setup(context, *args, **kwargs):
     )
 
     xsarm_control_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('interbotix_xsarm_control'),
-                'launch',
-                'xsarm_control.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'robot_model': robot_model_launch_arg,
-            'robot_name': robot_name_launch_arg,
-            'base_link_frame': base_link_frame_launch_arg,
-            'use_rviz': use_rviz_launch_arg,
-            'mode_configs': mode_configs_launch_arg,
-            'use_sim': use_sim_launch_arg,
-            'robot_description': robot_description_launch_arg,
-            'xs_driver_logging_level': xs_driver_logging_level_launch_arg,
-        }.items(),
-        condition=IfCondition(launch_driver_launch_arg)
-    )
+                PythonLaunchDescriptionSource([
+                    PathJoinSubstitution([
+                        FindPackageShare('interbotix_xsarm_control'),
+                        'launch',
+                        'xsarm_control.launch.py'
+                    ])
+                ]),
+                launch_arguments={
+                    'robot_model': robot_model_launch_arg,
+                    'robot_name': robot_name_launch_arg,
+                    'base_link_frame': base_link_frame_launch_arg,
+                    'use_rviz': use_rviz_launch_arg,
+                    'mode_configs': mode_configs_launch_arg,
+                    'use_sim': use_sim_launch_arg,
+                    'robot_description': robot_description_launch_arg,
+                    'xs_driver_logging_level': xs_driver_logging_level_launch_arg,
+                }.items(),
+                condition=IfCondition(launch_driver_launch_arg)
+            )
+
 
     admittance_controller_node = Node(
         name='admittance_controller_node',
         package='arm_controller',
         executable='admittance_controller',
+        namespace=robot_name_launch_arg,
         condition=IfCondition(
             PythonExpression([
                 "'", admittance_control_launch_arg,
@@ -138,18 +144,20 @@ def launch_setup(context, *args, **kwargs):
         name='admittance_rviz_markers_node',
         package='arm_controller',
         executable='admittance_rviz_markers',
+        namespace=robot_name_launch_arg,
         condition=IfCondition(
             PythonExpression([
                 "'", admittance_control_launch_arg,
                 "' == 'true'"
             ])
-        )
+        ),
     )
 
     virtual_pose_node = Node(
         package='arm_controller',
         executable='virtual_pose_publisher',
         name='virtual_pose_publisher_node',
+        namespace=robot_name_launch_arg,
         parameters=[{
             'delay': 0.0,
             'frequency': 0.002,
@@ -169,6 +177,7 @@ def launch_setup(context, *args, **kwargs):
         package='arm_controller',
         executable='force_publisher',
         name='force_publisher_node',
+        namespace=robot_name_launch_arg,
         parameters=[{
             'delay': 0.0,
             'frequency': 0.002,
@@ -281,5 +290,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        declared_arguments + [OpaqueFunction(function=launch_setup)]
-    )
+                declared_arguments + [OpaqueFunction(function=launch_setup)]
+            )
