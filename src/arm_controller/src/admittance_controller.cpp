@@ -15,12 +15,12 @@ class AdmittanceController : public rclcpp::Node {
   public:
     AdmittanceController() : Node("admittance_controller") {
       pose_publisher = this->create_publisher<Pose>(
-        "high_freq_target_pose",
+        "px100_target_pose",
         10
       );
 
       virtual_pose_sub = this->create_subscription<Pose>(
-        "high_freq_virtual_pose",
+        "px100_virtual_pose",
         10,
         std::bind(&AdmittanceController::callback, this, _1)
       );

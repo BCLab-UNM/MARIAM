@@ -10,7 +10,7 @@ class VirtualPosePublisher : public rclcpp::Node {
   public:
     VirtualPosePublisher() : Node("virtual_pose_publisher") {
       pose_publisher = this->create_publisher<Pose>(
-        "high_freq_virtual_pose",
+        "px100_virtual_pose",
         10
       );
       // position parameters

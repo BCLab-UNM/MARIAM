@@ -11,7 +11,7 @@ class EllipsePublisher : public rclcpp::Node
   public:
     EllipsePublisher() : rclcpp::Node("ellipse_publisher_node") {
       pose_publisher = this->create_publisher<Pose>(
-        "high_freq_target_pose",
+        "px100_target_pose",
         10
       );
       this->declare_parameter("delay",     2.0);

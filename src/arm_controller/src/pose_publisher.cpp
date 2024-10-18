@@ -11,10 +11,10 @@ using namespace geometry_msgs::msg;
  * This class contains poses that test the arm's trajectory
  * when a high number of goal poses are published.
  */
-class HighFreqPosePublisher : public rclcpp::Node
+class PosePublisher : public rclcpp::Node
 {
   public:
-    HighFreqPosePublisher() : Node("high_freq_pose_publisher_node")
+    PosePublisher() : Node("pose_publisher_node")
     {
       pose1.position.x = 0.0;
       pose1.position.y = 0.15;
@@ -40,11 +40,6 @@ class HighFreqPosePublisher : public rclcpp::Node
       pose3.orientation.z =  0.707;
       pose3.orientation.w =  0.707;
 
-      pose_publisher = this->create_publisher<Pose>(
-        "high_freq_target_pose",
-        10
-      );
-
       this->declare_parameter("delay",     2.0);
       this->declare_parameter("duration",  300.0);
       this->declare_parameter("frequency", 0.002);
@@ -55,11 +50,16 @@ class HighFreqPosePublisher : public rclcpp::Node
       this->get_parameter("frequency", frequency);
       this->get_parameter("max_ticks", max_ticks);
 
+      pose_publisher = this->create_publisher<Pose>(
+        "px100_target_pose",
+        10
+      );
+
       srand(42);
 
       delay_timer = this->create_wall_timer(
         delay * 1s,
-        std::bind(&HighFreqPosePublisher::start_timer, this)
+        std::bind(&PosePublisher::start_timer, this)
       );
     }
 
@@ -71,12 +71,13 @@ class HighFreqPosePublisher : public rclcpp::Node
     geometry_msgs::msg::Pose pose1;
     geometry_msgs::msg::Pose pose2;
     geometry_msgs::msg::Pose pose3;
+    geometry_msgs::msg::Pose current_pose;
 
     rclcpp::TimerBase::SharedPtr delay_timer;
     rclcpp::TimerBase::SharedPtr main_timer;
     rclcpp::TimerBase::SharedPtr stop_timer;
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher;
-    const rclcpp::Logger LOGGER = rclcpp::get_logger("high_freq_pose_publisher_node");
+    const rclcpp::Logger LOGGER = rclcpp::get_logger("pose_publisher_node");
 
     double delay;
     double duration;
@@ -85,48 +86,55 @@ class HighFreqPosePublisher : public rclcpp::Node
     void start_timer()
     {
       delay_timer->cancel();
-
+      RCLCPP_INFO(LOGGER, "Publishing poses to topic: %s/px100_target_pose",
+        this->get_namespace());
+      current_pose = pose1;
       main_timer = this->create_wall_timer(
         frequency * 1s,
-        std::bind(&HighFreqPosePublisher::callback, this)
+        std::bind(&PosePublisher::callback, this)
       );
 
       stop_timer = this->create_wall_timer(
         duration * 1s, 
-        std::bind(&HighFreqPosePublisher::stop, this)
+        std::bind(&PosePublisher::stop, this)
       );
     }
 
     void callback()
     {
       auto msg = Pose();
-      switch (pose_num)
-      {
-        case 1:
-          msg.position = pose1.position;
-          msg.orientation = pose1.orientation;
-          RCLCPP_INFO(LOGGER, "Publishing pose 1");
-          break;
-        
-        case 2:
-          msg.position = pose2.position;
-          msg.orientation = pose2.orientation;
-          RCLCPP_INFO(LOGGER, "Publishing pose 2");
-          break;
-        
-        case 3:
-          msg.position = pose3.position;
-          msg.orientation = pose3.orientation;
-          RCLCPP_INFO(LOGGER, "Publishing pose 3");
-          break;
-      }
-
+      msg.position = current_pose.position;
+      msg.orientation = current_pose.orientation;
       pose_publisher->publish(msg);
       ticks++;
       if(ticks == max_ticks)
       {
         ticks = 0;
         pose_num = 1 + (rand() % 3);
+        switch(pose_num){
+          case 1:
+            current_pose = pose1;
+            break;
+          case 2:
+            current_pose = pose2;
+            break;
+          default:
+            current_pose = pose3;
+            break;
+        }
+        RCLCPP_INFO(LOGGER, "Max ticks reached.");
+        RCLCPP_INFO(LOGGER, "Publishing pose %d", pose_num);
+        RCLCPP_INFO(LOGGER, "Position {%.3f, %.3f, %.3f}",
+          current_pose.position.x,
+          current_pose.position.y,
+          current_pose.position.z
+        );
+        RCLCPP_INFO(LOGGER, "Quaternion {%.3f, %.3f, %.3f, %.3f}",
+          current_pose.orientation.w,
+          current_pose.orientation.x,
+          current_pose.orientation.y,
+          current_pose.orientation.z
+        );
       }
     }
 
@@ -141,7 +149,7 @@ class HighFreqPosePublisher : public rclcpp::Node
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<HighFreqPosePublisher>());
+  rclcpp::spin(std::make_shared<PosePublisher>());
   rclcpp::shutdown();
   return 0;
 }

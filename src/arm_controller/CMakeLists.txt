@@ -162,18 +162,18 @@ install(TARGETS force_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable high_freq_pose_publisher.cpp
-add_executable(high_freq_pose_publisher src/high_freq_pose_publisher.cpp)
-target_include_directories(high_freq_pose_publisher PUBLIC
+# For executable pose_publisher.cpp
+add_executable(pose_publisher src/pose_publisher.cpp)
+target_include_directories(pose_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(high_freq_pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  high_freq_pose_publisher
+  pose_publisher
   "rclcpp"
   "std_msgs"
 )
-install(TARGETS high_freq_pose_publisher
+install(TARGETS pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -214,7 +214,7 @@ target_link_libraries(admittance_controller "${cpp_typesupport_target}")
 target_link_libraries(virtual_pose_publisher "${cpp_typesupport_target}")
 target_link_libraries(ellipse_publisher "${cpp_typesupport_target}")
 target_link_libraries(force_publisher "${cpp_typesupport_target}")
-target_link_libraries(high_freq_pose_publisher "${cpp_typesupport_target}")
+target_link_libraries(pose_publisher "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -16,10 +16,10 @@ public:
 
     // Subscribe to the target and virtual poses
     target_pose_sub = this->create_subscription<Pose>(
-      "/high_freq_target_pose", 10, std::bind(&AdmittanceRvizMarkers::target_pose_callback, this, _1)
+      "px100_target_pose", 10, std::bind(&AdmittanceRvizMarkers::target_pose_callback, this, _1)
     );
     virtual_pose_sub = this->create_subscription<Pose>(
-      "/high_freq_virtual_pose", 10, std::bind(&AdmittanceRvizMarkers::virtual_pose_callback, this, _1)
+      "px100_virtual_pose", 10, std::bind(&AdmittanceRvizMarkers::virtual_pose_callback, this, _1)
     );
   }
 
