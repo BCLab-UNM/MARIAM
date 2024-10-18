@@ -11,8 +11,8 @@ class AdmittanceRvizMarkers : public rclcpp::Node {
 public:
   AdmittanceRvizMarkers() : Node("admittance_rviz_markers") {
     // Create separate publishers for the target and virtual RViz markers
-    target_marker_publisher = this->create_publisher<MarkerArray>("/target_pose_rviz_markers", 10);
-    virtual_marker_publisher = this->create_publisher<MarkerArray>("/virtual_pose_rviz_markers", 10);
+    target_marker_publisher = this->create_publisher<MarkerArray>("target_pose_rviz_markers", 10);
+    virtual_marker_publisher = this->create_publisher<MarkerArray>("virtual_pose_rviz_markers", 10);
 
     // Subscribe to the target and virtual poses
     target_pose_sub = this->create_subscription<Pose>(
