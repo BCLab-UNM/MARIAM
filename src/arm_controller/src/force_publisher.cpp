@@ -70,6 +70,7 @@ class ForcePublisher : public rclcpp::Node
       auto msg = Float64();
       if(ticks == max_ticks)
       {
+        RCLCPP_INFO(LOGGER, " =================== Changing force ===================");
         ticks = 0;
         if(current_force >= 2) current_force = 0;
         else {

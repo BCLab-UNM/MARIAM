@@ -56,15 +56,7 @@ class XSArmRobot(InterbotixManipulatorXS):
     directly controlled via the PS3/PS4 joystick, other buttons allow position-ik to be
     performed using all the arm joints.
     """
-
-    waist_step = 0.06
-    rotate_step = 0.04
-    translate_step = 0.01
-    current_loop_rate = 25
-    current_torque_status = True
-    loop_rates = {'coarse': 25, 'fine': 25}
-    joy_msg = ArmJoy()
-    joy_mutex = Lock()
+    current_loop_rate = 500
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
@@ -86,20 +78,13 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.T_yb = np.identity(4)
         self.update_T_yb()
         self.core.get_node().create_subscription(
-            ArmJoy,
-            'commands/joy_processed',
-            self.joy_control_cb,
-            10,
-        )
-        self.core.get_node().create_subscription(
             Pose,
             'px100_target_pose',
             self.control_loop_cb,
             10
         )
         time.sleep(0.5)
-        self.core.get_node().loginfo('Ready to receive processed joystick commands.')
-        self.core.get_node().loginfo(f'{pargs.robot_name}')
+        self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
     def start_robot(self) -> None:
         self.arm.go_to_home_pose(
@@ -110,21 +95,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         try:
             robot_startup()
             while rclpy.ok():
-                self.controller()
                 self.rate.sleep()
         except KeyboardInterrupt:
             robot_shutdown()
-
-    def update_speed(self, loop_rate: float) -> None:
-        """
-        Update the frequency at which the main control loop runs.
-
-        :param loop_rate: desired loop frequency [Hz]
-        """
-        self.current_loop_rate = loop_rate
-        self.rate = self.core.get_node().create_rate(self.current_loop_rate)
-        self.core.get_node().loginfo(
-            f'Current loop rate is {self.current_loop_rate} Hz.')
 
     def update_T_yb(self) -> None:
         """
@@ -141,142 +114,6 @@ class XSArmRobot(InterbotixManipulatorXS):
         # Updates the end-effectors position relative to base frame
         self.T_yb = ang.trans_inv(self.T_sy) @ T_sb
 
-    def joy_control_cb(self, msg: ArmJoy) -> None:
-        """
-        Process ArmJoy messages from ROS Subscription callback.
-
-        :param msg: ArmJoy ROS message
-        """
-        with self.joy_mutex:
-            self.joy_msg = copy.deepcopy(msg)
-
-        # Check the speed_cmd
-        if (msg.speed_cmd == ArmJoy.SPEED_INC and self.current_loop_rate < 40):
-            self.update_speed(loop_rate=self.current_loop_rate + 1)
-        elif (msg.speed_cmd == ArmJoy.SPEED_DEC and self.current_loop_rate > 10):
-            self.update_speed(loop_rate=self.current_loop_rate - 1)
-
-        # Check the speed_toggle_cmd
-        if (msg.speed_toggle_cmd == ArmJoy.SPEED_COARSE):
-            self.loop_rates['fine'] = self.current_loop_rate
-            self.core.get_node().loginfo('Switched to Coarse Control')
-            self.update_speed(loop_rate=self.loop_rates['coarse'])
-        elif (msg.speed_toggle_cmd == ArmJoy.SPEED_FINE):
-            self.loop_rates['coarse'] = self.current_loop_rate
-            self.core.get_node().loginfo('Switched to Fine Control')
-            self.update_speed(loop_rate=self.loop_rates['fine'])
-
-        # Check the torque_cmd
-        if (msg.torque_cmd == ArmJoy.TORQUE_ON):
-            self.core.robot_torque_enable(
-                cmd_type='group', name='arm', enable=True)
-            self.arm.capture_joint_positions()
-            self.update_T_yb()
-            self.current_torque_status = True
-        elif (msg.torque_cmd == ArmJoy.TORQUE_OFF):
-            self.core.robot_torque_enable(
-                cmd_type='group', name='arm', enable=False)
-            self.current_torque_status = False
-
-    def controller(self) -> None:
-        """Run main arm manipulation control loop."""
-        if not self.current_torque_status:
-            return
-
-        with self.joy_mutex:
-            msg = copy.deepcopy(self.joy_msg)
-
-        # Check the pose_cmd
-        if (msg.pose_cmd != 0):
-            if (msg.pose_cmd == ArmJoy.HOME_POSE):
-                self.arm.go_to_home_pose(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == ArmJoy.SLEEP_POSE):
-                self.arm.go_to_sleep_pose(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == ArmJoy.START_LIFT):
-                self.arm.start_lift(moving_time=1.5, accel_time=0.75)
-            elif (msg.pose_cmd == ArmJoy.LIFT):
-                self.arm.lift(moving_time=1.5, accel_time=0.75)
-            self.update_T_yb()
-            self.arm.set_trajectory_time(moving_time=0.2, accel_time=0.1)
-
-        # Check the waist_cmd
-        if (msg.waist_cmd != 0):
-            waist_position = self.arm.get_single_joint_command('waist')
-            if (msg.waist_cmd == ArmJoy.WAIST_CCW):
-                success = self.arm.set_single_joint_position(
-                    joint_name='waist',
-                    position=waist_position + self.waist_step,
-                    moving_time=0.2,
-                    accel_time=0.1,
-                    blocking=False)
-                if (not success and waist_position != self.waist_ul):
-                    self.arm.set_single_joint_position(
-                        joint_name='waist',
-                        position=self.waist_ul,
-                        moving_time=0.2,
-                        accel_time=0.1,
-                        blocking=False)
-            elif (msg.waist_cmd == ArmJoy.WAIST_CW):
-                success = self.arm.set_single_joint_position(
-                    joint_name='waist',
-                    position=waist_position - self.waist_step,
-                    moving_time=0.2,
-                    accel_time=0.1,
-                    blocking=False)
-                if (not success and waist_position != self.waist_ll):
-                    self.arm.set_single_joint_position(
-                        joint_name='waist',
-                        position=self.waist_ll,
-                        moving_time=0.2,
-                        accel_time=0.1,
-                        blocking=False)
-            self.update_T_yb()
-
-        position_changed = msg.ee_x_cmd + msg.ee_z_cmd
-        orientation_changed = msg.ee_roll_cmd + msg.ee_pitch_cmd
-
-        if (position_changed + orientation_changed == 0):
-            return
-
-        # Copy the most recent T_yb transform into a temporary variable
-        T_yb = np.array(self.T_yb)
-
-        if (position_changed):
-            # check ee_x_cmd
-            if (msg.ee_x_cmd == ArmJoy.EE_X_INC):
-                T_yb[0, 3] += self.translate_step
-            elif (msg.ee_x_cmd == ArmJoy.EE_X_DEC):
-                T_yb[0, 3] -= self.translate_step
-
-            # check ee_z_cmd
-            if (msg.ee_z_cmd == ArmJoy.EE_Z_INC):
-                T_yb[2, 3] += self.translate_step
-            elif (msg.ee_z_cmd == ArmJoy.EE_Z_DEC):
-                T_yb[2, 3] -= self.translate_step
-
-        # check end-effector orientation related commands
-        if (orientation_changed != 0):
-            rpy = ang.rotation_matrix_to_euler_angles(T_yb[:3, :3])
-
-            # check ee_pitch_cmd
-            if (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_DOWN):
-                rpy[1] += self.rotate_step
-            elif (msg.ee_pitch_cmd == ArmJoy.EE_PITCH_UP):
-                rpy[1] -= self.rotate_step
-            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
-
-        # Get desired transformation matrix of the end-effector w.r.t. the base frame
-        T_sd = self.T_sy @ T_yb
-        _, success = self.arm.set_ee_pose_matrix(
-            T_sd=T_sd,
-            custom_guess=self.arm.get_joint_commands(),
-            execute=True,
-            moving_time=0.2,
-            accel_time=0.1,
-            blocking=False)
-        if success:
-            self.T_yb = np.array(T_yb)
-
     def control_loop_cb(self, msg: Pose) -> None:
         """
         Slightly moves the end-effector towards the desired pose.
@@ -289,7 +126,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         ee_pitch_step = 0.002
         tol = 8e-3
         ee_tol = 8e-3
-        moving_time = 0.8
+        moving_time = 0.75
         accel_time = 0.15
         set_ee_pose = False
         
@@ -335,6 +172,9 @@ class XSArmRobot(InterbotixManipulatorXS):
         T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
         x_pos_error = T_yd[0, 3] - T_yb[0, 3]
         z_pos_error = T_yd[2, 3] - T_yb[2, 3]
+        ee_moving_time = abs(desired_matrix[0, 3] - T_yb[0, 3]) / 2
+        self.log_info(f'Diff: {abs(desired_matrix[0, 3] - T_yb[0, 3])}')
+        self.log_info(f'Moving time: {ee_moving_time}')
 
         if abs(x_pos_error) > tol:
             set_ee_pose = True
@@ -364,11 +204,10 @@ class XSArmRobot(InterbotixManipulatorXS):
             if success:
                 self.T_yb = np.array(T_yb)
             else:
-                self.log_info('Failed to move to goal pose.')
+                # self.log_info('Failed to move to goal pose.')
+                pass
         end_time = self.core.get_node().get_clock().now()
-        # self.log_info(
-        #     f'Time: {(end_time-start_time).nanoseconds / 1e9}'
-        # )
+        # self.core.get_node().loginfo(f'Time in control loop callback:\n{(end_time-start_time).nanoseconds / 1e9}')
 
     def sign(self, x):
         if x > 0:
