@@ -40,30 +40,6 @@ def launch_setup(context, *args, **kwargs):
     ikpy_launch_arg = LaunchConfiguration('use_ikpy')
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
 
-    joy_node = Node(
-        package='joy',
-        executable='joy_node',
-        name='joy_node',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'dev': '/dev/input/js0',
-        }],
-        remappings=[
-            ('joy', 'commands/joy_raw')
-        ]
-    )
-
-    joy_input_handler_node = Node(
-        name='joy_input_handler',
-        package='arm_controller',
-        executable='joy_input_handler',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'threshold': threshold_launch_arg,
-            'controller': controller_launch_arg
-        }]
-    )
-
     xsarm_robot_node = Node(
         name='xsarm_robot_node',
         package='arm_controller',
@@ -192,8 +168,6 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        joy_node,
-        joy_input_handler_node,
         xsarm_robot_node,
         xsarm_ikpy_robot_node,
         xsarm_control_launch,

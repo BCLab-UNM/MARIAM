@@ -28,12 +28,13 @@ class XSArmRobot(InterbotixManipulatorXS):
             robot_model=pargs.robot_model,
             robot_name=pargs.robot_name,
             # default moving time and accel time are defined here
-            moving_time=0.2,
-            accel_time=0.0,
+            moving_time=0.8,
+            accel_time=0.15,
             args=args,
         )
+        self.desired_pose = Pose()
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
-        self.num_joints = self.arm.group_info.num_joints
+        
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
@@ -45,7 +46,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.core.get_node().create_subscription(
             Pose,
             'px100_target_pose',
-            self.control_loop_cb,
+            self.update_desired_pose_cb,
             10
         )
         time.sleep(0.5)
@@ -60,10 +61,10 @@ class XSArmRobot(InterbotixManipulatorXS):
         try:
             robot_startup()
             while rclpy.ok():
+                self.control_loop()
                 self.rate.sleep()
         except KeyboardInterrupt:
             robot_shutdown()
-
 
     def update_T_yb(self) -> None:
         """
@@ -81,7 +82,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.T_yb = ang.trans_inv(self.T_sy) @ T_sb
 
 
-    def control_loop_cb(self, msg: Pose) -> None:
+    def control_loop(self) -> None:
         """
         Moves the end-effector towards the desired pose.
 
@@ -95,19 +96,19 @@ class XSArmRobot(InterbotixManipulatorXS):
         # convert pose into the desired transformation matrix
         desired_rotation = np.eye(4)
         desired_rotation[:3, :3] = R.from_quat([ 
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
+            self.desired_pose.orientation.x,
+            self.desired_pose.orientation.y,
+            self.desired_pose.orientation.z,
+            self.desired_pose.orientation.w,
         ]).as_matrix()
 
         desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
     
         desired_matrix = np.eye(4)
         desired_matrix[:3, :3] = desired_rotation[:3, :3]
-        desired_matrix[0, 3] = msg.position.x
-        desired_matrix[1, 3] = msg.position.y
-        desired_matrix[2, 3] = msg.position.z
+        desired_matrix[0, 3] = self.desired_pose.position.x
+        desired_matrix[1, 3] = self.desired_pose.position.y
+        desired_matrix[2, 3] = self.desired_pose.position.z
 
         self.move_waist(desired_rpy, tol)
         
@@ -138,6 +139,8 @@ class XSArmRobot(InterbotixManipulatorXS):
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
+                moving_time=0.8,
+                accel_time=0.15,
                 execute=True,
                 blocking=False
             )
@@ -152,7 +155,7 @@ class XSArmRobot(InterbotixManipulatorXS):
     def move_waist(self, desired_rpy, tol):
         """
         Rotates the waist towards the desired yaw angle.
-        
+
         desired_rpy: a list of the deisred roll, pitch, yaw angles.
         tol: the acceptable error limit.
         """
@@ -163,16 +166,22 @@ class XSArmRobot(InterbotixManipulatorXS):
             success_waist = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
+                moving_time=0.8,
+                accel_time=0.15,
                 blocking=False
             )
             if (not success_waist and waist_position != self.waist_ul):
                 self.arm.set_single_joint_position(
                     joint_name='waist',
                     position=self.waist_ul,
+                    moving_time=0.8,
+                    accel_time=0.15,
                     blocking=False
                 )
             self.update_T_yb()
 
+    def update_desired_pose_cb(self, msg: Pose):
+        self.desired_pose = msg
 
     def sign(self, x):
         if x > 0:
