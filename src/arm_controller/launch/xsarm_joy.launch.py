@@ -156,8 +156,8 @@ def launch_setup(context, *args, **kwargs):
         namespace=robot_name_launch_arg,
         parameters=[{
             'delay': 0.0,
-            'frequency': 0.002,
-            'max_ticks': 500
+            'frequency': 2.0,
+            'max_ticks': 2
         }],
         condition=IfCondition(
             PythonExpression([
