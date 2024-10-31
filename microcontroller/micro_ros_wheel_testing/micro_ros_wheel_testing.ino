@@ -4,7 +4,6 @@
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
-#include <std_msgs/msg/float32.h>
 #include <std_msgs/msg/int32.h>
 #include <geometry_msgs/msg/twist.h>
 
@@ -29,19 +28,17 @@ Movement move(rightSpeedPin, rightDirectionA, rightDirectionB, leftSpeedPin, lef
 Encoder leftEncoder(leftEncoderA, leftEncoderB);
 Encoder rightEncoder(rightEncoderA, rightEncoderB);
 
-// ROS 2 node, publishers, and messages
+// ROS 2 node, publishers, subscribers, and messages
 rcl_node_t node;
 rcl_publisher_t left_total_ticks_publisher;
 rcl_publisher_t right_total_ticks_publisher;
-rcl_publisher_t left_current_ticks_publisher;
-rcl_publisher_t right_current_ticks_publisher;
 rcl_publisher_t wheel_velocity_publisher;
+rcl_subscription_t wheel_analog_subscriber;
 
 std_msgs__msg__Int32 left_wheel_total_ticks_msg;
 std_msgs__msg__Int32 right_wheel_total_ticks_msg;
-std_msgs__msg__Int32 left_current_ticks_msg;
-std_msgs__msg__Int32 right_current_ticks_msg;
 geometry_msgs__msg__Twist wheel_velocity_msg;
+std_msgs__msg__Int32 analog_msg;  // Changed from Float32 to Int32
 
 // ROS 2 support structures
 rclc_support_t support;
@@ -53,9 +50,6 @@ rcl_timer_t timer;
 long left_total_ticks = 0;
 long right_total_ticks = 0;
 
-// Store the last callback time
-int64_t last_call_time = 0;
-
 // Helper function to convert ticks to meters
 double ticksToMeters(long ticks) {
     return (ticks / (double)TICKS_PER_ROTATION) * WHEEL_CIRCUMFERENCE;
@@ -64,6 +58,9 @@ double ticksToMeters(long ticks) {
 // Timer callback to update and publish velocities and total ticks
 void timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
     if (timer == NULL) return;
+
+    // Convert elapsed time from nanoseconds to seconds
+    double elapsed_time_sec = last_call_time / 1e9;
 
     // Get current encoder values and reset them
     long left_ticks = leftEncoder.readAndReset();
@@ -80,27 +77,27 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
     rcl_publish(&left_total_ticks_publisher, &left_wheel_total_ticks_msg, NULL);
     rcl_publish(&right_total_ticks_publisher, &right_wheel_total_ticks_msg, NULL);
 
-    // Publish current encoder ticks (not accumulated)
-    left_current_ticks_msg.data = left_ticks;  // Use readAndReset value
-    right_current_ticks_msg.data = right_ticks; // Use readAndReset value
-
-    rcl_publish(&left_current_ticks_publisher, &left_current_ticks_msg, NULL);
-    rcl_publish(&right_current_ticks_publisher, &right_current_ticks_msg, NULL);
-
-    // Calculate elapsed time since last call
-    int64_t current_time = rcl_get_time_now();
-    double elapsed_time_seconds = (current_time - last_call_time) / 1e9; // Convert nanoseconds to seconds
-    last_call_time = current_time; // Update the last call time
-
-    // Calculate velocities in meters per second
-    double left_wheel_velocity = ticksToMeters(left_ticks) / elapsed_time_seconds;  // m/s
-    double right_wheel_velocity = ticksToMeters(right_ticks) / elapsed_time_seconds; // m/s
+    // Calculate velocities in meters per second using the elapsed time
+    double left_wheel_speed = ticksToMeters(left_ticks) / elapsed_time_sec;  // m/s
+    double right_wheel_speed = ticksToMeters(right_ticks) / elapsed_time_sec; // m/s
 
     // Publish velocities as a Twist message
-    wheel_velocity_msg.linear.x = (left_wheel_velocity + right_wheel_velocity) / 2; // Average linear velocity
-    wheel_velocity_msg.angular.z = (right_wheel_velocity - left_wheel_velocity) / WHEEL_CIRCUMFERENCE; // Angular velocity
+    wheel_velocity_msg.linear.x = (left_wheel_speed + right_wheel_speed) / 2; // Average linear velocity
+    wheel_velocity_msg.angular.z = (right_wheel_speed - left_wheel_speed) / WHEEL_CIRCUMFERENCE; // Angular velocity
 
     rcl_publish(&wheel_velocity_publisher, &wheel_velocity_msg, NULL);
+}
+
+// Callback function for wheel_analog subscriber (receiving Int32)
+void wheel_analog_callback(const void *msgin) {
+    const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
+    int motor_speed = msg->data;  // Directly use the received Int32 value
+
+    // Ensure the speed is within the valid range [0, 255]
+    motor_speed = constrain(motor_speed, 0, 255);
+
+    // Set both motors to the received speed
+    move.forward(motor_speed, motor_speed);
 }
 
 void setup() {
@@ -130,19 +127,6 @@ void setup() {
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
         "/total_wheel_ticks/right");
 
-    // Initialize current tick publishers
-    rclc_publisher_init_default(
-        &left_current_ticks_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-        "/current_ticks/left");
-
-    rclc_publisher_init_default(
-        &right_current_ticks_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-        "/current_ticks/right");
-
     // Initialize wheel velocity publisher
     rclc_publisher_init_default(
         &wheel_velocity_publisher,
@@ -150,18 +134,23 @@ void setup() {
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "/wheel_vel");
 
+    // Initialize wheel_analog subscriber (for Int32 type)
+    rclc_subscription_init_default(
+        &wheel_analog_subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "/wheel_analog");
+
     // Create timer for publishing velocities and ticks at 30ms intervals
     rclc_timer_init_default(&timer, &support, RCL_MS_TO_NS(30), timer_callback);
 
-    // Create executor to manage the timer callback
-    rclc_executor_init(&executor, &support.context, 1, &allocator);
+    // Create executor to manage the timer and subscriber callbacks
+    rclc_executor_init(&executor, &support.context, 2, &allocator);
     rclc_executor_add_timer(&executor, &timer);
-
-    // Start motors at full speed (uncomment to enable)
-    // move.forward(255, 255);  // Full speed forward
+    rclc_executor_add_subscription(&executor, &wheel_analog_subscriber, &analog_msg, &wheel_analog_callback, ON_NEW_DATA);
 }
 
 void loop() {
-    // Spin the executor to handle the timer callback
+    // Spin the executor to handle the timer callback and subscription
     rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
 }
