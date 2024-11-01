@@ -19,10 +19,12 @@ from scipy.spatial.transform import Rotation as R
 
 
 class XSArmRobot(InterbotixManipulatorXS):
-    current_loop_rate = 25
-    waist_step = 0.05
-    translate_step = 0.01
-    ee_pitch_step = 0.04
+    current_loop_rate = 40
+    waist_step        = 0.05
+    translate_step    = 0.001
+    ee_pitch_step     = 0.004
+    moving_time       = 0.2
+    accel_time        = 0.001
     lock = Lock()
 
     def __init__(self, pargs, args=None):
@@ -30,9 +32,8 @@ class XSArmRobot(InterbotixManipulatorXS):
             self,
             robot_model=pargs.robot_model,
             robot_name=pargs.robot_name,
-            # default moving time and accel time are defined here
-            moving_time=0.2,
-            accel_time=0.1,
+            moving_time=self.moving_time,
+            accel_time=self.accel_time,
             args=args,
         )
         self.desired_pose = Pose()
@@ -130,16 +131,16 @@ class XSArmRobot(InterbotixManipulatorXS):
             success_waist = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
-                moving_time=0.2,
-                accel_time=0.1,
+                moving_time=self.moving_time,
+                accel_time=self.accel_time,
                 blocking=False
             )
             if (not success_waist and waist_position != self.waist_ul):
                 self.arm.set_single_joint_position(
                     joint_name='waist',
                     position=self.waist_ul,
-                    moving_time=0.2,
-                    accel_time=0.1,
+                    moving_time=self.moving_time,
+                    accel_time=self.accel_time,
                     blocking=False
                 )
             self.update_T_yb()
@@ -164,8 +165,8 @@ class XSArmRobot(InterbotixManipulatorXS):
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),    
                 execute=True,
-                moving_time=0.2,
-                accel_time=0.1,
+                moving_time=self.moving_time,
+                accel_time=self.accel_time,
                 blocking=False
             )
             if success:
