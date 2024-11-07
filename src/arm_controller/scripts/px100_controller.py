@@ -15,17 +15,17 @@ import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose
+from std_msgs.msg import Float64
 from scipy.spatial.transform import Rotation as R
 
 
 class XSArmRobot(InterbotixManipulatorXS):
     current_loop_rate = 500
-    waist_step        = 0.005
-    translate_step    = 0.001
-    ee_pitch_step     = 0.004
     moving_time       = 0.2
     accel_time        = 0.001
+    times             = []
     lock = Lock()
+    desired_pose = Pose()
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
@@ -36,7 +36,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=self.accel_time,
             args=args,
         )
-        self.desired_pose = Pose()
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
         
         self.waist_index = self.arm.group_info.joint_names.index('waist')
@@ -51,6 +50,12 @@ class XSArmRobot(InterbotixManipulatorXS):
             Pose,
             'px100_target_pose',
             self.update_desired_pose_cb,
+            10
+        )
+        # dummy publishers for timing functions
+        self.timer_pub = self.core.get_node().create_publisher(
+            Float64,
+            'control_loop_time',
             10
         )
         time.sleep(0.5)
@@ -74,7 +79,6 @@ class XSArmRobot(InterbotixManipulatorXS):
 
     def update_T_yb(self) -> None:
         """
-        Calculate the pose of the end-effector w.r.t. the virtual frame.
         """
         # Get the latest command
         T_sb = self.arm.get_ee_pose_command()
@@ -92,9 +96,13 @@ class XSArmRobot(InterbotixManipulatorXS):
         msg: the desired pose.
         """
         # create a copy of the desired pose using a lock to avoid race conditions
+        start_time = self.core.get_node().get_clock().now()
         with self.lock:
             desired_pose = copy.deepcopy(self.desired_pose)
         # start_time = self.core.get_node().get_clock().now()
+        waist_step = 0.005
+        translate_step = 0.001
+        ee_pitch_step = 0.004
         waist_tol   = 8e-3
         ee_tol      = 8e-3
         set_ee_pose = False # determines if the IK solver will be called
@@ -137,7 +145,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         # if the waist error is above some tolerance, move the waist by
         # a single step (self.wasit_step)
         if abs(waist_error) > waist_tol:
-            waist_position += self.sign(waist_error) * self.waist_step
+            waist_position += self.sign(waist_error) * waist_step
             success_waist = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
@@ -163,15 +171,15 @@ class XSArmRobot(InterbotixManipulatorXS):
         """
         if abs(x_pos_error) > ee_tol:
             set_ee_pose = True
-            T_yb[0, 3] += self.sign(x_pos_error) * self.translate_step
+            T_yb[0, 3] += self.sign(x_pos_error) * translate_step
 
         if abs(z_pos_error) > ee_tol:
             set_ee_pose = True
-            T_yb[2, 3] += self.sign(z_pos_error) * self.translate_step
+            T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
         if abs(ee_pitch_error) > ee_tol:
             set_ee_pose = True
-            rpy[1] += self.sign(ee_pitch_error) * self.ee_pitch_step
+            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
             T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
         # if 'set_ee_pose' is true, then the IK solver will be called
@@ -188,11 +196,21 @@ class XSArmRobot(InterbotixManipulatorXS):
             )
             if success:
                 self.T_yb = np.array(T_yb)
+                end_time = self.core.get_node().get_clock().now()
+                time = Float64()
+                time.data = (end_time-start_time).nanoseconds / 1e9
+                # self.times.append(time)
+                # if len(self.times) == 10:
+                #     self.log_info(f'Avg. time over 10 samples (s): {sum(self.times)/10}')
+                #     self.times = []
+                # else:
+                    # self.log_info(
+                    #     f'Sample:\n{(end_time-start_time).nanoseconds / 1e9}')
+                self.timer_pub.publish(time)
+
             # else:
                 # self.log_info('Failed to move to goal pose.')
                 
-        # end_time = self.core.get_node().get_clock().now()
-        # self.core.get_node().loginfo(f'Time in control loop callback:\n{(end_time-start_time).nanoseconds / 1e9}')
 
 
     def update_desired_pose_cb(self, msg: Pose):

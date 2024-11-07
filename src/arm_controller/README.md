@@ -1,9 +1,9 @@
 # Arm Controller Package
 Different modes of control for the end effector of the PX100 robotic arm.
 
-## Launch Files
+# Launch Files
 
-### xsarm_joy.launch.py
+### px100_controller.launch.py
 This launch file requires the modern robotics package to be installed using pip: `pip3 install modern-robotics`
 Documentation for controller input: https://wiki.ros.org/joy#Microsoft_Xbox_360_Wired_Controller_for_Linux
 
@@ -38,17 +38,17 @@ Note: the buttons on the controller fall under two categories: buttons and axes.
 
 Launch command for fake hardware:
 ```bash
-ros2 launch arm_controller xsarm_joy.launch.py
+ros2 launch arm_controller px100_controller.launch.py
 ```
 
 Launch command for actual hardware:
 ```bash
-ros2 launch arm_controller xsarm_joy.launch.py use_sim:=false
+ros2 launch arm_controller px100_controller.launch.py use_sim:=false
 ```
 
 Launch command for admittance control demo
 ```bash
-ros2 launch arm_controller xsarm_joy.launch.py use_admittance_control:=true
+ros2 launch arm_controller px100_controller.launch.py use_admittance_control:=true
 ```
 
 All parameters:
@@ -103,7 +103,7 @@ Each launch file will use some or all of these parameters, here are their option
 
 ## Publisher nodes
 This package has a few nodes that can be ran to publish data periodically. The current nodes are
-- `high_freq_pose_publisher`
+- `pose_publisher`
 - `ellipse_publisher`
 - `force_publisher`
 - `virtual_pose_publisher`
@@ -117,5 +117,5 @@ NOTE: delay and frequency need to be specified as floating point values. For exa
 
 Example
 ```bash
-ros2 run arm_controller high_freq_pose_publisher --ros-args -p delay:=0.0 -p frequency:=0.002 -p max_ticks:=250
+ros2 run arm_controller pose_publisher --ros-args -r __ns:=/px100 -p delay:=0.0 -p frequency:=0.002 -p max_ticks:=250
 ```

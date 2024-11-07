@@ -188,7 +188,7 @@ install(
 ##### adding script to lib folder #####
 install(
   PROGRAMS
-    scripts/xsarm_robot.py
+    scripts/px100_controller.py
     scripts/xsarm_ikpy_robot.py
   DESTINATION
     lib/${PROJECT_NAME}

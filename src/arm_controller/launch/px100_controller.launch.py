@@ -136,7 +136,7 @@ def launch_setup(context, *args, **kwargs):
         namespace=robot_name_launch_arg,
         parameters=[{
             'delay': 0.0,
-            'frequency': 0.002,
+            'frequency': 1.0,
             'x_pos': 0.0,
             'y_pos': 0.25,
             'z_pos': 0.098
