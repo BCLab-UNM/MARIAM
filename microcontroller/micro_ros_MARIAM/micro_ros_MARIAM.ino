@@ -5,13 +5,12 @@
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
 #define FORCE_TOPIC_NAME NAMESPACE "/force"
-#define LEFT_CURRENT_SPEED_TOPIC_NAME NAMESPACE "/pid_left_current_speed"
-#define SPEEDL_TOPIC_NAME NAMESPACE "/pid_speedL"
-#define LEFT_SP_TOPIC_NAME NAMESPACE "/pid_left_sp"
-#define RIGHT_CURRENT_SPEED_TOPIC_NAME NAMESPACE "/pid_right_current_speed"
-#define SPEEDR_TOPIC_NAME NAMESPACE "/pid_speedR"
-#define RIGHT_SP_TOPIC_NAME NAMESPACE "/pid_right_sp"
+#define LEFT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/left_pid_output"
+#define LEFT_SET_POINT_TOPIC_NAME NAMESPACE "/left_set_point"
+#define RIGHT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/right_pid_output"
+#define RIGHT_SET_POINT_TOPIC_NAME NAMESPACE "/right_set_point"
 #define PID_TOPIC_NAME NAMESPACE "/pid"
+#define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 
 // Misc libraries
 #include <micro_ros_arduino.h>
@@ -62,50 +61,57 @@ Encoder rightEncoder(rightEncoderA, rightEncoderB);
 rcl_publisher_t odom_publisher;
 rcl_publisher_t force_publisher;
 rcl_publisher_t data_publisher;
-rcl_publisher_t left_current_speed_publisher;
-rcl_publisher_t speedl_publisher;
-rcl_publisher_t left_sp_publisher;
-rcl_publisher_t right_current_speed_publisher;
-rcl_publisher_t speedr_publisher;
-rcl_publisher_t right_sp_publisher;
+rcl_publisher_t left_pid_output_publisher;
+rcl_publisher_t left_set_point_publisher;
+rcl_publisher_t right_pid_output_publisher;
+rcl_publisher_t right_set_point_publisher;
 
 std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 heading;
 std_msgs__msg__Float32 force;
-double left_sp, right_sp, dleft, dright, speedL, speedR;
+double left_set_point, right_set_point, dleft, dright, left_pid_output, right_pid_output;
 double Kp=500.0, Ki=2000.0, Kd=0.0;
 
-// Define PID controllers for each pair
-PID left_PID(&left_current_speed, &speedL, &left_sp, Kp, Ki, Kd, DIRECT);
-PID right_PID(&right_current_speed, &speedR, &right_sp, Kp, Ki, Kd, DIRECT);
-
-// Physical measurements in meters
-const double wheelBase = 0.3397; // Distance between left and right wheels
-const double leftWheelCircumference = 0.3613;
-const double rightWheelCircumference = 0.3613;
-const int cpr = 8400; // "cycles per revolution" of encoder
+// PID object takes the parameters PID(Input, Output, Setpoint, Kp, Ki, Kd, DIRECT)
+PID left_PID(&left_current_speed, &left_pid_output, &left_set_point, Kp, Ki, Kd, DIRECT);
+PID right_PID(&right_current_speed, &right_pid_output, &right_set_point, Kp, Ki, Kd, DIRECT);
 
 // Declare subscribers
-rcl_subscription_t subscriber;
+rcl_subscription_t subscriber_cmd_vel;
 rcl_subscription_t subscriber_pid;
+rcl_subscription_t subscriber_wheel_analog;
 
-geometry_msgs__msg__Twist msg;
-
+// Declare executors
 rclc_executor_t executor;
-rclc_executor_t executor_sub;
+rclc_executor_t executor_sub_cmd_vel;
 rclc_executor_t executor_sub_pid;
+rclc_executor_t executor_sub_wheel_analog;
 
+// Declare misc
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
-
-nav_msgs__msg__Odometry odom;
 rcl_timer_t timer;
-const double ticks_per_rotation = 8400; //2094.625;
+
+// Create ros message object
+nav_msgs__msg__Odometry odom_msg;
+geometry_msgs__msg__Twist twist_msg;
+
+// Physical measurements in meters
+const double wheel_base = 0.3397; // Distance between left and right wheels
+const double wheel_circumference = 0.3613;
+const double ticks_per_rotation = 8400; 
 double theta_heading = 0;
-unsigned int pid_compute_ticks = 0;
+double previous_x_pos = 0.0;
+double previous_y_pos = 0.0;
+
+// Global variables for force averaging
+float force_samples[30];  // Array to store force readings
+int force_sample_count = 0;              // Counter for the number of stored samples
+int averaging_window = 5;  
+
 bool estop = true;
 
 // Indicator light
@@ -113,6 +119,7 @@ bool estop = true;
 
 // Global variable to store the timestamp of the last /cmd_vel message
 rcl_time_point_value_t last_cmd_vel_time = 0;
+rcl_time_point_value_t last_wheel_analog_time = 0;
 
 // =============================================================
 // =================== FUNCTION DECLARATIONS ===================
@@ -137,31 +144,35 @@ void error_loop(){
 }
 
 double leftTicksToMeters(double leftTicks_arg) {
-  return (leftWheelCircumference * (double)leftTicks_arg) / (double)cpr;
+  return (wheel_circumference * (double)leftTicks_arg) / (double)ticks_per_rotation;
 }
 
 double rightTicksToMeters(double rightTicks_arg) {
-  return (rightWheelCircumference * (double)rightTicks_arg) / (double)cpr;
+  return (wheel_circumference * (double)rightTicks_arg) / (double)ticks_per_rotation;
+}
+
+double ticksToMeters(long ticks) {
+  return (ticks / (double)ticks_per_rotation) * wheel_circumference;
 }
 
 double metersToTicks(double meters) {
-  return (meters * cpr) / ((leftWheelCircumference + rightWheelCircumference) / 2);
+  return (meters * ticks_per_rotation) / ((wheel_circumference + wheel_circumference) / 2);
 }
 
 double leftMetersToTicks(double meters) {
-  return (meters * cpr) / leftWheelCircumference;
+  return (meters * ticks_per_rotation) / wheel_circumference;
 }
 
 double rightMetersToTicks(double meters) {
-  return (meters * cpr) / rightWheelCircumference;
+  return (meters * ticks_per_rotation) / wheel_circumference;
 }
 
 double diffToTheta(double right, double left) {
-  return (right - left) / wheelBase;
+  return (right - left) / wheel_base;
 }
 
 double thetaToDiff(double theta) {
-  return theta * wheelBase;
+  return theta * wheel_base;
 }
 
 void update_rotation(float x, float y, float z) {
@@ -171,38 +182,93 @@ void update_rotation(float x, float y, float z) {
   float s1 = sin(y);
   float s2 = sin(z);
   float s3 = sin(x);
-  odom.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
-  odom.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
-  odom.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
-  odom.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
+  odom_msg.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
+  odom_msg.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
+  odom_msg.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
+  odom_msg.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
 }
 
-// 
 void update_odometry(int ticks_left, int ticks_right){
-  dleft = ticks_left / ticks_per_rotation * leftWheelCircumference;
-  dright = ticks_right / ticks_per_rotation * rightWheelCircumference;
+  dleft = ticks_left / ticks_per_rotation * wheel_circumference;
+  dright = ticks_right / ticks_per_rotation * wheel_circumference;
 
   double dcenter = (dleft + dright) / 2.0;
-  double dtheta = (dright - dleft) / wheelBase;
+  double dtheta = (dright - dleft) / wheel_base;
 
   double dx = dcenter * cos(theta_heading);
   double dy = dcenter * sin(theta_heading);
 
-  odom.pose.pose.position.x += dx;
-  odom.pose.pose.position.y += dy;
+  odom_msg.pose.pose.position.x += dx;
+  odom_msg.pose.pose.position.y += dy;
   theta_heading += dtheta/2;
   heading.data = theta_heading;
 
   update_rotation(0, 0, theta_heading);
   //odom.pose.pose.orientation = //get_rotation()
 
-  odom.twist.twist.linear.x = dx;
-  odom.twist.twist.linear.y = dy;
-  odom.twist.twist.angular.z = dtheta;
+  odom_msg.twist.twist.linear.x = dx;
+  odom_msg.twist.twist.linear.y = dy;
+  odom_msg.twist.twist.angular.z = dtheta;
+}
 
-  //odom.header.stamp = get_clock().now().to_msg();
-  //odom.pose.pose = Pose(position=Point(x=x, y=y, z=0.0), orientation=get_rotation());
-} //end update_odometry function
+void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
+  // Convert ticks to distance in meters for each wheel
+  double left_distance = (wheel_circumference * left_ticks) / ticks_per_rotation;
+  double right_distance = (wheel_circumference * right_ticks) / ticks_per_rotation;
+
+  // Calculate average distance and change in heading
+  double distance = (left_distance + right_distance) / 2.0;
+  double delta_theta = (right_distance - left_distance) / wheel_base;
+
+  // Update the robot's heading
+  theta_heading += delta_theta;
+
+  // Calculate the change in position
+  double delta_x = distance * cos(theta_heading);
+  double delta_y = distance * sin(theta_heading);
+
+  // Update the odometry position using the previous position
+  previous_x_pos += delta_x;
+  previous_y_pos += delta_y;
+  odom_msg.pose.pose.position.x = previous_x_pos;
+  odom_msg.pose.pose.position.y = previous_y_pos;
+
+  // Update orientation as a quaternion (flat ground)
+  odom_msg.pose.pose.orientation.w = cos(theta_heading / 2.0);  // w component
+  odom_msg.pose.pose.orientation.x = 0;                          // x component (no roll)
+  odom_msg.pose.pose.orientation.y = 0;                          // y component (no pitch)
+  odom_msg.pose.pose.orientation.z = sin(theta_heading / 2.0);  // z component
+
+  // Calculate linear and angular velocities
+  odom_msg.twist.twist.linear.x = distance / elapsed_time;
+  odom_msg.twist.twist.angular.z = delta_theta / elapsed_time;
+}
+
+// Function for building a list of the most recent force readings
+// Used for debugging force values
+void add_force_sample(float new_sample) {
+  // Shift samples if buffer is full
+  if (force_sample_count >= averaging_window) {
+    for (int i = 1; i < averaging_window; i++) {
+      force_samples[i - 1] = force_samples[i];
+    }
+    force_samples[averaging_window - 1] = new_sample;
+  } else {
+    // Add new sample
+    force_samples[force_sample_count++] = new_sample;
+  }
+}
+
+// Function for averaging our forces list
+// Used for debugging force values
+float compute_average_force() {
+  float sum = 0.0;
+  int count = force_sample_count < averaging_window ? force_sample_count : averaging_window;
+  for (int i = 0; i < count; i++) {
+    sum += force_samples[i];
+  }
+  return count > 0 ? sum / count : 0;
+}
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
@@ -213,62 +279,79 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     rcl_time_point_value_t current_time;
     rcutils_system_time_now(&current_time);
 
-    // Check if more than 3 seconds have passed since the last /cmd_vel message
-    // Reset wheel speeds and e-stop
-    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000)) { // 3000 ms = 3 seconds
-      left_sp = 0;
-      right_sp = 0;
+    // Convert elapsed time from nanoseconds to seconds
+    double elapsed_time_sec = last_call_time / 1e9;
+
+    // Saftey e-stop
+    // Check if more than 3 seconds have passed since the last /cmd_vel or /wheel_analog message
+    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000) 
+        & (current_time - last_wheel_analog_time) > RCL_MS_TO_NS(3000)) {
+      left_set_point = 0;
+      right_set_point = 0;
       move.stop(); 
       estop = true; 
     }
 
-    //Read & Reset encoders
+    // Read ticks since last callback
     left_ticks.data = leftEncoder.readAndReset(); 
     right_ticks.data = -rightEncoder.readAndReset();
-    // Meter/Nanosecond ->Meter/second
-    left_current_speed =   leftTicksToMeters(left_ticks.data) *(1000000000/last_call_time);
-    right_current_speed = rightTicksToMeters(right_ticks.data)*(1000000000/last_call_time);
+
+    // Calculate the current speed
+    left_current_speed = ticksToMeters(left_ticks.data) / elapsed_time_sec;
+    right_current_speed = ticksToMeters(right_ticks.data) / elapsed_time_sec;
+
+    // Update left_pid_output and right_pid_output values via PID
     left_PID.Compute();
     right_PID.Compute();
-    //speedL = left_sp * 50;
-    //speedR = right_sp * 50;
-    // Feed forward
-    //speedL += ff_l * speedL;
-    //speedR += ff_r * speedL;
-    if ((speedL == 0 && speedR == 0)||estop) { move.stop(); }
-    else if (speedL >= 0 && speedR >= 0) { move.forward(speedL, speedR); }
-    else if (speedL <= 0 && speedR <= 0) { move.backward(speedL*-1, speedR*-1); }
-    else if (speedL <= 0 && speedR >= 0) { move.rotateLeft(speedL*-1, speedR); }
-    else { move.rotateRight(speedL, speedR*-1); }  
 
-    update_odometry(left_ticks.data, right_ticks.data);
-    force.data = analogRead(A5)* (5.0 / 1023.0); // to voltage  
-    force.data = exp(force.data); 
-    force.data = -0.00000008099*pow(force.data, 5) + 0.000013687*pow(force.data, 4) 
-                 - 0.00068314*pow(force.data, 3) + 0.011707*pow(force.data, 2) 
-                 - 0.0081636*force.data + 0.0098014; // to force
+    // Move robot based on PID output values
+    if ((left_pid_output == 0 && right_pid_output == 0)||estop) { move.stop(); }
+    else if (left_pid_output >= 0 && right_pid_output >= 0) { move.forward(left_pid_output, right_pid_output); }
+    else if (left_pid_output <= 0 && right_pid_output <= 0) { move.backward(left_pid_output*-1, right_pid_output*-1); }
+    else if (left_pid_output <= 0 && right_pid_output >= 0) { move.rotateLeft(left_pid_output*-1, right_pid_output); }
+    else { move.rotateRight(left_pid_output, right_pid_output*-1); }  
 
+    // Update odom reading
+    // update_odometry(left_ticks.data, right_ticks.data);
+    update_odometry_new(left_ticks.data, right_ticks.data, elapsed_time_sec);
+
+    // Read new force data and add it to the sample buffer
+    float current_force = analogRead(A5) * (5.0 / 1023.0);
+    add_force_sample(current_force);
+
+    // Compute the average force and publish it
+    force.data = compute_average_force();
+
+    // Determine force data using fitted curve
+    // float coef_0 = 0.0; // coef for x^0
+    // float coef_1 = 0.0;
+    // float coef_2 = 0.0;
+    // float coef_3 = 0.0;  
+    // force.data = coef_3 * pow(force.data, 3) 
+    //             + coef_2 * pow(force.data, 2) 
+    //             + coef_1 * force.data 
+    //             + coef_0;
+
+    // Publish force and odom values to ROS2 network
     RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
-    RCSOFTCHECK(rcl_publish(&odom_publisher, &odom, NULL));
+    RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
     
-    std_msgs__msg__Float32 left_current_speed_to_publish; left_current_speed_to_publish.data = left_current_speed;
-    RCSOFTCHECK(rcl_publish(&left_current_speed_publisher, &left_current_speed_to_publish, NULL)); 
-    std_msgs__msg__Float32 speedl_to_publish; speedl_to_publish.data = speedL;
-    RCSOFTCHECK(rcl_publish(&speedl_publisher, &speedl_to_publish, NULL));
-    std_msgs__msg__Float32 left_sp_to_publish; left_sp_to_publish.data = left_sp;
-    RCSOFTCHECK(rcl_publish(&left_sp_publisher, &left_sp_to_publish, NULL)); 
-    std_msgs__msg__Float32 right_current_speed_to_publish; right_current_speed_to_publish.data = right_current_speed;
-    RCSOFTCHECK(rcl_publish(&right_current_speed_publisher, &right_current_speed_to_publish, NULL)); 
-    std_msgs__msg__Float32 speedr_to_publish; speedr_to_publish.data = speedR;
-    RCSOFTCHECK(rcl_publish(&speedr_publisher, &speedr_to_publish, NULL));    
-    std_msgs__msg__Float32 right_sp_to_publish; right_sp_to_publish.data = right_sp;
-    RCSOFTCHECK(rcl_publish(&right_sp_publisher, &right_sp_to_publish, NULL)); 
-    
+    // Publish speeds to ROS2 network
+    std_msgs__msg__Float32 left_pid_output_to_publish; left_pid_output_to_publish.data = left_pid_output;
+    RCSOFTCHECK(rcl_publish(&left_pid_output_publisher, &left_pid_output_to_publish, NULL));
+
+    // std_msgs__msg__Float32 left_set_point_to_publish; left_set_point_to_publish.data = left_set_point;
+    // RCSOFTCHECK(rcl_publish(&left_set_point_publisher, &left_set_point_to_publish, NULL)); 
+
+    std_msgs__msg__Float32 right_pid_output_to_publish; right_pid_output_to_publish.data = right_pid_output;
+    RCSOFTCHECK(rcl_publish(&right_pid_output_publisher, &right_pid_output_to_publish, NULL));   
+
+    // std_msgs__msg__Float32 right_set_point_to_publish; right_set_point_to_publish.data = right_set_point;
+    // RCSOFTCHECK(rcl_publish(&right_set_point_publisher, &right_set_point_to_publish, NULL)); 
   }
 }
 
-// Callback for /cmd_vel
-void subscription_callback(const void *msgin) {
+void subscription_cmd_vel_callback(const void *msgin) {
 
   // Read in callback msg
   const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
@@ -282,8 +365,8 @@ void subscription_callback(const void *msgin) {
   double yaw = msg->angular.z;
   double linear_sp = msg->linear.x;
   double angular_sp = thetaToDiff(msg->angular.z);
-  left_sp = msg->linear.x - angular_sp;
-  right_sp = msg->linear.x + angular_sp;
+  left_set_point = msg->linear.x - angular_sp;
+  right_set_point = msg->linear.x + angular_sp;
 
   // Activate e-stop if /cmd_vel is 0 overall
   if((msg->linear.x == 0) && (msg->angular.z == 0)) { 
@@ -301,6 +384,24 @@ void subscription_pid_callback(const void *msgin) {
   right_PID.SetTunings(msg->x, msg->y, msg->z);
 }
 
+void subscription_wheel_analog_callback(const void *msgin) {
+  const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
+
+  // Update the timestamp of the last received command
+  rcutils_system_time_now(&last_wheel_analog_time);
+
+  // Set both motor speeds to the received value, ensuring they are clamped between 0 and 255
+  int motor_speed = msg->data;
+  if (motor_speed < 0) {
+      motor_speed = 0;
+  } else if (motor_speed > 255) {
+      motor_speed = 255;
+  }
+
+  left_set_point = motor_speed;  // Set left speed
+  right_set_point = motor_speed; // Set right speed
+}
+
 // =============================================================
 // ===================== MAIN CONTROL LOOP =====================
 // =============================================================
@@ -312,57 +413,49 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);  
 
-  //Reset encoders
+  // Zero encoders
   leftEncoder.write(0); 
   rightEncoder.write(0);
-  odom.header.frame_id.data = "odom";
-  odom.child_frame_id.data = "base_link"; //@TODO add namespaces?
-  odom.pose.pose.position.z = 0;
 
+  // Set odom defaults
+  odom_msg.header.frame_id.data = "odom";
+  odom_msg.child_frame_id.data = "base_link"; //@TODO add namespaces?
+  odom_msg.pose.pose.position.z = 0;
+
+  // Wait
   delay(2000);
 
+  // An allocator facilitates dynamic memoory management
   allocator = rcl_get_default_allocator();
 
   // Set initial time for last command received
   rcutils_system_time_now(&last_cmd_vel_time);
+  rcutils_system_time_now(&last_wheel_analog_time);
 
-  //create init_options
+  // Create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
 
-  // create node
+  // Create ROS2 node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
-  // create publishers
-
+  // Create publishers
   RCCHECK(rclc_publisher_init_default(
-      &left_current_speed_publisher,
-      &node,
-      ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_CURRENT_SPEED_TOPIC_NAME));
-      
-  RCCHECK(rclc_publisher_init_default(
-    &speedl_publisher,
+    &left_pid_output_publisher,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), SPEEDL_TOPIC_NAME));
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
+  // RCCHECK(rclc_publisher_init_default(
+  //   &left_set_point_publisher,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_SET_POINT_TOPIC_NAME));
   RCCHECK(rclc_publisher_init_default(
-    &left_sp_publisher,
+    &right_pid_output_publisher,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_SP_TOPIC_NAME));
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_PID_OUTPUT_TOPIC_NAME));
+  // RCCHECK(rclc_publisher_init_default(
+  //   &right_set_point_publisher,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_SET_POINT_TOPIC_NAME));
   RCCHECK(rclc_publisher_init_default(
-    &right_current_speed_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_CURRENT_SPEED_TOPIC_NAME));
-    
-  RCCHECK(rclc_publisher_init_default(
-    &speedr_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), SPEEDR_TOPIC_NAME));
-
-  RCCHECK(rclc_publisher_init_default(
-    &right_sp_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_SP_TOPIC_NAME));
-   
- RCCHECK(rclc_publisher_init_default(
     &force_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), FORCE_TOPIC_NAME));
@@ -371,18 +464,21 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), ODOM_TOPIC_NAME));
 
+  // Create subscribers
   RCCHECK(rclc_subscription_init_default(
-    &subscriber,
+    &subscriber_cmd_vel,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), CMD_VEL_TOPIC_NAME));
-
   RCCHECK(rclc_subscription_init_default(
     &subscriber_pid,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));  
-    
+  RCCHECK(rclc_subscription_init_default(
+    &subscriber_wheel_analog,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), WHEEL_ANALOG_TOPIC_NAME));
 
-  // create timer,
+  // Create timer,
   const unsigned int timer_timeout = 30; // In miliseconds /// @TODO update this to slow down the publishers and test this `ros2 topic hz /Monica/right_ticks`
   RCCHECK(rclc_timer_init_default(
     &timer,
@@ -390,31 +486,36 @@ void setup() {
     RCL_MS_TO_NS(timer_timeout),
     timer_callback));
 
+  // Initiate tick data
   left_ticks.data = 0;
   right_ticks.data = 0;
+
+  // Set PID parameters
   left_PID.SetMode(AUTOMATIC);
   right_PID.SetMode(AUTOMATIC);
   left_PID.SetOutputLimits(-255,255);
   right_PID.SetOutputLimits(-255,255);
   
-
   // Create executors
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  RCCHECK(rclc_executor_init(&executor_sub, &support.context, 1, &allocator));
+  RCCHECK(rclc_executor_init(&executor_sub_cmd_vel, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_init(&executor_sub_pid, &support.context, 1, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor_sub, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor_sub_pid, &subscriber_pid, &msg, &subscription_pid_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_init(&executor_sub_wheel_analog, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_add_timer(&executor, &timer)); 
+  RCCHECK(rclc_executor_add_subscription(&executor_sub_cmd_vel, &subscriber_cmd_vel, &twist_msg, &subscription_cmd_vel_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor_sub_pid, &subscriber_pid, &twist_msg, &subscription_pid_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor_sub_wheel_analog, &subscriber_wheel_analog, &twist_msg, &subscription_wheel_analog_callback, ON_NEW_DATA));
 }
 
 // Functions to be looped continiously
 // This results in close to a publish rate of 1khz and a sub rate of 100hz
 void loop() {
+
   // Spin for in ns
   RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100))); 
 
   // Read cmd vel for 1ns then swich back
-  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub, RCL_MS_TO_NS(1))); 
+  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_cmd_vel, RCL_MS_TO_NS(1))); 
 
   // Read pid values for 1ns then swich back
   RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10))); 

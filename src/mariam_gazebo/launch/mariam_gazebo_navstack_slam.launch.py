@@ -11,22 +11,27 @@ def generate_launch_description():
 
   # Set the path to different files and folders.
   pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
-  pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
-  default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_urdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.urdf.xacro')
-  default_sdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.sdf')
-  robot_name = 'mariam'
-  robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml') 
-  default_rviz_config_path = os.path.join(pkg_share, 'rviz/nav2_gazebo_config.rviz')
-  world_file_name = 'mariam_agent_world/smalltown.world'
-  world_path = os.path.join(pkg_share, 'worlds', world_file_name)
   nav2_dir = FindPackageShare(package='nav2_bringup').find('nav2_bringup') 
+  nav2_bt_path = FindPackageShare(package='nav2_bt_navigator').find('nav2_bt_navigator')
   slam_toolbox_dir = FindPackageShare(package='slam_toolbox').find('slam_toolbox') 
+  mariam_description_pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
+  mariam_navigation_pkg_share = FindPackageShare(package='mariam_navigation').find('mariam_navigation')
+  mariam_gazebo_pkg_share = FindPackageShare(package='mariam_gazebo').find('mariam_gazebo')
+
+  default_urdf_model_path = os.path.join(mariam_description_pkg_share, 'models/mariam_description/mariam.urdf.xacro')
+  default_sdf_model_path = os.path.join(mariam_description_pkg_share, 'models/mariam_description/mariam.sdf')
+  robot_name = 'mariam'
+
+  robot_localization_file_path = os.path.join(mariam_navigation_pkg_share, 'config/ekf.yaml') 
+  default_rviz_config_path = os.path.join(mariam_navigation_pkg_share, 'rviz/nav2_gazebo_config.rviz')
+  nav2_params_path = os.path.join(mariam_navigation_pkg_share, 'params', 'nav2_gazebo_params.yaml')
+  static_map_path = os.path.join(mariam_navigation_pkg_share, 'maps', 'smalltown_world.yaml')
+  
+  world_file_name = 'mariam_agent_world/smalltown.world'
+  world_path = os.path.join(mariam_gazebo_pkg_share, 'world', world_file_name)
+
   nav2_launch_dir = os.path.join(nav2_dir, 'launch') 
   slam_toolbox_launch_dir = os.path.join(slam_toolbox_dir, 'launch') 
-  static_map_path = os.path.join(pkg_share, 'maps', 'smalltown_world.yaml')
-  nav2_params_path = os.path.join(pkg_share, 'params', 'nav2_gazebo_params.yaml')
-  nav2_bt_path = FindPackageShare(package='nav2_bt_navigator').find('nav2_bt_navigator')
   behavior_tree_xml_path = os.path.join(nav2_bt_path, 'behavior_trees', 'navigate_w_replanning_and_recovery.xml')
   
   # Launch configuration variables specific to simulation
