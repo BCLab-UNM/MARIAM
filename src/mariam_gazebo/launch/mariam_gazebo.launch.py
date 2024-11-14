@@ -11,15 +11,20 @@ def generate_launch_description():
 
   # Set the path to different files and folders.
   pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')   
-  pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
-  default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_urdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.urdf.xacro')
-  default_sdf_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.sdf')
+  mariam_description_pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
+  mariam_navigation_pkg_share = FindPackageShare(package='mariam_navigation').find('mariam_navigation')
+  mariam_gazebo_pkg_share = FindPackageShare(package='mariam_gazebo').find('mariam_gazebo')
+
+  default_urdf_model_path = os.path.join(mariam_description_pkg_share, 'models/mariam_description/mariam.urdf.xacro')
+  default_sdf_model_path = os.path.join(mariam_description_pkg_share, 'models/mariam_description/mariam.sdf')
   robot_name = 'mariam'
-  robot_localization_file_path = os.path.join(pkg_share, 'config/ekf.yaml') 
-  default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_gazebo_config.rviz')
+  
+  robot_localization_file_path = os.path.join(mariam_navigation_pkg_share, 'config/ekf.yaml') 
+  
+  default_rviz_config_path = os.path.join(mariam_description_pkg_share, 'rviz/urdf_gazebo_config.rviz')
+  
   world_file_name = 'mariam_agent_world/smalltown.world'
-  world_path = os.path.join(pkg_share, 'worlds', world_file_name)
+  world_path = os.path.join(mariam_gazebo_pkg_share, 'worlds', world_file_name)
   
   # Launch configuration variables specific to simulation
   headless = LaunchConfiguration('headless')

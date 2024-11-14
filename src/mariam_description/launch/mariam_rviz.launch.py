@@ -11,7 +11,7 @@ def generate_launch_description():
   # Set the path to different files and folders.
   pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
   default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_model_path = os.path.join(pkg_share, 'models/mariam_description/mariam.urdf.xacro')
+  default_model_path = os.path.join(pkg_share, 'models/mariam.urdf.xacro')
   robot_name_in_urdf = 'mariam'
   default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_gazebo_config.rviz')
 
