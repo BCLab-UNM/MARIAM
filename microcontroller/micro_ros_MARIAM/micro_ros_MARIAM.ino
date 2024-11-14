@@ -70,7 +70,7 @@ std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 heading;
-std_msgs__msg__Float32 force;
+std_msgs__msg__Float32 force_msg;
 double left_set_point, right_set_point, dleft, dright, left_pid_output, right_pid_output;
 double Kp=500.0, Ki=2000.0, Kd=0.0;
 
@@ -106,11 +106,6 @@ const double ticks_per_rotation = 8400;
 double theta_heading = 0;
 double previous_x_pos = 0.0;
 double previous_y_pos = 0.0;
-
-// Global variables for force averaging
-float force_samples[30];  // Array to store force readings
-int force_sample_count = 0;              // Counter for the number of stored samples
-int averaging_window = 5;  
 
 bool estop = true;
 
@@ -244,32 +239,6 @@ void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
   odom_msg.twist.twist.angular.z = delta_theta / elapsed_time;
 }
 
-// Function for building a list of the most recent force readings
-// Used for debugging force values
-void add_force_sample(float new_sample) {
-  // Shift samples if buffer is full
-  if (force_sample_count >= averaging_window) {
-    for (int i = 1; i < averaging_window; i++) {
-      force_samples[i - 1] = force_samples[i];
-    }
-    force_samples[averaging_window - 1] = new_sample;
-  } else {
-    // Add new sample
-    force_samples[force_sample_count++] = new_sample;
-  }
-}
-
-// Function for averaging our forces list
-// Used for debugging force values
-float compute_average_force() {
-  float sum = 0.0;
-  int count = force_sample_count < averaging_window ? force_sample_count : averaging_window;
-  for (int i = 0; i < count; i++) {
-    sum += force_samples[i];
-  }
-  return count > 0 ? sum / count : 0;
-}
-
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
   // Only run if timer is available
@@ -315,25 +284,21 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     // update_odometry(left_ticks.data, right_ticks.data);
     update_odometry_new(left_ticks.data, right_ticks.data, elapsed_time_sec);
 
-    // Read new force data and add it to the sample buffer
-    float current_force = analogRead(A5) * (5.0 / 1023.0);
-    add_force_sample(current_force);
-
-    // Compute the average force and publish it
-    force.data = compute_average_force();
+    // Collect force data
+    float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    // float coef_0 = 0.0; // coef for x^0
-    // float coef_1 = 0.0;
-    // float coef_2 = 0.0;
-    // float coef_3 = 0.0;  
-    // force.data = coef_3 * pow(force.data, 3) 
-    //             + coef_2 * pow(force.data, 2) 
-    //             + coef_1 * force.data 
-    //             + coef_0;
+    float coef_0 = 1.0; // coef for x^0
+    float coef_1 = 1.0; // coef for x^1
+    float coef_2 = 1.0; // coef for x^2
+    float coef_3 = 1.0; // coef for x^3
+    force_msg.data = coef_3 * pow(raw_force_data, 3) 
+                + coef_2 * pow(raw_force_data, 2) 
+                + coef_1 * raw_force_data
+                + coef_0;
 
     // Publish force and odom values to ROS2 network
-    RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
+    RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
     
     // Publish speeds to ROS2 network
@@ -378,9 +343,9 @@ void subscription_cmd_vel_callback(const void *msgin) {
 
 void subscription_pid_callback(const void *msgin) {
   const geometry_msgs__msg__Point * msg = (const geometry_msgs__msg__Point *)msgin;
-  //left_PID.SetTunings(double Kp, double Ki, double Kd, int POn);
+
+  // Set PID parameters
   left_PID.SetTunings(msg->x, msg->y, msg->z);
-  //right_PID.SetTunings(double Kp, double Ki, double Kd, int POn)
   right_PID.SetTunings(msg->x, msg->y, msg->z);
 }
 
@@ -439,40 +404,56 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Create publishers
+  // Left PID output publisher
   RCCHECK(rclc_publisher_init_default(
     &left_pid_output_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
+
+  // Left set point publisher
   // RCCHECK(rclc_publisher_init_default(
   //   &left_set_point_publisher,
   //   &node,
   //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_SET_POINT_TOPIC_NAME));
+
+  // Right PID output publisher
   RCCHECK(rclc_publisher_init_default(
     &right_pid_output_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_PID_OUTPUT_TOPIC_NAME));
+
+  // Right set point publisher
   // RCCHECK(rclc_publisher_init_default(
   //   &right_set_point_publisher,
   //   &node,
   //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_SET_POINT_TOPIC_NAME));
+
+  // Force publsisher
   RCCHECK(rclc_publisher_init_default(
     &force_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), FORCE_TOPIC_NAME));
+
+  // Wheel odom publisher
   RCCHECK(rclc_publisher_init_default(
     &odom_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), ODOM_TOPIC_NAME));
 
   // Create subscribers
+  // Command velocity subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_cmd_vel,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), CMD_VEL_TOPIC_NAME));
+
+  // PID parameter subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_pid,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));  
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));
+
+  // Wheel analog subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_wheel_analog,
     &node,
