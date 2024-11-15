@@ -5,9 +5,16 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+# Find required packages
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
+find_package(launch REQUIRED)
+find_package(launch_ros REQUIRED)
+
+# Install the launch files
+install(
+  DIRECTORY launch/
+  DESTINATION share/${PROJECT_NAME}/launch
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
