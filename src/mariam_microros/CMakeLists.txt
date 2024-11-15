@@ -7,8 +7,6 @@ endif()
 
 # Find required packages
 find_package(ament_cmake REQUIRED)
-find_package(launch REQUIRED)
-find_package(launch_ros REQUIRED)
 
 # Install the launch files
 install(
