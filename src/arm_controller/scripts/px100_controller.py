@@ -20,9 +20,9 @@ from scipy.spatial.transform import Rotation as R
 
 
 class XSArmRobot(InterbotixManipulatorXS):
-    current_loop_rate = 500
+    current_loop_rate = 25
     moving_time       = 0.2
-    accel_time        = 0.001
+    accel_time        = 0.1
     times             = []
     lock = Lock()
     desired_pose = Pose()
@@ -37,7 +37,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             args=args,
         )
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
-        
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
@@ -52,7 +51,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             self.update_desired_pose_cb,
             10
         )
-        # dummy publishers for timing functions
+        # dummy publisher for timing functions
         self.timer_pub = self.core.get_node().create_publisher(
             Float64,
             'control_loop_time',
@@ -96,13 +95,12 @@ class XSArmRobot(InterbotixManipulatorXS):
         msg: the desired pose.
         """
         # create a copy of the desired pose using a lock to avoid race conditions
-        start_time = self.core.get_node().get_clock().now()
+        # start_time = self.core.get_node().get_clock().now()
         with self.lock:
             desired_pose = copy.deepcopy(self.desired_pose)
-        # start_time = self.core.get_node().get_clock().now()
-        waist_step = 0.005
-        translate_step = 0.001
-        ee_pitch_step = 0.004
+        waist_step = 0.008
+        translate_step = 0.01
+        ee_pitch_step = 0.04
         waist_tol   = 8e-3
         ee_tol      = 8e-3
         set_ee_pose = False # determines if the IK solver will be called
@@ -177,13 +175,14 @@ class XSArmRobot(InterbotixManipulatorXS):
             set_ee_pose = True
             T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
-        if abs(ee_pitch_error) > ee_tol:
-            set_ee_pose = True
-            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
-            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+        # if abs(ee_pitch_error) > ee_tol:
+        #     set_ee_pose = True
+        #     rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
+        #     T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
         # if 'set_ee_pose' is true, then the IK solver will be called
         # and the result of the IK solver is published to '/robot_name/commands/joint_group'
+
         if set_ee_pose:
             T_sd = self.T_sy @ T_yb
             _, success = self.arm.set_ee_pose_matrix(
@@ -196,21 +195,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             )
             if success:
                 self.T_yb = np.array(T_yb)
-                end_time = self.core.get_node().get_clock().now()
-                time = Float64()
-                time.data = (end_time-start_time).nanoseconds / 1e9
-                # self.times.append(time)
-                # if len(self.times) == 10:
-                #     self.log_info(f'Avg. time over 10 samples (s): {sum(self.times)/10}')
-                #     self.times = []
-                # else:
-                    # self.log_info(
-                    #     f'Sample:\n{(end_time-start_time).nanoseconds / 1e9}')
-                self.timer_pub.publish(time)
-
-            # else:
-                # self.log_info('Failed to move to goal pose.')
-                
 
 
     def update_desired_pose_cb(self, msg: Pose):
@@ -227,6 +211,7 @@ class XSArmRobot(InterbotixManipulatorXS):
 
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
+
 
 def main(args=None):
     p = argparse.ArgumentParser()

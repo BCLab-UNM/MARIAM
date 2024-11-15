@@ -43,7 +43,7 @@ def launch_setup(context, *args, **kwargs):
     xsarm_robot_node = Node(
         name='xsarm_robot_node',
         package='arm_controller',
-        executable='xsarm_robot.py',
+        executable='px100_controller.py',
         namespace=robot_name_launch_arg,
         output='screen', # change to 'screen' for messages
         parameters=[{
@@ -136,7 +136,7 @@ def launch_setup(context, *args, **kwargs):
         namespace=robot_name_launch_arg,
         parameters=[{
             'delay': 0.0,
-            'frequency': 1.0,
+            'frequency': 0.002,
             'x_pos': 0.0,
             'y_pos': 0.25,
             'z_pos': 0.098
