@@ -5,6 +5,7 @@
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
 #include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/twist.h>
 
 // Pin assignments for the motor driver and encoders
@@ -33,12 +34,14 @@ rcl_node_t node;
 rcl_publisher_t left_total_ticks_publisher;
 rcl_publisher_t right_total_ticks_publisher;
 rcl_publisher_t wheel_velocity_publisher;
+rcl_publisher_t force_publisher;
 rcl_subscription_t wheel_analog_subscriber;
 
 std_msgs__msg__Int32 left_wheel_total_ticks_msg;
 std_msgs__msg__Int32 right_wheel_total_ticks_msg;
 geometry_msgs__msg__Twist wheel_velocity_msg;
 std_msgs__msg__Int32 analog_msg;  // Changed from Float32 to Int32
+std_msgs__msg__Float32 force_msg;
 
 // ROS 2 support structures
 rclc_support_t support;
@@ -50,9 +53,40 @@ rcl_timer_t timer;
 long left_total_ticks = 0;
 long right_total_ticks = 0;
 
+// Global variables for force averaging
+float force_samples[30];  // Array to store force readings
+int force_sample_count = 0; // Counter for the number of stored samples
+int averaging_window = 5;  
+
 // Helper function to convert ticks to meters
 double ticksToMeters(long ticks) {
     return (ticks / (double)TICKS_PER_ROTATION) * WHEEL_CIRCUMFERENCE;
+}
+
+// Function for building a list of the most recent force readings
+// Used for debugging force values
+void add_force_sample(float new_sample) {
+  // Shift samples if buffer is full
+  if (force_sample_count >= averaging_window) {
+    for (int i = 1; i < averaging_window; i++) {
+      force_samples[i - 1] = force_samples[i];
+    }
+    force_samples[averaging_window - 1] = new_sample;
+  } else {
+    // Add new sample
+    force_samples[force_sample_count++] = new_sample;
+  }
+}
+
+// Function for averaging our forces list
+// Used for debugging force values
+float compute_average_force() {
+  float sum = 0.0;
+  int count = force_sample_count < averaging_window ? force_sample_count : averaging_window;
+  for (int i = 0; i < count; i++) {
+    sum += force_samples[i];
+  }
+  return count > 0 ? sum / count : 0;
 }
 
 // Timer callback to update and publish velocities and total ticks
@@ -85,6 +119,14 @@ void timer_callback(rcl_timer_t *timer, int64_t last_call_time) {
     wheel_velocity_msg.linear.x = (left_wheel_speed + right_wheel_speed) / 2; // Average linear velocity
     wheel_velocity_msg.angular.z = (right_wheel_speed - left_wheel_speed) / WHEEL_CIRCUMFERENCE; // Angular velocity
 
+    // Read new force data and add it to the sample buffer
+    float current_force = analogRead(A5) * (5.0 / 1023.0);
+    add_force_sample(current_force);
+
+    // Compute the average force and publish it
+    force_msg.data = compute_average_force();
+
+    rcl_publish(&force_publisher, &force_msg, NULL);
     rcl_publish(&wheel_velocity_publisher, &wheel_velocity_msg, NULL);
 }
 
@@ -133,6 +175,13 @@ void setup() {
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
         "/wheel_vel");
+
+    // Initialize force publisher
+    rclc_publisher_init_default(
+        &force_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+        "/force");
 
     // Initialize wheel_analog subscriber (for Int32 type)
     rclc_subscription_init_default(

@@ -60,7 +60,6 @@ Encoder rightEncoder(rightEncoderA, rightEncoderB);
 // Declare publishers
 rcl_publisher_t odom_publisher;
 rcl_publisher_t force_publisher;
-rcl_publisher_t data_publisher;
 rcl_publisher_t left_pid_output_publisher;
 rcl_publisher_t left_set_point_publisher;
 rcl_publisher_t right_pid_output_publisher;
@@ -69,9 +68,8 @@ rcl_publisher_t right_set_point_publisher;
 std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
-std_msgs__msg__Float32 heading;
-std_msgs__msg__Float32 force;
-double left_set_point, right_set_point, dleft, dright, left_pid_output, right_pid_output;
+std_msgs__msg__Float32 force_msg;
+double left_set_point, right_set_point, left_pid_output, right_pid_output;
 double Kp=500.0, Ki=2000.0, Kd=0.0;
 
 // PID object takes the parameters PID(Input, Output, Setpoint, Kp, Ki, Kd, DIRECT)
@@ -107,11 +105,6 @@ double theta_heading = 0;
 double previous_x_pos = 0.0;
 double previous_y_pos = 0.0;
 
-// Global variables for force averaging
-float force_samples[30];  // Array to store force readings
-int force_sample_count = 0;              // Counter for the number of stored samples
-int averaging_window = 5;  
-
 bool estop = true;
 
 // Indicator light
@@ -143,75 +136,15 @@ void error_loop(){
   }
 }
 
-double leftTicksToMeters(double leftTicks_arg) {
-  return (wheel_circumference * (double)leftTicks_arg) / (double)ticks_per_rotation;
-}
-
-double rightTicksToMeters(double rightTicks_arg) {
-  return (wheel_circumference * (double)rightTicks_arg) / (double)ticks_per_rotation;
-}
-
 double ticksToMeters(long ticks) {
   return (ticks / (double)ticks_per_rotation) * wheel_circumference;
-}
-
-double metersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / ((wheel_circumference + wheel_circumference) / 2);
-}
-
-double leftMetersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / wheel_circumference;
-}
-
-double rightMetersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / wheel_circumference;
-}
-
-double diffToTheta(double right, double left) {
-  return (right - left) / wheel_base;
 }
 
 double thetaToDiff(double theta) {
   return theta * wheel_base;
 }
 
-void update_rotation(float x, float y, float z) {
-  float c1 = cos(y);
-  float c2 = cos(z);
-  float c3 = cos(x);
-  float s1 = sin(y);
-  float s2 = sin(z);
-  float s3 = sin(x);
-  odom_msg.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
-  odom_msg.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
-  odom_msg.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
-  odom_msg.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
-}
-
-void update_odometry(int ticks_left, int ticks_right){
-  dleft = ticks_left / ticks_per_rotation * wheel_circumference;
-  dright = ticks_right / ticks_per_rotation * wheel_circumference;
-
-  double dcenter = (dleft + dright) / 2.0;
-  double dtheta = (dright - dleft) / wheel_base;
-
-  double dx = dcenter * cos(theta_heading);
-  double dy = dcenter * sin(theta_heading);
-
-  odom_msg.pose.pose.position.x += dx;
-  odom_msg.pose.pose.position.y += dy;
-  theta_heading += dtheta/2;
-  heading.data = theta_heading;
-
-  update_rotation(0, 0, theta_heading);
-  //odom.pose.pose.orientation = //get_rotation()
-
-  odom_msg.twist.twist.linear.x = dx;
-  odom_msg.twist.twist.linear.y = dy;
-  odom_msg.twist.twist.angular.z = dtheta;
-}
-
-void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
+void update_odometry(int left_ticks, int right_ticks, double elapsed_time) {
   // Convert ticks to distance in meters for each wheel
   double left_distance = (wheel_circumference * left_ticks) / ticks_per_rotation;
   double right_distance = (wheel_circumference * right_ticks) / ticks_per_rotation;
@@ -244,31 +177,9 @@ void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
   odom_msg.twist.twist.angular.z = delta_theta / elapsed_time;
 }
 
-// Function for building a list of the most recent force readings
-// Used for debugging force values
-void add_force_sample(float new_sample) {
-  // Shift samples if buffer is full
-  if (force_sample_count >= averaging_window) {
-    for (int i = 1; i < averaging_window; i++) {
-      force_samples[i - 1] = force_samples[i];
-    }
-    force_samples[averaging_window - 1] = new_sample;
-  } else {
-    // Add new sample
-    force_samples[force_sample_count++] = new_sample;
-  }
-}
-
-// Function for averaging our forces list
-// Used for debugging force values
-float compute_average_force() {
-  float sum = 0.0;
-  int count = force_sample_count < averaging_window ? force_sample_count : averaging_window;
-  for (int i = 0; i < count; i++) {
-    sum += force_samples[i];
-  }
-  return count > 0 ? sum / count : 0;
-}
+// =============================================================
+// ========================= CALLBACKS =========================
+// =============================================================
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
@@ -312,28 +223,23 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     else { move.rotateRight(left_pid_output, right_pid_output*-1); }  
 
     // Update odom reading
-    // update_odometry(left_ticks.data, right_ticks.data);
-    update_odometry_new(left_ticks.data, right_ticks.data, elapsed_time_sec);
+    update_odometry(left_ticks.data, right_ticks.data, elapsed_time_sec);
 
-    // Read new force data and add it to the sample buffer
-    float current_force = analogRead(A5) * (5.0 / 1023.0);
-    add_force_sample(current_force);
-
-    // Compute the average force and publish it
-    force.data = compute_average_force();
+    // Collect force data
+    float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    // float coef_0 = 0.0; // coef for x^0
-    // float coef_1 = 0.0;
-    // float coef_2 = 0.0;
-    // float coef_3 = 0.0;  
-    // force.data = coef_3 * pow(force.data, 3) 
-    //             + coef_2 * pow(force.data, 2) 
-    //             + coef_1 * force.data 
-    //             + coef_0;
+    float coef_0 = 1.0; // coef for x^0
+    float coef_1 = 1.0; // coef for x^1
+    float coef_2 = 1.0; // coef for x^2
+    float coef_3 = 1.0; // coef for x^3
+    force_msg.data = coef_3 * pow(raw_force_data, 3) 
+                + coef_2 * pow(raw_force_data, 2) 
+                + coef_1 * raw_force_data
+                + coef_0;
 
     // Publish force and odom values to ROS2 network
-    RCSOFTCHECK(rcl_publish(&force_publisher, &force, NULL));
+    RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
     RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
     
     // Publish speeds to ROS2 network
@@ -378,9 +284,9 @@ void subscription_cmd_vel_callback(const void *msgin) {
 
 void subscription_pid_callback(const void *msgin) {
   const geometry_msgs__msg__Point * msg = (const geometry_msgs__msg__Point *)msgin;
-  //left_PID.SetTunings(double Kp, double Ki, double Kd, int POn);
+
+  // Set PID parameters
   left_PID.SetTunings(msg->x, msg->y, msg->z);
-  //right_PID.SetTunings(double Kp, double Ki, double Kd, int POn)
   right_PID.SetTunings(msg->x, msg->y, msg->z);
 }
 
@@ -439,40 +345,56 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Create publishers
+  // Left PID output publisher
   RCCHECK(rclc_publisher_init_default(
     &left_pid_output_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
+
+  // Left set point publisher
   // RCCHECK(rclc_publisher_init_default(
   //   &left_set_point_publisher,
   //   &node,
   //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_SET_POINT_TOPIC_NAME));
+
+  // Right PID output publisher
   RCCHECK(rclc_publisher_init_default(
     &right_pid_output_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_PID_OUTPUT_TOPIC_NAME));
+
+  // Right set point publisher
   // RCCHECK(rclc_publisher_init_default(
   //   &right_set_point_publisher,
   //   &node,
   //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_SET_POINT_TOPIC_NAME));
+
+  // Force publsisher
   RCCHECK(rclc_publisher_init_default(
     &force_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), FORCE_TOPIC_NAME));
+
+  // Wheel odom publisher
   RCCHECK(rclc_publisher_init_default(
     &odom_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), ODOM_TOPIC_NAME));
 
   // Create subscribers
+  // Command velocity subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_cmd_vel,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), CMD_VEL_TOPIC_NAME));
+
+  // PID parameter subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_pid,
     &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));  
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));
+
+  // Wheel analog subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_wheel_analog,
     &node,
