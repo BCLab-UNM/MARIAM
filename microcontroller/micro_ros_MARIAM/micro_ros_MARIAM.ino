@@ -60,7 +60,6 @@ Encoder rightEncoder(rightEncoderA, rightEncoderB);
 // Declare publishers
 rcl_publisher_t odom_publisher;
 rcl_publisher_t force_publisher;
-rcl_publisher_t data_publisher;
 rcl_publisher_t left_pid_output_publisher;
 rcl_publisher_t left_set_point_publisher;
 rcl_publisher_t right_pid_output_publisher;
@@ -69,9 +68,8 @@ rcl_publisher_t right_set_point_publisher;
 std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
-std_msgs__msg__Float32 heading;
 std_msgs__msg__Float32 force_msg;
-double left_set_point, right_set_point, dleft, dright, left_pid_output, right_pid_output;
+double left_set_point, right_set_point, left_pid_output, right_pid_output;
 double Kp=500.0, Ki=2000.0, Kd=0.0;
 
 // PID object takes the parameters PID(Input, Output, Setpoint, Kp, Ki, Kd, DIRECT)
@@ -138,75 +136,15 @@ void error_loop(){
   }
 }
 
-double leftTicksToMeters(double leftTicks_arg) {
-  return (wheel_circumference * (double)leftTicks_arg) / (double)ticks_per_rotation;
-}
-
-double rightTicksToMeters(double rightTicks_arg) {
-  return (wheel_circumference * (double)rightTicks_arg) / (double)ticks_per_rotation;
-}
-
 double ticksToMeters(long ticks) {
   return (ticks / (double)ticks_per_rotation) * wheel_circumference;
-}
-
-double metersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / ((wheel_circumference + wheel_circumference) / 2);
-}
-
-double leftMetersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / wheel_circumference;
-}
-
-double rightMetersToTicks(double meters) {
-  return (meters * ticks_per_rotation) / wheel_circumference;
-}
-
-double diffToTheta(double right, double left) {
-  return (right - left) / wheel_base;
 }
 
 double thetaToDiff(double theta) {
   return theta * wheel_base;
 }
 
-void update_rotation(float x, float y, float z) {
-  float c1 = cos(y);
-  float c2 = cos(z);
-  float c3 = cos(x);
-  float s1 = sin(y);
-  float s2 = sin(z);
-  float s3 = sin(x);
-  odom_msg.pose.pose.orientation.w = c1 * c2 * c3 - s1 * s2 * s3;
-  odom_msg.pose.pose.orientation.x= s1 * s2 * c3 + c1 * c2 * s3;
-  odom_msg.pose.pose.orientation.y = s1 * c2 * c3 + c1 * s2 * s3;
-  odom_msg.pose.pose.orientation.z = c1 * s2 * c3 - s1 * c2 * s3;
-}
-
-void update_odometry(int ticks_left, int ticks_right){
-  dleft = ticks_left / ticks_per_rotation * wheel_circumference;
-  dright = ticks_right / ticks_per_rotation * wheel_circumference;
-
-  double dcenter = (dleft + dright) / 2.0;
-  double dtheta = (dright - dleft) / wheel_base;
-
-  double dx = dcenter * cos(theta_heading);
-  double dy = dcenter * sin(theta_heading);
-
-  odom_msg.pose.pose.position.x += dx;
-  odom_msg.pose.pose.position.y += dy;
-  theta_heading += dtheta/2;
-  heading.data = theta_heading;
-
-  update_rotation(0, 0, theta_heading);
-  //odom.pose.pose.orientation = //get_rotation()
-
-  odom_msg.twist.twist.linear.x = dx;
-  odom_msg.twist.twist.linear.y = dy;
-  odom_msg.twist.twist.angular.z = dtheta;
-}
-
-void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
+void update_odometry(int left_ticks, int right_ticks, double elapsed_time) {
   // Convert ticks to distance in meters for each wheel
   double left_distance = (wheel_circumference * left_ticks) / ticks_per_rotation;
   double right_distance = (wheel_circumference * right_ticks) / ticks_per_rotation;
@@ -238,6 +176,10 @@ void update_odometry_new(int left_ticks, int right_ticks, double elapsed_time) {
   odom_msg.twist.twist.linear.x = distance / elapsed_time;
   odom_msg.twist.twist.angular.z = delta_theta / elapsed_time;
 }
+
+// =============================================================
+// ========================= CALLBACKS =========================
+// =============================================================
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
@@ -281,8 +223,7 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     else { move.rotateRight(left_pid_output, right_pid_output*-1); }  
 
     // Update odom reading
-    // update_odometry(left_ticks.data, right_ticks.data);
-    update_odometry_new(left_ticks.data, right_ticks.data, elapsed_time_sec);
+    update_odometry(left_ticks.data, right_ticks.data, elapsed_time_sec);
 
     // Collect force data
     float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
