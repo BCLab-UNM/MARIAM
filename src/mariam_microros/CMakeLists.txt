@@ -12,8 +12,8 @@ find_package(launch_ros REQUIRED)
 
 # Install the launch files
 install(
-  DIRECTORY launch/
-  DESTINATION share/${PROJECT_NAME}/launch
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
