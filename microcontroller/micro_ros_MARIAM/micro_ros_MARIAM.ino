@@ -1,14 +1,16 @@
 // Topic defines
-#define NODE_NAME "micro_ros_arduino_node_on_" 
-#define CMD_VEL_TOPIC_NAME "cmd_vel"
-#define ODOM_TOPIC_NAME "odom/wheel"
-#define FORCE_TOPIC_NAME "force"
-#define LEFT_PID_OUTPUT_TOPIC_NAME "left_pid_output"
-#define LEFT_SET_POINT_TOPIC_NAME "left_set_point"
-#define RIGHT_PID_OUTPUT_TOPIC_NAME "right_pid_output"
-#define RIGHT_SET_POINT_TOPIC_NAME "right_set_point"
-#define PID_TOPIC_NAME "pid"
-#define WHEEL_ANALOG_TOPIC_NAME "wheel_analog"
+#define NAMESPACE "monica"
+//#define NAMESPACE "ross"
+#define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
+#define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
+#define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
+#define FORCE_TOPIC_NAME NAMESPACE "/force"
+#define LEFT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/left_pid_output"
+#define LEFT_SET_POINT_TOPIC_NAME NAMESPACE "/left_set_point"
+#define RIGHT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/right_pid_output"
+#define RIGHT_SET_POINT_TOPIC_NAME NAMESPACE "/right_set_point"
+#define PID_TOPIC_NAME NAMESPACE "/pid"
+#define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 
 // Misc libraries
 #include <micro_ros_arduino.h>
