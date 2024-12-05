@@ -1,0 +1,19 @@
+<package format="3">
+  <name>mariam_slam</name>
+  <version>0.0.0</version>
+  <description>Package containing launch files for SLAM.</description>
+
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>TODO: License declaration</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
+  
+  <depend>rclpy</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
