@@ -4,7 +4,7 @@ import argparse
 import sys
 import time
 import copy
-from threading import Lock
+from threading import Lock, get_ident
 
 from interbotix_common_modules.common_robot.robot import (
     robot_shutdown, robot_startup
@@ -17,10 +17,16 @@ from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Float64
 from scipy.spatial.transform import Rotation as R
+from math import sqrt, pi
+
+# imports for the profiler
+# import cProfile
+# import pstats
+# from io import StringIO
 
 
 class XSArmRobot(InterbotixManipulatorXS):
-    current_loop_rate = 25
+    current_loop_rate = 10
     moving_time       = 0.2
     accel_time        = 0.1
     times             = []
@@ -67,12 +73,23 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=0.75
         )
         self.update_T_yb()
+
+        # profiler for IKinSpace()
+        # profiler = cProfile.Profile()
+        # profiler.enable()
+
         try:
             robot_startup()
             while rclpy.ok():
+                # self.log_info(f'Threat ID (while loop): {get_ident()}')
                 self.control_loop()
                 self.rate.sleep()
         except KeyboardInterrupt:
+            # profiler.disable()
+            # save the results from the profiler
+            # s = StringIO()
+            # ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
+            # ps.dump_stats('px100_controller.py-2.profile.stats')
             robot_shutdown()
 
 
@@ -96,6 +113,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         """
         # create a copy of the desired pose using a lock to avoid race conditions
         # start_time = self.core.get_node().get_clock().now()
+        # self.log_info(f'Threat ID (control loop): {get_ident()}')
         with self.lock:
             desired_pose = copy.deepcopy(self.desired_pose)
         waist_step = 0.008
@@ -175,10 +193,10 @@ class XSArmRobot(InterbotixManipulatorXS):
             set_ee_pose = True
             T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
-        # if abs(ee_pitch_error) > ee_tol:
-        #     set_ee_pose = True
-        #     rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
-        #     T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+        if abs(ee_pitch_error) > ee_tol:
+            set_ee_pose = True
+            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
+            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
         
         # if 'set_ee_pose' is true, then the IK solver will be called
         # and the result of the IK solver is published to '/robot_name/commands/joint_group'
@@ -188,7 +206,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),    
-                execute=True,
+                execute=False,
                 moving_time=self.moving_time,
                 accel_time=self.accel_time,
                 blocking=False
@@ -196,8 +214,43 @@ class XSArmRobot(InterbotixManipulatorXS):
             if success:
                 self.T_yb = np.array(T_yb)
 
+    def ccd(self, target_x, target_y, target_z):
+        # number of iterations to perform to minimize distance between ee
+        # and target position
+        iterations = 20
+        angle_adjustment = pi / 256
+
+        # number of joints on the robot
+        # we will only consider the shoulder, elbow, and wrist
+        # and handle the waist angle iteratively in the control loop
+        numOfJoints = 3
+
+        # positions in cartisian space w.r.t body frame
+        x = self.T_yb[0, 3]
+        y = self.T_yb[1, 3]
+        z = self.T_yb[2, 3]
+
+        joint_positions = self.arm.get_joint_commands()
+
+        for i in range(iterations):
+            # for each joint
+            # start at joint 1 to ignore the waist angle
+            for j in range(1, numOfJoints):
+                # compute the error between the ee and target
+                x_error = (target_x - x)**2
+                y_error = (target_y - y)**2
+                z_error = (target_z - z)**2
+                # the goal is to adjust the joint angle to
+                # minimize this error (task space error)
+                error = self.sign(sqrt(x_error + y_error + z_error))
+                joint_positions[j] += error * angle_adjustment
+
+        return joint_positions
+
+
 
     def update_desired_pose_cb(self, msg: Pose):
+        # self.log_info(f'Threat ID (desired pose cb): {get_ident()}')
         with self.lock:
             self.desired_pose = copy.deepcopy(msg)
 
