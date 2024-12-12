@@ -1,33 +1,16 @@
 cmake_minimum_required(VERSION 3.8)
-project(mariam_description)
-
-# Default to C99
-if(NOT CMAKE_C_STANDARD)
-  set(CMAKE_C_STANDARD 99)
-endif()
-
-# Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif()
+project(mariam_microros)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+# Find required packages
 find_package(ament_cmake REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
-# Install mesh files
-install(DIRECTORY meshes/
-  DESTINATION share/${PROJECT_NAME}/meshes
-)
-
+# Install the launch files
 install(
-  DIRECTORY launch models models/mariam_description rviz
+  DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
