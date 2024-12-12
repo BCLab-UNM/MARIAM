@@ -5,36 +5,7 @@ Different modes of control for the end effector of the PX100 robotic arm.
 
 ### px100_controller.launch.py
 This launch file requires the modern robotics package to be installed using pip: `pip3 install modern-robotics`
-Documentation for controller input: https://wiki.ros.org/joy#Microsoft_Xbox_360_Wired_Controller_for_Linux
 
-Note: the buttons on the controller fall under two categories: buttons and axes. The following table documents which category each button falls under and the action it will perform when pressed.
-
-**Buttons**
-| Value | Button       | Action                   |
-|-------|--------------|--------------------------|
-|   0   | A            |                          |
-|   1   | B            |                          |
-|   2   | X            |       |
-|   3   | Y            |       |
-|   4   | LB           | Rotate waist counterclockwise |
-|   5   | RB           | Rotate waist clockwise   |
-|   6   | back         | Go to sleep pose         |
-|   7   | start        | Go to home pose          |
-|   8   | power        | Enable torque            |
-|   9   | LS (pressed) |  |
-|  10   | RS (pressed) |    |
-
-**Axes**
-| Value | Button                 | Action                  |
-|-------|------------------------|-------------------------|
-|   0   | LS (left/right)        | Move end effector along X axis |
-|   1   | LS (up/down)           | Move end effector along Z axis |
-|   2   | LT                     |                         |
-|   3   | RS (left/right)        |                         |
-|   4   | RS (up/down)           | Move end effector pitch |
-|   5   | RT                     |                         |
-|   6   | Cross key (left/right) | Change speed type       |
-|   7   | Cross key (up/down)    | Change speed            |
 
 Launch command for fake hardware:
 ```bash
@@ -59,6 +30,8 @@ All parameters:
 - use_sim: Can be `true` or `false`. If `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's motion; if `false`, the real DYNAMIXEL driver node is run. This is used to run a simulation of the arm instead of using an actual arm. Default is `true`.
 
 - use_admittance_control: launches three nodes to run a demo of admittance control.
+
+- publish_poses: launches the pose_publisher node
 
 Best practices when moving the arm using the Python-ROS interface: https://docs.trossenrobotics.com/interbotix_xsarms_docs/python_ros_interface.html#tips-best-practices
 

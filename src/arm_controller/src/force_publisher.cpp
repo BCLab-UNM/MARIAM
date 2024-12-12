@@ -29,7 +29,7 @@ class ForcePublisher : public rclcpp::Node
       this->get_parameter("frequency", frequency);
       this->get_parameter("max_ticks", max_ticks);
       
-      delay_timer = this->create_wall_timer(
+      initial_delay_timer = this->create_wall_timer(
         delay * 1s,
         std::bind(&ForcePublisher::start_timer, this)
       );
@@ -44,22 +44,22 @@ class ForcePublisher : public rclcpp::Node
     double duration;
     double frequency;
     
-    rclcpp::TimerBase::SharedPtr delay_timer;
-    rclcpp::TimerBase::SharedPtr main_timer;
-    rclcpp::TimerBase::SharedPtr stop_timer;
+    rclcpp::TimerBase::SharedPtr initial_delay_timer;
+    rclcpp::TimerBase::SharedPtr publisher_timer;
+    rclcpp::TimerBase::SharedPtr duration_timer;
     rclcpp::Publisher<Float64>::SharedPtr force_publisher;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("force_publisher");
 
     void start_timer()
     {
-      delay_timer->cancel();
+      initial_delay_timer->cancel();
 
-      main_timer = this->create_wall_timer(
+      publisher_timer = this->create_wall_timer(
         frequency * 1s,
         std::bind(&ForcePublisher::callback, this)
       );
 
-      stop_timer = this->create_wall_timer(
+      duration_timer = this->create_wall_timer(
         duration * 1s, 
         std::bind(&ForcePublisher::stop, this)
       );
@@ -70,7 +70,6 @@ class ForcePublisher : public rclcpp::Node
       auto msg = Float64();
       if(ticks == max_ticks)
       {
-        RCLCPP_INFO(LOGGER, " =================== Changing force ===================");
         ticks = 0;
         if(current_force >= 2) current_force = 0;
         else {
@@ -79,6 +78,7 @@ class ForcePublisher : public rclcpp::Node
           // current_force = 2;
           // RCLCPP_INFO(LOGGER, "Increasing force by %f", increment);
         }
+        RCLCPP_INFO(LOGGER, "Current force: %.6f N", current_force);
       }
       else ticks++;
       msg.data = current_force;
@@ -88,8 +88,8 @@ class ForcePublisher : public rclcpp::Node
 
     void stop()
     {
-      RCLCPP_INFO(this->get_logger(), "Canceling timer");
-      main_timer->cancel();
+      publisher_timer->cancel();
+      RCLCPP_INFO(this->get_logger(), "Cancelled timer");
     }
 };
 

@@ -55,7 +55,7 @@ class PosePublisher : public rclcpp::Node
         10
       );
 
-      srand(42);
+      // srand(42);
 
       delay_timer = this->create_wall_timer(
         delay * 1s,
@@ -110,16 +110,16 @@ class PosePublisher : public rclcpp::Node
       if(ticks == max_ticks)
       {
         ticks = 0;
-        pose_num = 1 + (rand() % 3);
+        pose_num = (pose_num + 1) % 3;
         switch(pose_num){
           case 1:
-            current_pose = pose1;
-            break;
-          case 2:
             current_pose = pose2;
             break;
-          default:
+          case 2:
             current_pose = pose3;
+            break;
+          default: // case 0
+            current_pose = pose1;
             break;
         }
         RCLCPP_INFO(LOGGER, "Max ticks reached.");

@@ -7,7 +7,6 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
-    GroupAction
 )
 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -15,13 +14,9 @@ from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
     PythonExpression,
-    TextSubstitution
 )
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import (
-    Node,
-    PushRosNamespace
-)
+from launch_ros.actions import Node
 from launch.conditions import IfCondition
 
 def launch_setup(context, *args, **kwargs):
@@ -30,8 +25,6 @@ def launch_setup(context, *args, **kwargs):
     base_link_frame_launch_arg = LaunchConfiguration('base_link_frame')
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
     mode_configs_launch_arg = LaunchConfiguration('mode_configs')
-    threshold_launch_arg = LaunchConfiguration('threshold')
-    controller_launch_arg = LaunchConfiguration('controller')
     launch_driver_launch_arg = LaunchConfiguration('launch_driver')
     use_sim_launch_arg = LaunchConfiguration('use_sim')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
@@ -39,6 +32,7 @@ def launch_setup(context, *args, **kwargs):
 
     ikpy_launch_arg = LaunchConfiguration('use_ikpy')
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
+    publish_poses_launch_arg = LaunchConfiguration('publish_poses')
 
     xsarm_robot_node = Node(
         name='xsarm_robot_node',
@@ -129,6 +123,7 @@ def launch_setup(context, *args, **kwargs):
         ),
     )
 
+    # Admittance control nodes
     virtual_pose_node = Node(
         package='arm_controller',
         executable='virtual_pose_publisher',
@@ -157,11 +152,35 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'delay': 0.0,
             'frequency': 2.0,
-            'max_ticks': 2
+            'max_ticks': 2,
+            # set duration to -1 to cancel the timer
+            'duration': -1.0
         }],
         condition=IfCondition(
             PythonExpression([
                 "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
+    # node to publish poses for testing the speed of the arm
+    pose_publisher_node = Node(
+        package='arm_controller',
+        executable='pose_publisher',
+        name='pose_publisher_node',
+        namespace=robot_name_launch_arg,
+        parameters=[{
+            'delay': 1.0,
+            # This will change pose every 5 seconds
+            'frequency': 0.002,
+            'max_ticks': 2500,
+            # 2 minutes
+            'duration': 120.0
+        }],
+        condition=IfCondition(
+            PythonExpression([
+                "'", publish_poses_launch_arg,
                 "' == 'true'"
             ])
         )
@@ -174,7 +193,8 @@ def launch_setup(context, *args, **kwargs):
         admittance_controller_node,
         admittance_rviz_markers_node,
         virtual_pose_node,
-        force_node
+        force_node,
+        pose_publisher_node
     ]
 
 
@@ -254,6 +274,12 @@ def generate_launch_description():
             default_value='false',
             choices=('true', 'false'),
             description="Launches an admittance controller node when true."
+        ),
+        DeclareLaunchArgument(
+            'publish_poses',
+            default_value='false',
+            choices=('true', 'false'),
+            description="Launches pose_publisher node when true."
         )
     ]
     declared_arguments.extend(

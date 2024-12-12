@@ -26,10 +26,9 @@ from math import sqrt, pi
 
 
 class XSArmRobot(InterbotixManipulatorXS):
-    current_loop_rate = 10
+    current_loop_rate = 250
     moving_time       = 0.2
     accel_time        = 0.1
-    times             = []
     lock = Lock()
     desired_pose = Pose()
 
@@ -81,7 +80,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         try:
             robot_startup()
             while rclpy.ok():
-                # self.log_info(f'Threat ID (while loop): {get_ident()}')
+                # self.log_info(f'Thread ID (while loop): {get_ident()}')
                 self.control_loop()
                 self.rate.sleep()
         except KeyboardInterrupt:
@@ -113,12 +112,12 @@ class XSArmRobot(InterbotixManipulatorXS):
         """
         # create a copy of the desired pose using a lock to avoid race conditions
         # start_time = self.core.get_node().get_clock().now()
-        # self.log_info(f'Threat ID (control loop): {get_ident()}')
+        # self.log_info(f'Thread ID (control loop): {get_ident()}')
         with self.lock:
             desired_pose = copy.deepcopy(self.desired_pose)
         waist_step = 0.008
-        translate_step = 0.01
-        ee_pitch_step = 0.04
+        translate_step = 0.001
+        ee_pitch_step = 0.004
         waist_tol   = 8e-3
         ee_tol      = 8e-3
         set_ee_pose = False # determines if the IK solver will be called
@@ -206,7 +205,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),    
-                execute=False,
+                execute=True,
                 moving_time=self.moving_time,
                 accel_time=self.accel_time,
                 blocking=False
@@ -214,43 +213,9 @@ class XSArmRobot(InterbotixManipulatorXS):
             if success:
                 self.T_yb = np.array(T_yb)
 
-    def ccd(self, target_x, target_y, target_z):
-        # number of iterations to perform to minimize distance between ee
-        # and target position
-        iterations = 20
-        angle_adjustment = pi / 256
-
-        # number of joints on the robot
-        # we will only consider the shoulder, elbow, and wrist
-        # and handle the waist angle iteratively in the control loop
-        numOfJoints = 3
-
-        # positions in cartisian space w.r.t body frame
-        x = self.T_yb[0, 3]
-        y = self.T_yb[1, 3]
-        z = self.T_yb[2, 3]
-
-        joint_positions = self.arm.get_joint_commands()
-
-        for i in range(iterations):
-            # for each joint
-            # start at joint 1 to ignore the waist angle
-            for j in range(1, numOfJoints):
-                # compute the error between the ee and target
-                x_error = (target_x - x)**2
-                y_error = (target_y - y)**2
-                z_error = (target_z - z)**2
-                # the goal is to adjust the joint angle to
-                # minimize this error (task space error)
-                error = self.sign(sqrt(x_error + y_error + z_error))
-                joint_positions[j] += error * angle_adjustment
-
-        return joint_positions
-
-
 
     def update_desired_pose_cb(self, msg: Pose):
-        # self.log_info(f'Threat ID (desired pose cb): {get_ident()}')
+        # self.log_info(f'Thread ID (desired pose cb): {get_ident()}')
         with self.lock:
             self.desired_pose = copy.deepcopy(msg)
 
