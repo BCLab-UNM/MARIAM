@@ -30,8 +30,8 @@ def launch_setup(context, *args, **kwargs):
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
 
-    ikpy_launch_arg = LaunchConfiguration('use_ikpy')
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
+    force_node_launch_arg = LaunchConfiguration('use_fake_force')
     publish_poses_launch_arg = LaunchConfiguration('publish_poses')
 
     xsarm_robot_node = Node(
@@ -46,33 +46,7 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             '--robot_model', robot_model_launch_arg.perform(context),
             '--robot_name', robot_name_launch_arg.perform(context),
-        ],
-        condition=IfCondition(
-            PythonExpression([
-                "'",ikpy_launch_arg,
-                "' == 'false'"
-            ])
-        )
-    )
-
-    xsarm_ikpy_robot_node = Node(
-        name='xsarm_ikpy_robot_node',
-        package='arm_controller',
-        executable='xsarm_ikpy_robot.py',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'robot_model': robot_model_launch_arg,
-        }],
-        arguments=[
-            '--robot_model', robot_model_launch_arg.perform(context),
-            '--robot_name', robot_name_launch_arg.perform(context),
-        ],
-        condition=IfCondition(
-            PythonExpression([
-                "'",ikpy_launch_arg,
-                "' == 'true'"
-            ])
-        )
+        ]
     )
 
     xsarm_control_launch = IncludeLaunchDescription(
@@ -95,74 +69,28 @@ def launch_setup(context, *args, **kwargs):
                 }.items(),
                 condition=IfCondition(launch_driver_launch_arg)
             )
+    
+    admittance_control_launch = IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    PathJoinSubstitution([
+                        FindPackageShare('arm_controller'),
+                        'launch',
+                        'admittance_controller.launch.py'
+                    ])
+                ]),
+                launch_arguments={
+                    'robot_name': robot_name_launch_arg,
+                    'use_fake_force': force_node_launch_arg,
+                    'use_rviz_markers': use_rviz_launch_arg
+                }.items(),
+                condition=IfCondition(
+                    PythonExpression([
+                        "'", admittance_control_launch_arg,
+                        "' == 'true'"
+                    ])
+                )
+            )
 
-
-    admittance_controller_node = Node(
-        name='admittance_controller_node',
-        package='arm_controller',
-        executable='admittance_controller',
-        namespace=robot_name_launch_arg,
-        condition=IfCondition(
-            PythonExpression([
-                "'", admittance_control_launch_arg,
-                "' == 'true'"
-            ])
-        )
-    )
-
-    admittance_rviz_markers_node = Node(
-        name='admittance_rviz_markers_node',
-        package='arm_controller',
-        executable='admittance_rviz_markers',
-        namespace=robot_name_launch_arg,
-        condition=IfCondition(
-            PythonExpression([
-                "'", admittance_control_launch_arg,
-                "' == 'true'"
-            ])
-        ),
-    )
-
-    # Admittance control nodes
-    virtual_pose_node = Node(
-        package='arm_controller',
-        executable='virtual_pose_publisher',
-        name='virtual_pose_publisher_node',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'delay': 0.0,
-            'frequency': 0.002,
-            'x_pos': 0.0,
-            'y_pos': 0.25,
-            'z_pos': 0.098
-        }],
-        condition=IfCondition(
-            PythonExpression([
-                "'", admittance_control_launch_arg,
-                "' == 'true'"
-            ])
-        )
-    )
-
-    force_node = Node(
-        package='arm_controller',
-        executable='force_publisher',
-        name='force_publisher_node',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'delay': 0.0,
-            'frequency': 2.0,
-            'max_ticks': 2,
-            # set duration to -1 to cancel the timer
-            'duration': -1.0
-        }],
-        condition=IfCondition(
-            PythonExpression([
-                "'", admittance_control_launch_arg,
-                "' == 'true'"
-            ])
-        )
-    )
 
     # node to publish poses for testing the speed of the arm
     pose_publisher_node = Node(
@@ -188,12 +116,8 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         xsarm_robot_node,
-        xsarm_ikpy_robot_node,
         xsarm_control_launch,
-        admittance_controller_node,
-        admittance_rviz_markers_node,
-        virtual_pose_node,
-        force_node,
+        admittance_control_launch,
         pose_publisher_node
     ]
 
@@ -206,14 +130,6 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_name',
             default_value=LaunchConfiguration('robot_model')
-        ),
-        DeclareLaunchArgument(
-            'threshold',
-            default_value='0.75',
-            description=(
-                'value from 0 to 1 defining joystick sensitivity; a larger number means the '
-                'joystick should be less sensitive.'
-            ),
         ),
         DeclareLaunchArgument(
             'use_rviz',
@@ -229,13 +145,6 @@ def generate_launch_description():
                 'modes.yaml',
             ]),
             description="the file path to the 'mode config' YAML file.",
-        ),
-        DeclareLaunchArgument(
-            'controller',
-            default_value='xbox360',
-            choices=('ps4', 'ps3', 'xbox360'),
-            description='type of controller.',
-
         ),
         DeclareLaunchArgument(
             'launch_driver',
@@ -262,18 +171,16 @@ def generate_launch_description():
             ),
         ),
         DeclareLaunchArgument(
-            'use_ikpy',
-            default_value='false',
-            choices=('true', 'false'),
-            description=(
-                "If true, launches a node that uses IKPy as the IK solver."
-            )
-        ),
-        DeclareLaunchArgument(
             'use_admittance_control',
             default_value='false',
             choices=('true', 'false'),
             description="Launches an admittance controller node when true."
+        ),
+        DeclareLaunchArgument(
+            'use_fake_force',
+            default_value='false',
+            choices=('true', 'false'),
+            description="Launches a force publisher if use_admittance_control is also true."
         ),
         DeclareLaunchArgument(
             'publish_poses',

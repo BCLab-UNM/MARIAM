@@ -38,13 +38,13 @@ class AdmittanceController : public rclcpp::Node {
         std::bind(&AdmittanceController::mass_callback, this, _1)
       );
       
-      force_sub = this->create_subscription<Float64>(
+      damping_sub = this->create_subscription<Float64>(
         "admittance_control/damping",
         10,
         std::bind(&AdmittanceController::damping_callback, this, _1)
       );
       
-      force_sub = this->create_subscription<Float64>(
+      stiffness_sub = this->create_subscription<Float64>(
         "admittance_control/stiffness",
         10,
         std::bind(&AdmittanceController::stiffness_callback, this, _1)

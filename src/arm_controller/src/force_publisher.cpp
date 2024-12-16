@@ -71,7 +71,7 @@ class ForcePublisher : public rclcpp::Node
       if(ticks == max_ticks)
       {
         ticks = 0;
-        if(current_force >= 2) current_force = 0;
+        if(current_force >= 1.0) current_force = 0;
         else {
           double increment = (double) rand() / RAND_MAX;
           current_force += increment;

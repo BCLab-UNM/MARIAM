@@ -19,7 +19,7 @@ from std_msgs.msg import Float64
 from scipy.spatial.transform import Rotation as R
 from math import sqrt, pi
 
-# imports for the profiler
+##### imports for the profiler ######
 # import cProfile
 # import pstats
 # from io import StringIO
@@ -56,12 +56,6 @@ class XSArmRobot(InterbotixManipulatorXS):
             self.update_desired_pose_cb,
             10
         )
-        # dummy publisher for timing functions
-        self.timer_pub = self.core.get_node().create_publisher(
-            Float64,
-            'control_loop_time',
-            10
-        )
         time.sleep(0.5)
         self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
@@ -73,7 +67,7 @@ class XSArmRobot(InterbotixManipulatorXS):
         )
         self.update_T_yb()
 
-        # profiler for IKinSpace()
+        ###### Enabling the profiler ######
         # profiler = cProfile.Profile()
         # profiler.enable()
 
@@ -84,8 +78,9 @@ class XSArmRobot(InterbotixManipulatorXS):
                 self.control_loop()
                 self.rate.sleep()
         except KeyboardInterrupt:
+            ###### Disabling the profiler ######
             # profiler.disable()
-            # save the results from the profiler
+            ###### save the results from the profiler ######
             # s = StringIO()
             # ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
             # ps.dump_stats('px100_controller.py-2.profile.stats')
