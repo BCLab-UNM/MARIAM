@@ -14,6 +14,7 @@ using std::placeholders::_1;
 class AdmittanceController : public rclcpp::Node {
   public:
     AdmittanceController() : Node("admittance_controller") {
+      // =============== creating publishers and subscriptions ===============
       pose_publisher = this->create_publisher<Pose>(
         "px100_target_pose",
         10
@@ -31,23 +32,35 @@ class AdmittanceController : public rclcpp::Node {
         std::bind(&AdmittanceController::force_callback, this, _1)
       );
 
-      // mass_sub = this->create_subscription<Float64>(
-      //   "admittance_control/mass",
-      //   10,
-      //   std::bind(&AdmittanceController::mass_callback, this, _1)
-      // );
+      mass_sub = this->create_subscription<Float64>(
+        "admittance_control/mass",
+        10,
+        std::bind(&AdmittanceController::mass_callback, this, _1)
+      );
       
-      // force_sub = this->create_subscription<Float64>(
-      //   "admittance_control/damping",
-      //   10,
-      //   std::bind(&AdmittanceController::damping_callback, this, _1)
-      // );
+      force_sub = this->create_subscription<Float64>(
+        "admittance_control/damping",
+        10,
+        std::bind(&AdmittanceController::damping_callback, this, _1)
+      );
       
-      // force_sub = this->create_subscription<Float64>(
-      //   "admittance_control/stiffness",
-      //   10,
-      //   std::bind(&AdmittanceController::stiffness_callback, this, _1)
-      // );
+      force_sub = this->create_subscription<Float64>(
+        "admittance_control/stiffness",
+        10,
+        std::bind(&AdmittanceController::stiffness_callback, this, _1)
+      );
+
+      // =============== creating parameters ===============
+      // declaring parameters for the initial values of
+      // mass, damping, and stiffness
+      this->declare_parameter("mass",       5.0);
+      this->declare_parameter("damping",   10.0);
+      this->declare_parameter("stiffness", 15.0);
+
+      // storing the initial values into variables
+      this->get_parameter("mass",      mass);
+      this->get_parameter("damping",   damping);
+      this->get_parameter("stiffness", stiffness);
     }
 
   private:
@@ -57,14 +70,20 @@ class AdmittanceController : public rclcpp::Node {
     rclcpp::Subscription<Float64>::SharedPtr mass_sub;
     rclcpp::Subscription<Float64>::SharedPtr damping_sub;
     rclcpp::Subscription<Float64>::SharedPtr stiffness_sub;
+    
+    // most recent force reading
     double force_reading = 0;
+    
+    // previous desired position
     double position = 0;
+    
+    // previous desired velocity
     double velocity = 0;
     double step_size = 0.002;
 
-    const double MASS = 5;
-    const double DAMPING = 10;
-    const double STIFFNESS = 15;
+    double mass;
+    double damping;
+    double stiffness;
     
     const rclcpp::Logger LOGGER = rclcpp::get_logger("admittance_controller");
 
@@ -73,11 +92,11 @@ class AdmittanceController : public rclcpp::Node {
       new_msg.position = msg->position;
       new_msg.orientation = msg->orientation;
       // Using Hooke's law to compute desired position
-      // new_msg.position.y -= force_reading / STIFFNESS;
+      // new_msg.position.y -= force_reading / stiffness;
       
       // Using Euler's method to compute desired position
       // acceleration is in meters per second squared
-      double acceleration = (force_reading-DAMPING*velocity-STIFFNESS*position)/MASS;
+      double acceleration = (force_reading-damping*velocity-stiffness*position)/mass;
       // velocity is in meters per second
       velocity += step_size*acceleration;
       // position is in meters
@@ -91,17 +110,20 @@ class AdmittanceController : public rclcpp::Node {
       force_reading = msg->data;
     }
 
-    // void mass_callback(const Float64::SharedPtr msg) {
-    //   MASS = msg->data;
-    // }
+    void mass_callback(const Float64::SharedPtr msg) {
+      RCLCPP_INFO(LOGGER, "Updating mass from %.2f to %.2f", mass, msg->data);
+      mass = msg->data;
+    }
     
-    // void damping_callback(const Float64::SharedPtr msg) {
-    //   DAMPING = msg->data;
-    // }
+    void damping_callback(const Float64::SharedPtr msg) {
+      RCLCPP_INFO(LOGGER, "Updating damping from %.2f to %.2f", damping, msg->data);
+      damping = msg->data;
+    }
     
-    // void stiffness_callback(const Float64::SharedPtr msg) {
-    //   STIFFNESS = msg->data;
-    // }
+    void stiffness_callback(const Float64::SharedPtr msg) {
+      RCLCPP_INFO(LOGGER, "Updating stiffness from %.2f to %.2f", stiffness, msg->data);
+      stiffness = msg->data;
+    }
 };
 
 int main(int argc, char * argv[]) {

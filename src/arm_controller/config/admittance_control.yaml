@@ -1,0 +1,20 @@
+px100/admittance_controller_node:
+  ros__parameters:
+    mass:       15.0
+    damping:   10.0
+    stiffness: 15.0
+
+px100/virtual_pose_publisher:
+  ros__parameters:
+    delay:     0.0
+    frequency: 0.002
+    x_pos:     0.0
+    y_pos:     0.30
+    z_pos:     0.198
+
+px100/force_publisher_node:
+  ros__parameters:
+    delay:     0.0
+    frequency: 0.02
+    max_ticks: 220
+    duration:  3600.0

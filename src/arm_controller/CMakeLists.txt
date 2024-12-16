@@ -132,7 +132,7 @@ install(TARGETS virtual_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable ellipse_publisher.cpp
+##### For executable ellipse_publisher.cpp #####
 add_executable(ellipse_publisher src/ellipse_publisher.cpp)
 target_include_directories(ellipse_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -147,7 +147,7 @@ install(TARGETS ellipse_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable force_publisher.cpp
+##### For executable force_publisher.cpp #####
 add_executable(force_publisher src/force_publisher.cpp)
 target_include_directories(force_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -162,7 +162,7 @@ install(TARGETS force_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable pose_publisher.cpp
+##### For executable pose_publisher.cpp #####
 add_executable(pose_publisher src/pose_publisher.cpp)
 target_include_directories(pose_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -177,10 +177,18 @@ install(TARGETS pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Add launch file to share folder
+##### Add launch file to share folder #####
 install(
   DIRECTORY
     launch
+  DESTINATION
+    share/${PROJECT_NAME}/
+)
+
+##### Add config files to share folder #####
+install(
+  DIRECTORY
+    config
   DESTINATION
     share/${PROJECT_NAME}/
 )
