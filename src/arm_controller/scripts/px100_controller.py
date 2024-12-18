@@ -25,8 +25,11 @@ from math import sqrt, pi
 # from io import StringIO
 
 
-class XSArmRobot(InterbotixManipulatorXS):
-    current_loop_rate = 250
+class ArmController(InterbotixManipulatorXS):
+    """
+    This class is a position controller for the Interbotix PX100.
+    """
+    current_loop_rate = 500
     moving_time       = 0.2
     accel_time        = 0.1
     lock = Lock()
@@ -41,6 +44,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             accel_time=self.accel_time,
             args=args,
         )
+        # sets the rate at which the control loop will run
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
@@ -75,9 +79,11 @@ class XSArmRobot(InterbotixManipulatorXS):
             robot_startup()
             while rclpy.ok():
                 # self.log_info(f'Thread ID (while loop): {get_ident()}')
-                self.control_loop()
+                self.move_end_effector()
                 self.rate.sleep()
         except KeyboardInterrupt:
+            self.arm.go_to_sleep_pose()
+            time.sleep(2.5)
             ###### Disabling the profiler ######
             # profiler.disable()
             ###### save the results from the profiler ######
@@ -89,6 +95,8 @@ class XSArmRobot(InterbotixManipulatorXS):
 
     def update_T_yb(self) -> None:
         """
+        Helper function that calculates the pose of
+        the end effector w.t.t the virtual frame (T_y)
         """
         # Get the latest command
         T_sb = self.arm.get_ee_pose_command()
@@ -99,27 +107,26 @@ class XSArmRobot(InterbotixManipulatorXS):
         self.T_yb = ang.trans_inv(self.T_sy) @ T_sb
 
 
-    def control_loop(self) -> None:
+    def move_end_effector(self) -> None:
         """
-        Moves the end-effector towards the desired pose.
-
-        msg: the desired pose.
-        """
-        # create a copy of the desired pose using a lock to avoid race conditions
-        # start_time = self.core.get_node().get_clock().now()
-        # self.log_info(f'Thread ID (control loop): {get_ident()}')
-        with self.lock:
-            desired_pose = copy.deepcopy(self.desired_pose)
-        waist_step = 0.008
-        translate_step = 0.001
-        ee_pitch_step = 0.004
-        waist_tol   = 8e-3
-        ee_tol      = 8e-3
-        set_ee_pose = False # determines if the IK solver will be called
+        This function moves the end effector towards the desired position
+        by reducing the difference between current position and the desired position.
         
-        # this line creates a rotation matrix form the desired pose's quaterion
-        desired_rotation = np.eye(4)
-        desired_rotation[:3, :3] = R.from_quat([ 
+        On each iteration, if the difference between the current position and the
+        desired position of the end effector is above some tolerance, then position of the
+        end effector will be adjusted by some constant value.
+        """
+        # start_time = self.core.get_node().get_clock().now()
+        # self.log_info(f'Thread ID (control loop): {get_ident()}') 
+
+        # create a local copy of the desired pose using a lock to avoid race conditions
+        with self.lock:
+            desired_pose = self.desired_pose
+
+        
+        # creates a rotation matrix from the desired pose's quaterion
+        desired_rotation_mat = np.eye(4)
+        desired_rotation_mat[:3, :3] = R.from_quat([ 
             desired_pose.orientation.x,
             desired_pose.orientation.y,
             desired_pose.orientation.z,
@@ -127,35 +134,47 @@ class XSArmRobot(InterbotixManipulatorXS):
         ]).as_matrix()
 
         # get the desired roll, pitch, yaw angles from the rotation matrix
-        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation)
+        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation_mat)
     
-        # create a transformation matrix from the desired pose
-        desired_matrix = np.eye(4)
-        desired_matrix[:3, :3] = desired_rotation[:3, :3]
-        desired_matrix[0, 3] = desired_pose.position.x
-        desired_matrix[1, 3] = desired_pose.position.y
-        desired_matrix[2, 3] = desired_pose.position.z
+        # create a transformation matrix from the desired pose and the rotation matrix
+        desired_trans_mat = np.eye(4)
+        desired_trans_mat[:3, :3] = desired_rotation_mat[:3, :3]
+        desired_trans_mat[0, 3] = desired_pose.position.x
+        desired_trans_mat[1, 3] = desired_pose.position.y
+        desired_trans_mat[2, 3] = desired_pose.position.z
         
-        # create a copy of the current end-effector pose wrt virtual frame
+        # create a copy of the current end-effector position w.r.t. the virtual frame
         T_yb = np.array(self.T_yb)
-        # compute the transformation matrix for the desired end-effector pose
-        # wrt the virtual frame
-        T_yd = np.linalg.inv(desired_rotation) @ desired_matrix
-        # get the current rpy angle
+        # compute the transformation matrix for the desired end-effector position
+        # w.r.t. the virtual frame
+        T_yd = np.linalg.inv(desired_rotation_mat) @ desired_trans_mat
+        # get the current rpy angles
         rpy = ang.rotation_matrix_to_euler_angles(T_yb)
-        # get the current angle of the waist
+
+        ######### adjust waist angle #########
         waist_position = self.arm.get_single_joint_command('waist')
+        self.adjust_waist_angle(desired_rpy[2], waist_position)
 
-        # error calculations
-        waist_error = desired_rpy[2] - waist_position
-        x_pos_error = T_yd[0, 3] - T_yb[0, 3]
-        z_pos_error = T_yd[2, 3] - T_yb[2, 3]
-        ee_pitch_error = desired_rpy[1] - rpy[1]
+        ######### Compute a new end effector position w.r.t. virtual frame #########
+        self.move_end_effector_wrt_virtual_frame(T_yd, T_yb, desired_rpy, rpy)
+        
 
-        # if the waist error is above some tolerance, move the waist by
-        # a single step (self.wasit_step)
-        if abs(waist_error) > waist_tol:
-            waist_position += self.sign(waist_error) * waist_step
+
+    def adjust_waist_angle(self, desired_waist_position, waist_position):
+        """
+        This function rotates the waist by a constant angle if the difference
+        between the current position and the desired position is large enough.
+        """
+        # allowed difference between the ee position and the desired position
+        waist_angle_tolerance = 8e-3
+        # the value to move the waist by
+        waist_angle_step = np.pi / 512  # in radians
+        
+        # compute the difference between the desired angle and the current angle
+        error = desired_waist_position - waist_position
+
+        if abs(error) > waist_angle_tolerance:
+            waist_position += self.sign(error) * waist_angle_step
             success_waist = self.arm.set_single_joint_position(
                 joint_name='waist',
                 position=waist_position,
@@ -172,34 +191,50 @@ class XSArmRobot(InterbotixManipulatorXS):
                     blocking=False
                 )
             self.update_T_yb()
-        
-        
+
+
+    def move_end_effector_wrt_virtual_frame(self, T_yd, T_yb, desired_rpy, rpy):
         """
-        For each of the three if statements, if the error is greater than the
-        tolerance, then increment the relative position and make 'set_ee_pose'
-        true.
+        This function will move the end effector towards a desired position
+        w.r.t. the virtual frame.
+
+        The function calculates the error (difference) between the x and y
+        position of current position and the desired position. If the difference
+        is large enough, a new intermediate distance between the two is calculated
+        and the end effector is told to move to this new position.
+
+        The same process is applied to the pitch error.
         """
+        translate_step = 0.001  # in meters
+        ee_pitch_step = np.pi / 1024  # in radians
+        ee_tol = np.pi / 512
+        move_end_effector = False
+
+        # position error calculations
+        x_pos_error = T_yd[0, 3] - T_yb[0, 3]
+        z_pos_error = T_yd[2, 3] - T_yb[2, 3]
+        # end effector pitch error
+        ee_pitch_error = desired_rpy[1] - rpy[1]
+
         if abs(x_pos_error) > ee_tol:
-            set_ee_pose = True
+            move_end_effector = True
             T_yb[0, 3] += self.sign(x_pos_error) * translate_step
 
         if abs(z_pos_error) > ee_tol:
-            set_ee_pose = True
+            move_end_effector = True
             T_yb[2, 3] += self.sign(z_pos_error) * translate_step
 
         if abs(ee_pitch_error) > ee_tol:
-            set_ee_pose = True
-            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
+            move_end_effector = True
+            pitch += self.sign(ee_pitch_error) * ee_pitch_step
             T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
-        
-        # if 'set_ee_pose' is true, then the IK solver will be called
-        # and the result of the IK solver is published to '/robot_name/commands/joint_group'
 
-        if set_ee_pose:
+        # move the end effector if the error is greater than the tolerance
+        if move_end_effector:
             T_sd = self.T_sy @ T_yb
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
-                custom_guess=self.arm.get_joint_commands(),    
+                custom_guess=self.arm.get_joint_commands(),
                 execute=True,
                 moving_time=self.moving_time,
                 accel_time=self.accel_time,
@@ -211,8 +246,14 @@ class XSArmRobot(InterbotixManipulatorXS):
 
     def update_desired_pose_cb(self, msg: Pose):
         # self.log_info(f'Thread ID (desired pose cb): {get_ident()}')
+        
+        # if the pose isn't different from the current one, just return
+        if self.desired_pose.position == msg.position and self.desired_pose.orientation == msg.orientation:
+            return
+
         with self.lock:
             self.desired_pose = copy.deepcopy(msg)
+
 
     def sign(self, x):
         if x > 0:
@@ -221,6 +262,7 @@ class XSArmRobot(InterbotixManipulatorXS):
             return -1
         else:
             return 0
+
 
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
@@ -235,7 +277,7 @@ def main(args=None):
     command_line_args = remove_ros_args(args=sys.argv)[1:]
     ros_args = p.parse_args(command_line_args)
 
-    bot = XSArmRobot(ros_args, args=args)
+    bot = ArmController(ros_args, args=args)
     bot.start_robot()
 
 

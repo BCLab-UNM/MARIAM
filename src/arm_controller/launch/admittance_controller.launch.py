@@ -78,7 +78,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_fake_force',
-            default_value='false',
+            default_value='true',
             choices=('true', 'false'),
             description=("If true, launches a node to publish fake force measurements")
         ),

@@ -29,7 +29,8 @@ All parameters:
 
 - use_sim: Can be `true` or `false`. If `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's motion; if `false`, the real DYNAMIXEL driver node is run. This is used to run a simulation of the arm instead of using an actual arm. Default is `true`.
 
-- use_admittance_control: launches three nodes to run a demo of admittance control.
+- use_admittance_control: launches the admittance controller node and the virutal pose publisher.
+  - use_fake_force: launches an additional node to publish fake force measurements.
 
 - publish_poses: launches the pose_publisher node
 
@@ -75,16 +76,16 @@ Each launch file will use some or all of these parameters, here are their option
 - use_joy:= true, false
 
 ## Publisher nodes
-This package has a few nodes that can be ran to publish data periodically. The current nodes are
+This package has a few nodes that can be used to publish data periodically. The current nodes are
 - `pose_publisher`
 - `ellipse_publisher`
 - `force_publisher`
 - `virtual_pose_publisher`
 
 Each one has the following optional parameters that can be specified before running the node:
-- delay: the amount of time to wait, in seconds, before starting to publish data.
-- frequency: the time interval for publishing data. For example, if the frequency is 0.002, then the force publisher will publish a fake force reading every 0.002 seconds.
-- max_ticks: the number of times data will be published before it is modified. For example, if max_ticks=500 was set for the force publisher, then after publishing a value 500 times, the value is incremented or set back to zero.
+- `delay`: the amount of time to wait, in seconds, before starting to publish data.
+- `frequency`: the time interval for publishing data. For example, if the frequency is 0.002, then the force publisher will publish a fake force reading every 0.002 seconds.
+- `max_ticks`: the number of times data will be published before it is modified. For example, if max_ticks=500 was set for the force publisher, then after publishing a value 500 times, the value is incremented or set back to zero.
 
 NOTE: delay and frequency need to be specified as floating point values. For example, use 1.0 instead of 1.
 

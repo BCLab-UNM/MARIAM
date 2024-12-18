@@ -178,7 +178,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_fake_force',
-            default_value='false',
+            default_value='true',
             choices=('true', 'false'),
             description="Launches a force publisher if use_admittance_control is also true."
         ),
