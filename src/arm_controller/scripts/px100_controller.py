@@ -15,9 +15,7 @@ import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose
-from std_msgs.msg import Float64
 from scipy.spatial.transform import Rotation as R
-from math import sqrt, pi
 
 ##### imports for the profiler ######
 # import cProfile
@@ -49,11 +47,14 @@ class ArmController(InterbotixManipulatorXS):
         self.waist_index = self.arm.group_info.joint_names.index('waist')
         self.waist_ll = self.arm.group_info.joint_lower_limits[self.waist_index]
         self.waist_ul = self.arm.group_info.joint_upper_limits[self.waist_index]
+        
         # The transformation matrix between the space frame and the virtual frame
-        self.T_sy = np.identity(4)
+        self.T_space_to_virtual = np.identity(4)
+        
         # The transformation matrix between the virtual frame and the body frame
-        self.T_yb = np.identity(4)
-        self.update_T_yb()
+        self.T_virtual_to_body = np.identity(4)
+        
+        self.update_T_virtual_to_body()
         self.core.get_node().create_subscription(
             Pose,
             'px100_target_pose',
@@ -69,7 +70,7 @@ class ArmController(InterbotixManipulatorXS):
             moving_time=1.5,
             accel_time=0.75
         )
-        self.update_T_yb()
+        self.update_T_virtual_to_body()
 
         ###### Enabling the profiler ######
         # profiler = cProfile.Profile()
@@ -93,18 +94,19 @@ class ArmController(InterbotixManipulatorXS):
             robot_shutdown()
 
 
-    def update_T_yb(self) -> None:
+    def update_T_virtual_to_body(self) -> None:
         """
         Helper function that calculates the pose of
-        the end effector w.t.t the virtual frame (T_y)
+        the end effector w.t.t the virtual frame.
         """
         # Get the latest command
-        T_sb = self.arm.get_ee_pose_command()
-        rpy = ang.rotation_matrix_to_euler_angles(T_sb[:3, :3])
+        T_space_to_body = self.arm.get_ee_pose_command()
+        rpy = ang.rotation_matrix_to_euler_angles(T_space_to_body[:3, :3])
         # update yaw angle
-        self.T_sy[:2, :2] = ang.yaw_to_rotation_matrix(rpy[2])
+        self.T_space_to_virtual[:2, :2] = ang.yaw_to_rotation_matrix(rpy[2])
         # Updates the end-effectors position relative to base frame
-        self.T_yb = ang.trans_inv(self.T_sy) @ T_sb
+        T_space_to_virtual_inv = ang.trans_inv(self.T_space_to_virtual)
+        self.T_virtual_to_body = T_space_to_virtual_inv @ T_space_to_body
 
 
     def move_end_effector(self) -> None:
@@ -124,9 +126,9 @@ class ArmController(InterbotixManipulatorXS):
             desired_pose = self.desired_pose
 
         
-        # creates a rotation matrix from the desired pose's quaterion
-        desired_rotation_mat = np.eye(4)
-        desired_rotation_mat[:3, :3] = R.from_quat([ 
+        # creates a rotation matrix from the desired pose's quaternion
+        desired_rotation_matrix = np.eye(4)
+        desired_rotation_matrix[:3, :3] = R.from_quat([ 
             desired_pose.orientation.x,
             desired_pose.orientation.y,
             desired_pose.orientation.z,
@@ -134,36 +136,41 @@ class ArmController(InterbotixManipulatorXS):
         ]).as_matrix()
 
         # get the desired roll, pitch, yaw angles from the rotation matrix
-        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation_mat)
+        desired_rpy = ang.rotation_matrix_to_euler_angles(desired_rotation_matrix)
     
         # create a transformation matrix from the desired pose and the rotation matrix
-        desired_trans_mat = np.eye(4)
-        desired_trans_mat[:3, :3] = desired_rotation_mat[:3, :3]
-        desired_trans_mat[0, 3] = desired_pose.position.x
-        desired_trans_mat[1, 3] = desired_pose.position.y
-        desired_trans_mat[2, 3] = desired_pose.position.z
+        desired_trans_matrix = np.eye(4)
+        desired_trans_matrix[:3, :3] = desired_rotation_matrix[:3, :3]
+        desired_trans_matrix[0, 3] = desired_pose.position.x
+        desired_trans_matrix[1, 3] = desired_pose.position.y
+        desired_trans_matrix[2, 3] = desired_pose.position.z
         
         # create a copy of the current end-effector position w.r.t. the virtual frame
-        T_yb = np.array(self.T_yb)
+        T_virtual_to_body = np.array(self.T_virtual_to_body)
         # compute the transformation matrix for the desired end-effector position
         # w.r.t. the virtual frame
-        T_yd = np.linalg.inv(desired_rotation_mat) @ desired_trans_mat
+        desired_T_virtual_to_body = np.linalg.inv(desired_rotation_matrix) @ desired_trans_matrix
         # get the current rpy angles
-        rpy = ang.rotation_matrix_to_euler_angles(T_yb)
+        rpy = ang.rotation_matrix_to_euler_angles(T_virtual_to_body)
 
         ######### adjust waist angle #########
         waist_position = self.arm.get_single_joint_command('waist')
-        self.adjust_waist_angle(desired_rpy[2], waist_position)
+        self.rotate_end_effector(desired_rpy[2], waist_position)
 
         ######### Compute a new end effector position w.r.t. virtual frame #########
-        self.move_end_effector_wrt_virtual_frame(T_yd, T_yb, desired_rpy, rpy)
+        self.move_end_effector_wrt_virtual_frame(
+            desired_T_virtual_to_body, 
+            T_virtual_to_body,
+            desired_rpy,
+            rpy
+        )
         
 
 
-    def adjust_waist_angle(self, desired_waist_position, waist_position):
+    def rotate_end_effector(self, desired_waist_position, waist_position):
         """
-        This function rotates the waist by a constant angle if the difference
-        between the current position and the desired position is large enough.
+        This function rotates the waist by a constant value if the difference
+        between the current waist position and the desired waist position is large enough.
         """
         # allowed difference between the ee position and the desired position
         waist_angle_tolerance = 8e-3
@@ -190,10 +197,11 @@ class ArmController(InterbotixManipulatorXS):
                     accel_time=self.accel_time,
                     blocking=False
                 )
-            self.update_T_yb()
+            self.update_T_virtual_to_body()
 
 
-    def move_end_effector_wrt_virtual_frame(self, T_yd, T_yb, desired_rpy, rpy):
+    def move_end_effector_wrt_virtual_frame(self, desired_T_virtual_to_body,
+                                                  T_virtual_to_body, desired_rpy, rpy):
         """
         This function will move the end effector towards a desired position
         w.r.t. the virtual frame.
@@ -203,35 +211,36 @@ class ArmController(InterbotixManipulatorXS):
         is large enough, a new intermediate distance between the two is calculated
         and the end effector is told to move to this new position.
 
-        The same process is applied to the pitch error.
+        The same process is applied to the pitch angle.
         """
         translate_step = 0.001  # in meters
         ee_pitch_step = np.pi / 1024  # in radians
-        ee_tol = np.pi / 512
+        position_tolerance = 8e-3
+        pitch_tolerance = np.pi / 512
         move_end_effector = False
 
         # position error calculations
-        x_pos_error = T_yd[0, 3] - T_yb[0, 3]
-        z_pos_error = T_yd[2, 3] - T_yb[2, 3]
+        x_pos_error = desired_T_virtual_to_body[0, 3] - T_virtual_to_body[0, 3]
+        z_pos_error = desired_T_virtual_to_body[2, 3] - T_virtual_to_body[2, 3]
         # end effector pitch error
         ee_pitch_error = desired_rpy[1] - rpy[1]
 
-        if abs(x_pos_error) > ee_tol:
+        if abs(x_pos_error) > position_tolerance:
             move_end_effector = True
-            T_yb[0, 3] += self.sign(x_pos_error) * translate_step
+            T_virtual_to_body[0, 3] += self.sign(x_pos_error) * translate_step
 
-        if abs(z_pos_error) > ee_tol:
+        if abs(z_pos_error) > position_tolerance:
             move_end_effector = True
-            T_yb[2, 3] += self.sign(z_pos_error) * translate_step
+            T_virtual_to_body[2, 3] += self.sign(z_pos_error) * translate_step
 
-        if abs(ee_pitch_error) > ee_tol:
+        if abs(ee_pitch_error) > pitch_tolerance:
             move_end_effector = True
-            pitch += self.sign(ee_pitch_error) * ee_pitch_step
-            T_yb[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
+            rpy[1] += self.sign(ee_pitch_error) * ee_pitch_step
+            T_virtual_to_body[:3, :3] = ang.euler_angles_to_rotation_matrix(rpy)
 
         # move the end effector if the error is greater than the tolerance
         if move_end_effector:
-            T_sd = self.T_sy @ T_yb
+            T_sd = self.T_space_to_virtual @ T_virtual_to_body
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=T_sd,
                 custom_guess=self.arm.get_joint_commands(),
@@ -241,7 +250,7 @@ class ArmController(InterbotixManipulatorXS):
                 blocking=False
             )
             if success:
-                self.T_yb = np.array(T_yb)
+                self.T_virtual_to_body = np.array(T_virtual_to_body)
 
 
     def update_desired_pose_cb(self, msg: Pose):
