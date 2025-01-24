@@ -1,9 +1,9 @@
 // Topic defines
-#define NAMESPACE "monica"
-//#define NAMESPACE "ross"
+// #define NAMESPACE "monica"
+#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
-#define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
+#define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
 #define FORCE_TOPIC_NAME NAMESPACE "/force"
 #define LEFT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/left_pid_output"
 #define LEFT_SET_POINT_TOPIC_NAME NAMESPACE "/left_set_point"
@@ -325,7 +325,7 @@ void setup() {
 
   // Set odom defaults
   odom_msg.header.frame_id.data = "odom";
-  odom_msg.child_frame_id.data = "base_link"; //@TODO add namespaces?
+  odom_msg.child_frame_id.data = "base_footprint";
   odom_msg.pose.pose.position.z = 0;
 
   // Wait
