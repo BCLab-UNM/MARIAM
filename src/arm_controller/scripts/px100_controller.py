@@ -27,8 +27,10 @@ class ArmController(InterbotixManipulatorXS):
     """
     This class is a position controller for the Interbotix PX100.
     """
-    current_loop_rate = 500
+    current_loop_rate = 1000
+    # the amount of time to spend moving to the desired position
     moving_time       = 0.2
+    # the amount of time to spend accelerating/decelerating
     accel_time        = 0.1
     lock = Lock()
     desired_pose = Pose()
@@ -81,7 +83,7 @@ class ArmController(InterbotixManipulatorXS):
             while rclpy.ok():
                 # self.log_info(f'Thread ID (while loop): {get_ident()}')
                 self.move_end_effector()
-                self.rate.sleep()
+                # self.rate.sleep()
         except KeyboardInterrupt:
             self.arm.go_to_sleep_pose()
             time.sleep(2.5)
@@ -144,6 +146,7 @@ class ArmController(InterbotixManipulatorXS):
         desired_trans_matrix[0, 3] = desired_pose.position.x
         desired_trans_matrix[1, 3] = desired_pose.position.y
         desired_trans_matrix[2, 3] = desired_pose.position.z
+
         
         # create a copy of the current end-effector position w.r.t. the virtual frame
         T_virtual_to_body = np.array(self.T_virtual_to_body)
@@ -213,7 +216,7 @@ class ArmController(InterbotixManipulatorXS):
 
         The same process is applied to the pitch angle.
         """
-        translate_step = 0.001  # in meters
+        translate_step = 0.00005  # in meters
         ee_pitch_step = np.pi / 1024  # in radians
         position_tolerance = 8e-3
         pitch_tolerance = np.pi / 512
