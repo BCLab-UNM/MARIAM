@@ -229,10 +229,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    float coef_0 = 1.0; // coef for x^0
-    float coef_1 = 1.0; // coef for x^1
-    float coef_2 = 1.0; // coef for x^2
-    float coef_3 = 1.0; // coef for x^3
+    float coef_0 = 0.035582; // coef for x^0
+    float coef_1 = -0.055113; // coef for x^1
+    float coef_2 = 0.38334; // coef for x^2
+    float coef_3 = -0.057718; // coef for x^3
     force_msg.data = coef_3 * pow(raw_force_data, 3) 
                 + coef_2 * pow(raw_force_data, 2) 
                 + coef_1 * raw_force_data
