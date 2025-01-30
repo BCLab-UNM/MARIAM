@@ -10,7 +10,7 @@ end
 
 % Read data from table
 % Specify the path to the CSV file
-filename = 'fsrCalibrationAverage-2200Ohm.csv';
+filename = 'fsr_calibration_averages-2200Ohm.csv';
 TData = readtable(filename);
 
 % Get data meta-data
