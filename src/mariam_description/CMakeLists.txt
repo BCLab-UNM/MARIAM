@@ -21,13 +21,8 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-# Install mesh files
-install(DIRECTORY meshes/
-  DESTINATION share/${PROJECT_NAME}/meshes
-)
-
 install(
-  DIRECTORY launch models models/mariam_description rviz
+  DIRECTORY launch gazebo_models xacro_models rviz meshes
   DESTINATION share/${PROJECT_NAME}
 )
 

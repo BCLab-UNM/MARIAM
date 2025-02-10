@@ -1,9 +1,9 @@
 // Topic defines
-#define NAMESPACE "monica"
-//#define NAMESPACE "ross"
+// #define NAMESPACE "monica"
+#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
-#define ODOM_TOPIC_NAME NAMESPACE "/odom/wheel"
+#define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
 #define FORCE_TOPIC_NAME NAMESPACE "/force"
 #define LEFT_PID_OUTPUT_TOPIC_NAME NAMESPACE "/left_pid_output"
 #define LEFT_SET_POINT_TOPIC_NAME NAMESPACE "/left_set_point"
@@ -229,10 +229,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    float coef_0 = 1.0; // coef for x^0
-    float coef_1 = 1.0; // coef for x^1
-    float coef_2 = 1.0; // coef for x^2
-    float coef_3 = 1.0; // coef for x^3
+    float coef_0 = 0.035582; // coef for x^0
+    float coef_1 = -0.055113; // coef for x^1
+    float coef_2 = 0.38334; // coef for x^2
+    float coef_3 = -0.057718; // coef for x^3
     force_msg.data = coef_3 * pow(raw_force_data, 3) 
                 + coef_2 * pow(raw_force_data, 2) 
                 + coef_1 * raw_force_data
@@ -325,7 +325,7 @@ void setup() {
 
   // Set odom defaults
   odom_msg.header.frame_id.data = "odom";
-  odom_msg.child_frame_id.data = "base_link"; //@TODO add namespaces?
+  odom_msg.child_frame_id.data = "base_footprint";
   odom_msg.pose.pose.position.z = 0;
 
   // Wait

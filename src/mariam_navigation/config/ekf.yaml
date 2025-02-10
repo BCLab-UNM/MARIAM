@@ -1,6 +1,9 @@
 ### ekf config file ###
 ekf_filter_node:
     ros__parameters:
+
+        use_sim_time: true
+
         
 # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
 # computation until it receives at least one message from one of the inputs. It will then run continuously at the
@@ -37,17 +40,17 @@ ekf_filter_node:
         debug: false
 
 # Defaults to "robot_localization_debug.txt" if unspecified. Please specify the full path.
-        debug_out_file: /home/focalfossa/dev_ws/src/mariam_agent/debug_ekf.txt
+        debug_out_file: /path/to/debug/file.txt
 
-# Whether we'll allow old measurements to cause a re-publication of the updated state        
-        permit_corrected_publication: false
+# Whether to broadcast the transformation over the /tf topic. Defaults to true if unspecified.
+        publish_tf: true
 
 # Whether to publish the acceleration state. Defaults to false if unspecified.
         publish_acceleration: false
 
-# Whether to broadcast the transformation over the /tf topic. Defaults to true if unspecified.
-        publish_tf: true
-        
+# If the filter sees a jump back in time, the filter is reset (convenient for testing with rosbags!)
+        reset_on_time_jump: true
+
 # REP-105 (http://www.ros.org/reps/rep-0105.html) specifies four principal coordinate frames: base_link, odom, map, and
 # earth. base_link is the coordinate frame that is affixed to the robot. Both odom and map are world-fixed frames.
 # The robot's position in the odom frame will drift over time, but is accurate in the short term and should be
@@ -148,7 +151,7 @@ ekf_filter_node:
         imu0_nodelay: false
         imu0_differential: false
         imu0_relative: true
-        imu0_queue_size: 5
+        imu0_queue_size: 7
         imu0_pose_rejection_threshold: 0.8                 # Note the difference in parameter names
         imu0_twist_rejection_threshold: 0.8                #
         imu0_linear_acceleration_rejection_threshold: 0.8  #
