@@ -57,8 +57,9 @@
     <origin xyz="0.0 0.0 ${(wheel_radius+wheel_zoff)}" rpy="0 0 0"/>
   </joint>
 
-  <!-- ********************** ROBOT BASE *********************************  -->
+  <!-- ********************** ROBOT CHASSIS *********************************  -->
   <link name="base_link">
+    <!-- base chassis -->
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -68,22 +69,50 @@
         <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>
       </material>
     </visual>
-
     <collision>
       <geometry>
         <box size="${base_length} ${base_width} ${base_height}"/>
       </geometry>
     </collision>
 
+    <!-- computer -->
+    <visual>
+      <origin xyz="-0.01 0 ${base_height/2 + 0.05}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_length - 0.08} ${base_width - 0.06} 0.1"/>
+      </geometry>
+      <material name="Red">
+        <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.01 0 ${base_height/2 + 0.05}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_length - 0.08} ${base_width - 0.06} 0.1"/>
+      </geometry>
+    </collision>
+
+    <!-- camera stand -->
+    <visual>
+      <origin xyz="-${(base_length/2) + 0.01} 0 ${((0.3 - (0.027/2)) - base_height/2)/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.02 ${0.3 - (0.027/2) + base_height/2}"/>
+      </geometry>
+      <material name="Red">
+        <color rgba="${255/255} ${0/255} ${0/255} 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-${(base_length/2) + 0.01} 0 ${((0.3 - (0.027/2)) - base_height/2)/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.02 ${0.3 - (0.027/2) + base_height/2}"/>
+      </geometry>
+    </collision>
+
     <xacro:box_inertia m="40.0" w="${base_width}" d="${base_length}" h="${base_height}"/>
   </link>
 
-  <gazebo reference="base_link">
-    <material>Gazebo/Red</material>
-  </gazebo>
-
   <!-- *********************** DRIVE WHEELS ******************************  -->
-
   <xacro:macro name="wheel" params="prefix x_reflect y_reflect">
     <link name="${prefix}_link">
       <visual>
@@ -103,19 +132,20 @@
         </geometry>
       </collision>
       
-      <xacro:cylinder_inertia m="20.0" r="${wheel_radius}" h="${wheel_width}"/>
+      <xacro:cylinder_inertia m="5.0" r="${wheel_radius}" h="${wheel_width}"/>
       
     </link>
 
     <!-- Connect the wheels to the base_link at the appropriate location, and 
          define a continuous joint to allow the wheels to freely rotate about
          an axis -->
-    <joint name="${prefix}_joint" type="revolute">
+    <joint name="${prefix}_joint" type="continuous">
       <parent link="base_link"/>
       <child link="${prefix}_link"/>
       <origin xyz="${x_reflect*wheel_xoff} ${y_reflect*(base_width/2+wheel_ygap)} ${-wheel_zoff}" rpy="0 0 0"/>
-      <limit upper="3.1415" lower="-3.1415" effort="30" velocity="5.0"/>
       <axis xyz="0 1 0"/>
+      <!-- <limit effort="10000" velocity="1000"/> -->
+      <dynamics damping="0.5" friction="0.1"/>
     </joint>
   </xacro:macro>
 
@@ -148,11 +178,13 @@
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="-${base_length/2} 0 0.3" rpy="0 0 0"/>
+    <origin xyz="-${base_length/2 + 0.01} 0 0.3" rpy="0 0 0"/>
   </joint>   
 
-  <!-- *********************** INTERBOTIX SETUP **********************************  -->
+  <!-- *********************** GAZEBO SETUP **********************************  -->
+  <xacro:include filename="$(find mariam_description)/xacro_models/mariam_gazebo.urdf.xacro"/>
 
+  <!-- *********************** INTERBOTIX SETUP **********************************  -->
   <!-- Include the robotic arm xacro file -->
   <!-- <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/px100.urdf.xacro" />
    -->
@@ -164,7 +196,6 @@
   </joint> -->
 
   <!-- *********************** MODIFIED INTERBOTIX SETUP **********************************  -->
-
   <!-- Include the robotic arm xacro file -->
   <!-- <xacro:include filename="$(find mariam_description)/models/px100_original.urdf.xacro" />
    -->

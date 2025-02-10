@@ -5,16 +5,17 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+import xacro
 
 def generate_launch_description():
 
   # Set the path to different files and folders.
   pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
-  default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_model_path = os.path.join(pkg_share, 'models/mariam.urdf.xacro')
   robot_name_in_urdf = 'mariam'
-  default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_gazebo_config.rviz')
+  default_rviz_config_path = os.path.join(pkg_share, 'rviz/mariam_config.rviz')
 
+  xacro_model_path = os.path.join(pkg_share, 'xacro_models/mariam.urdf.xacro')
+  
   # Launch configuration variables specific to simulation
   gui = LaunchConfiguration('gui')
   model = LaunchConfiguration('model')
@@ -26,7 +27,7 @@ def generate_launch_description():
   # Declare the launch arguments  
   declare_model_path_cmd = DeclareLaunchArgument(
     name='model', 
-    default_value=default_model_path, 
+    default_value=xacro_model_path, 
     description='Absolute path to robot urdf file')
 
   declare_rviz_config_file_cmd = DeclareLaunchArgument(
@@ -53,9 +54,7 @@ def generate_launch_description():
     name='use_sim_time',
     default_value='True',
     description='Use simulation (Gazebo) clock if true')
-   
-  # Specify the actions
-
+  
   # Publish the joint state values for the non-fixed joints in the URDF file.
   start_joint_state_publisher_cmd = Node(
     condition=UnlessCondition(gui),
@@ -75,9 +74,9 @@ def generate_launch_description():
     condition=IfCondition(use_robot_state_pub),
     package='robot_state_publisher',
     executable='robot_state_publisher',
-    parameters=[{'use_sim_time': use_sim_time, 
-    'robot_description': Command(['xacro ', model])}],
-    arguments=[default_model_path])
+    parameters=[{
+      'use_sim_time': use_sim_time, 
+      'robot_description': Command(['xacro ', xacro_model_path])}])
 
   # Launch RViz
   start_rviz_cmd = Node(
