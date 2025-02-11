@@ -34,8 +34,8 @@ def launch_setup(context, *args, **kwargs):
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
     publish_poses_launch_arg = LaunchConfiguration('publish_poses')
 
-    xsarm_robot_node = Node(
-        name='xsarm_robot_node',
+    px100_controller_node = Node(
+        name='px100_controller_node',
         package='arm_controller',
         executable='px100_controller.py',
         namespace=robot_name_launch_arg,
@@ -115,7 +115,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        xsarm_robot_node,
+        px100_controller_node,
         xsarm_control_launch,
         admittance_control_launch,
         pose_publisher_node

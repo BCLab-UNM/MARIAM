@@ -21,9 +21,9 @@ import modern_robotics as mr
 from std_msgs.msg import Float64
 
 ##### imports for the profiler ######
-import cProfile
-import pstats
-from io import StringIO
+# import cProfile
+# import pstats
+# from io import StringIO
 
 
 class ArmController(InterbotixManipulatorXS):
@@ -67,11 +67,6 @@ class ArmController(InterbotixManipulatorXS):
             self.update_desired_pose_cb,
             10
         )
-        self.ccd_execution_time_pub = self.core.get_node().create_publisher(
-            Float64,
-            'ccd_execution_time',
-            10
-        )
         time.sleep(0.5)
         self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
@@ -83,8 +78,8 @@ class ArmController(InterbotixManipulatorXS):
         self.update_T_virtual_to_body()
 
         ###### Enabling the profiler ######
-        profiler = cProfile.Profile()
-        profiler.enable()
+        # profiler = cProfile.Profile()
+        # profiler.enable()
 
         try:
             robot_startup()
@@ -94,11 +89,11 @@ class ArmController(InterbotixManipulatorXS):
                 self.rate.sleep()
         except KeyboardInterrupt:
             ###### Disabling the profiler ######
-            profiler.disable()
+            # profiler.disable()
             ###### save the results from the profiler ######
-            s = StringIO()
-            ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
-            ps.dump_stats('px100_controller_CCD.profile.stats')
+            # s = StringIO()
+            # ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
+            # ps.dump_stats('px100_controller_CCD.profile.stats')
             robot_shutdown()
 
     def update_T_virtual_to_body(self) -> None:
@@ -118,11 +113,13 @@ class ArmController(InterbotixManipulatorXS):
     def move_end_effector(self) -> None:
         """
         This function moves the end effector towards the desired position
-        by reducing the difference between current position and the desired position.
+        self.desired_pose by reducing the difference between current
+        position and the desired position.
         
-        On each iteration, if the difference between the current position and the
-        desired position of the end effector is above some tolerance, then position of the
-        end effector will be adjusted by some constant value.
+        On each iteration, if the difference between the current position
+        and the desired position of the end effector is above some tolerance,
+        then the end-effector will move towards self.desired_pose by a single
+        step.
         """
         # start_time = self.core.get_node().get_clock().now()
         # self.log_info(f'Thread ID (control loop): {get_ident()}')
@@ -131,7 +128,7 @@ class ArmController(InterbotixManipulatorXS):
         with self.lock:
             desired_pose = self.desired_pose
 
-        # creates a rotation matrix from the desired pose's quaternion
+        # create a rotation matrix from the desired pose's quaternion
         desired_rotation_matrix = np.eye(4)
         desired_rotation_matrix[:3, :3] = R.from_quat([
             desired_pose.orientation.x,
@@ -144,7 +141,8 @@ class ArmController(InterbotixManipulatorXS):
         desired_rpy = ang.rotation_matrix_to_euler_angles(
             desired_rotation_matrix)
 
-        # create a transformation matrix from the desired pose and the rotation matrix
+        # create a homogeneous transformation matrix from the
+        # desired pose and the rotation matrix
         desired_trans_matrix = np.eye(4)
         desired_trans_matrix[:3, :3] = desired_rotation_matrix[:3, :3]
         desired_trans_matrix[0, 3] = desired_pose.position.x
@@ -205,6 +203,7 @@ class ArmController(InterbotixManipulatorXS):
                 )
             self.update_T_virtual_to_body()
 
+
     def move_end_effector_wrt_virtual_frame(self, desired_T_virtual_to_body,
                                             T_virtual_to_body, desired_rpy, rpy):
         """
@@ -247,28 +246,15 @@ class ArmController(InterbotixManipulatorXS):
         # move the end effector if the error is greater than the tolerance
         if move_end_effector:
             T_sd = self.T_space_to_virtual @ T_virtual_to_body
-            
-            # Test out CCD
-            start = self.core.get_node().get_clock().now()
-            ccd_joint_angles = self.CCD(
-                x=T_sd[0, 3],
-                y=T_sd[1, 3],
-                z=T_sd[2, 3],
-                desired_pitch=rpy[1],
-                tol=1e-2,
-                max_iters=3
-            )
-            end = self.core.get_node().get_clock().now()
-            success = self.arm.set_joint_positions(ccd_joint_angles, 0.2, 0.1, blocking=False)
 
-            # _, success = self.arm.set_ee_pose_matrix(
-            #     T_sd=T_sd,
-            #     custom_guess=ccd_joint_angles,
-            #     execute=False,
-            #     moving_time=self.moving_time,
-            #     accel_time=self.accel_time,
-            #     blocking=False
-            # )
+            _, success = self.arm.set_ee_pose_matrix(
+                T_sd=T_sd,
+                custom_guess=self.arm.get_joint_commands(),
+                execute=True,
+                moving_time=self.moving_time,
+                accel_time=self.accel_time,
+                blocking=False
+            )
             if success:
                 self.T_virtual_to_body = np.array(T_virtual_to_body)
                 # self.log_info(f'Joint angle errors:\n {[abs(j - c) for (c, j) in zip(ccd_joint_angles, _)]}')
@@ -298,7 +284,7 @@ class ArmController(InterbotixManipulatorXS):
 
            
     def golden_search(self, joints, index, left, right, xd, yd, zd, desired_pitch,
-        max_iters=20, tol=1e-3):
+                        max_iters=20, tol=1e-3):
         """
         Golden search is a line search method for single variable, unimodal functions.
         
@@ -366,6 +352,7 @@ class ArmController(InterbotixManipulatorXS):
         joint_angles = self.arm.get_joint_commands()
         num_of_joints = len(joint_angles)
         golden_search_tol = np.pi / 265 # a little over 0.01
+        golden_search_max_iters = 1
         # the size of half the region to search
         search_region = np.pi / 512
 
@@ -383,7 +370,7 @@ class ArmController(InterbotixManipulatorXS):
                     yd=y,
                     zd=z,
                     desired_pitch=desired_pitch,
-                    max_iters=max_iters,
+                    max_iters=golden_search_max_iters,
                     tol=golden_search_tol
                 )
                 joint_angles[i] = optimal_angle
