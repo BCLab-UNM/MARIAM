@@ -257,10 +257,6 @@ class ArmController(InterbotixManipulatorXS):
             )
             if success:
                 self.T_virtual_to_body = np.array(T_virtual_to_body)
-                # self.log_info(f'Joint angle errors:\n {[abs(j - c) for (c, j) in zip(ccd_joint_angles, _)]}')
-                msg = Float64()
-                msg.data = (end-start).nanoseconds / 1e9
-                self.ccd_execution_time_pub.publish(msg)
 
     def squared_euclidean_distance_error(self, xd, yd, zd, desired_pitch, thetalist):
         # compute the homogeneous transformation matrix
