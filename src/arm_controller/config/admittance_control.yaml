@@ -16,5 +16,5 @@ px100/force_publisher_node:
   ros__parameters:
     delay:     0.0
     frequency: 0.002
-    max_ticks: 1000
+    max_ticks: 2500
     duration:  120.0 # in seconds
