@@ -28,7 +28,7 @@ class ArmController(InterbotixManipulatorXS):
     # the amount of time to spend moving to the desired position
     moving_time = 0.2
     # the amount of time to spend accelerating/decelerating
-    accel_time = 0.1
+    accel_time = 0.001
     # used to lock the desired_pose field to avoid race conditions
     lock = Lock()
     # the pose we want the robot to be in
@@ -123,7 +123,7 @@ class ArmController(InterbotixManipulatorXS):
             start = self.core.get_node().get_clock().now()
             _, success = self.arm.set_ee_pose_matrix(
                 T_sd=desired_trans_matrix,
-                # custom_guess=self.arm.get_joint_commands(),
+                custom_guess=self.arm.get_joint_commands(),
                 execute=True,
                 moving_time=self.moving_time,
                 accel_time=self.accel_time,
