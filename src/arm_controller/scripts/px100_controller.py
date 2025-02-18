@@ -62,7 +62,11 @@ class ArmController(InterbotixManipulatorXS):
         self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
     def start_robot(self) -> None:
-        self.arm.start_lift(blocking=True)
+        self.arm.start_lift(
+            moving_time=1.5,
+            accel_time=0.5,
+            blocking=True
+        )
 
         try:
             robot_startup()
