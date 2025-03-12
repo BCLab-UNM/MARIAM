@@ -14,7 +14,7 @@ from interbotix_xs_modules.xs_robot.arm import InterbotixManipulatorXS
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, Point, Quaternion
 from scipy.spatial.transform import Rotation as R
 
 from std_msgs.msg import Float64
@@ -32,7 +32,11 @@ class ArmController(InterbotixManipulatorXS):
     # used to lock the desired_pose field to avoid race conditions
     lock = Lock()
     # the pose we want the robot to be in
-    desired_pose = Pose()
+    # Let the default be where start_lift() will place the robot
+    desired_pose = Pose(
+        position=Point(x=0.0, y=0.230, z=0.067), 
+        orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
+    )
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
