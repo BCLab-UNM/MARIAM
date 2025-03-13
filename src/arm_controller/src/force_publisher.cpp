@@ -1,7 +1,7 @@
 #include <memory>
 #include <chrono>
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 using namespace std::chrono_literals;
 using namespace std_msgs::msg;
@@ -14,7 +14,7 @@ class ForcePublisher : public rclcpp::Node
 {
   public:
     ForcePublisher() : Node("force_publisher") { 
-      force_publisher = this->create_publisher<Float64>(
+      force_publisher = this->create_publisher<Float32>(
         "force",
         10
       );
@@ -47,7 +47,7 @@ class ForcePublisher : public rclcpp::Node
     rclcpp::TimerBase::SharedPtr initial_delay_timer;
     rclcpp::TimerBase::SharedPtr publisher_timer;
     rclcpp::TimerBase::SharedPtr duration_timer;
-    rclcpp::Publisher<Float64>::SharedPtr force_publisher;
+    rclcpp::Publisher<Float32>::SharedPtr force_publisher;
     const rclcpp::Logger LOGGER = rclcpp::get_logger("force_publisher");
 
     void start_timer()
@@ -67,7 +67,7 @@ class ForcePublisher : public rclcpp::Node
 
     void callback()
     {
-      auto msg = Float64();
+      auto msg = Float32();
       if(ticks == max_ticks)
       {
         ticks = 0;

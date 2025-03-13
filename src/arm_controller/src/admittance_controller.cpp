@@ -4,6 +4,7 @@
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 using namespace geometry_msgs::msg;
@@ -26,7 +27,7 @@ class AdmittanceController : public rclcpp::Node {
         std::bind(&AdmittanceController::admittance_control_callback, this, _1)
       );
 
-      force_sub = this->create_subscription<Float64>(
+      force_sub = this->create_subscription<Float32>(
         "force",
         10,
         std::bind(&AdmittanceController::force_callback, this, _1)
@@ -66,7 +67,7 @@ class AdmittanceController : public rclcpp::Node {
   private:
     rclcpp::Publisher<Pose>::SharedPtr pose_publisher;
     rclcpp::Subscription<Pose>::SharedPtr virtual_pose_sub;
-    rclcpp::Subscription<Float64>::SharedPtr force_sub;
+    rclcpp::Subscription<Float32>::SharedPtr force_sub;
     rclcpp::Subscription<Float64>::SharedPtr mass_sub;
     rclcpp::Subscription<Float64>::SharedPtr damping_sub;
     rclcpp::Subscription<Float64>::SharedPtr stiffness_sub;
@@ -106,7 +107,7 @@ class AdmittanceController : public rclcpp::Node {
       this->pose_publisher->publish(new_msg);
     }
 
-    void force_callback(const Float64::SharedPtr msg) {
+    void force_callback(const Float32::SharedPtr msg) {
       force_reading = msg->data;
     }
 
