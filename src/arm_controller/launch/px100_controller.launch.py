@@ -140,7 +140,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'mode_configs',
             default_value=PathJoinSubstitution([
-                FindPackageShare('interbotix_xsarm_joy'),
+                FindPackageShare('arm_controller'),
                 'config',
                 'modes.yaml',
             ]),
