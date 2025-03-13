@@ -29,7 +29,7 @@ class ArmController(InterbotixManipulatorXS):
     This class is a position controller for the Interbotix PX100.
     """
     # the rate at which the while loop in 'start_robot()' will run
-    current_loop_rate = 5
+    loop_rate = 100
     # the amount of time to spend moving to the desired position
     moving_time = 0.2
     # the amount of time to spend accelerating/decelerating
@@ -53,7 +53,7 @@ class ArmController(InterbotixManipulatorXS):
             args=args,
         )
         # sets the rate at which the control loop will run
-        self.rate = self.core.get_node().create_rate(self.current_loop_rate)
+        self.rate = self.core.get_node().create_rate(self.loop_rate)
 
         self.joint_group_pub = self.core.get_node().create_publisher(
             JointGroupCommand,
