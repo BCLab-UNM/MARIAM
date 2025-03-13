@@ -186,7 +186,7 @@ def generate_launch_description():
             'publish_poses',
             default_value='false',
             choices=('true', 'false'),
-            description="Launches pose_publisher node when true."
+            description="Launches the pose_publisher node when true."
         )
     ]
     declared_arguments.extend(

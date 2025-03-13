@@ -9,22 +9,27 @@ from threading import Lock
 from interbotix_common_modules.common_robot.robot import (
     robot_shutdown, robot_startup
 )
-from interbotix_common_modules.angle_manipulation import angle_manipulation as ang
 from interbotix_xs_modules.xs_robot.arm import InterbotixManipulatorXS
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose, Point, Quaternion
+from interbotix_xs_msgs.msg import JointGroupCommand
 from scipy.spatial.transform import Rotation as R
 
-from std_msgs.msg import Float64
+from modern_robotics import IKinSpace
+
+
+# for publishing execution times
+# from std_msgs.msg import Float64
+
 
 class ArmController(InterbotixManipulatorXS):
     """
     This class is a position controller for the Interbotix PX100.
     """
     # the rate at which the while loop in 'start_robot()' will run
-    current_loop_rate = 500
+    current_loop_rate = 5
     # the amount of time to spend moving to the desired position
     moving_time = 0.2
     # the amount of time to spend accelerating/decelerating
@@ -34,7 +39,7 @@ class ArmController(InterbotixManipulatorXS):
     # the pose we want the robot to be in
     # Let the default be where start_lift() will place the robot
     desired_pose = Pose(
-        position=Point(x=0.0, y=0.230, z=0.067), 
+        position=Point(x=0.0, y=0.230, z=0.067),
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
@@ -50,6 +55,12 @@ class ArmController(InterbotixManipulatorXS):
         # sets the rate at which the control loop will run
         self.rate = self.core.get_node().create_rate(self.current_loop_rate)
 
+        self.joint_group_pub = self.core.get_node().create_publisher(
+            JointGroupCommand,
+            'commands/joint_group',
+            10
+        )
+
         self.core.get_node().create_subscription(
             Pose,
             'px100_target_pose',
@@ -57,11 +68,12 @@ class ArmController(InterbotixManipulatorXS):
             10
         )
 
-        self.exec_time_pub = self.core.get_node().create_publisher(
-            Float64,
-            'IK_solver_execution_time',
-            10
-        )
+        # uncomment to create a publisher for execution times
+        # self.exec_time_pub = self.core.get_node().create_publisher(
+        #     Float64,
+        #     'IK_solver_execution_time',
+        #     10
+        # )
 
         self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
@@ -84,7 +96,6 @@ class ArmController(InterbotixManipulatorXS):
     def move_end_effector(self) -> None:
         """
         """
-        waist_angle_tolerance = 1e-2
         cartesian_pos_tolerance = 8e-3
 
         with self.lock:
@@ -99,10 +110,6 @@ class ArmController(InterbotixManipulatorXS):
             desired_pose.orientation.w,
         ]).as_matrix()
 
-        # get the desired roll, pitch, yaw angles from the rotation matrix
-        desired_rpy = ang.rotation_matrix_to_euler_angles(
-            desired_rotation_matrix)
-
         # create a homogeneous transformation matrix from the
         # desired pose and the rotation matrix
         desired_trans_matrix = np.eye(4)
@@ -113,37 +120,29 @@ class ArmController(InterbotixManipulatorXS):
 
         trans_matrix = self.arm.get_ee_pose_command()
 
-        ######### adjust waist angle #########
-        waist_position = self.arm.get_single_joint_command('waist')
-        if abs(desired_rpy[2] - waist_position) > waist_angle_tolerance:
-            self.arm.set_single_joint_position(
-                joint_name='waist',
-                position=desired_rpy[2],
-                moving_time=self.moving_time,
-                accel_time=self.accel_time,
-                blocking=False
-            )
-
         # computing the cartesian position error
-        position_error = np.abs(desired_trans_matrix[:3, 3] - trans_matrix[:3, 3])
+        position_error = np.abs(
+            desired_trans_matrix[:3, 3] - trans_matrix[:3, 3])
 
         if (np.any(position_error) > cartesian_pos_tolerance):
-            start = self.core.get_node().get_clock().now()
-            _, success = self.arm.set_ee_pose_matrix(
+            # start = self.core.get_node().get_clock().now()
+            joint_cmds, success = self.arm.set_ee_pose_matrix(
                 T_sd=desired_trans_matrix,
                 custom_guess=self.arm.get_joint_commands(),
-                execute=True,
-                moving_time=self.moving_time,
-                accel_time=self.accel_time,
+                execute=False,
                 blocking=False
             )
-            end = self.core.get_node().get_clock().now()
+            # end = self.core.get_node().get_clock().now()
 
             if success:
-                exec_time_msg = Float64()
-                exec_time_msg.data = (end-start).nanoseconds / 1e9
-                self.exec_time_pub.publish(exec_time_msg)
-
+                msg = JointGroupCommand(name="arm", cmd=joint_cmds)
+                self.joint_group_pub.publish(msg)
+                # publish execution time for set_ee_pose_matrix()
+            #     exec_time_msg = Float64()
+            #     exec_time_msg.data = (end-start).nanoseconds / 1e9
+            #     self.exec_time_pub.publish(exec_time_msg)
+            else:
+                self.log_info('Failed to solve for target pose')
 
     def update_desired_pose_cb(self, msg: Pose):
         """
@@ -151,8 +150,8 @@ class ArmController(InterbotixManipulatorXS):
         pose is published to the topic 'px100_target_pose'.
         """
         # if the pose is the same, just return
-        if (self.desired_pose.position == msg.position 
-            and self.desired_pose.orientation == msg.orientation):
+        if (self.desired_pose.position == msg.position
+                and self.desired_pose.orientation == msg.orientation):
             return
 
         # use a lock to update self.desired_pose
