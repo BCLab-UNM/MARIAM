@@ -1,10 +1,10 @@
-px100/admittance_controller_node:
+/**/admittance_controller_node:
   ros__parameters:
     mass:       5.0
     damping:   10.0
     stiffness: 15.0
 
-px100/virtual_pose_publisher_node:
+/**/virtual_pose_publisher_node:
   ros__parameters:
     delay:     0.0
     frequency: 0.002
@@ -12,7 +12,7 @@ px100/virtual_pose_publisher_node:
     y_pos:     0.230
     z_pos:     0.067
 
-px100/force_publisher_node:
+/**/force_publisher_node:
   ros__parameters:
     delay:     0.0
     frequency: 0.002
