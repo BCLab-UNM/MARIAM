@@ -22,9 +22,15 @@ class SineWavePublisher : public rclcpp::Node {
         10
       );
 
+      // put arm in home position
+      auto msg = interbotix_xs_msgs::msg::JointGroupCommand();
+      msg.name = "arm";
+      msg.cmd = {0, 0, 0, 0};
+      publisher->publish(msg);
+
       // start a timer to call "timer_callback"
       timer = this->create_wall_timer(
-        frequency * 1s,
+        (1 / frequency) * 1s,
         std::bind(&SineWavePublisher::timer_callback, this)
       );
     }
@@ -32,8 +38,8 @@ class SineWavePublisher : public rclcpp::Node {
 
   private:
     int count = 0;
-    double frequency = 0.2; // 500Hz
-    double complete_cycle = 3; // 3 seconds
+    double frequency = 100; // in Hz
+    double complete_cycle = 6; // 3 seconds
     double step = 2 * M_PI / (frequency * complete_cycle);
 
     rclcpp::TimerBase::SharedPtr timer;
@@ -41,11 +47,11 @@ class SineWavePublisher : public rclcpp::Node {
     const rclcpp::Logger LOGGER = rclcpp::get_logger("sine_wave_publisher");
 
     void timer_callback() {
-      float cmd = M_PI_2 * sin(step * count);
+      float cmd = M_PI_4 * sin(step * count);
       auto msg = interbotix_xs_msgs::msg::JointGroupCommand();
       msg.name = "arm"; // specifies we want to move the arm
       // creating the joint commands as a list
-      msg.cmd = {cmd, cmd, cmd, cmd};
+      msg.cmd = {0, 0, 0, cmd};
 
       publisher->publish(msg);
       count++;
