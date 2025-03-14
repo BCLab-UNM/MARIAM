@@ -29,11 +29,11 @@ class ArmController(InterbotixManipulatorXS):
     This class is a position controller for the Interbotix PX100.
     """
     # the rate at which the while loop in 'start_robot()' will run
-    loop_rate = 100
+    loop_rate = 10
     # the amount of time to spend moving to the desired position
-    moving_time = 0.2
+    moving_time = 0.0
     # the amount of time to spend accelerating/decelerating
-    accel_time = 0.001
+    accel_time = 0.0
     # used to lock the desired_pose field to avoid race conditions
     lock = Lock()
     # the pose we want the robot to be in
@@ -96,7 +96,7 @@ class ArmController(InterbotixManipulatorXS):
     def move_end_effector(self) -> None:
         """
         """
-        cartesian_pos_tolerance = 8e-3
+        cartesian_pos_tolerance = 1e-3
 
         with self.lock:
             desired_pose = self.desired_pose
