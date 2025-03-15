@@ -29,7 +29,8 @@ class SineWavePublisher : public rclcpp::Node {
       RCLCPP_INFO(LOGGER, "Starting trajectory trace");
 
       const double AMP = M_PI_4;
-      const double FREQUENCY = 10; // in Hz
+      const double FREQUENCY = 500; // in Hz
+      const auto LOOP_PERIOD = std::chrono::milliseconds(static_cast<int>(1e6 / FREQUENCY));
 
       auto start_time = std::chrono::steady_clock::now();
       auto end_time   = start_time + std::chrono::seconds(120);
@@ -47,6 +48,8 @@ class SineWavePublisher : public rclcpp::Node {
         msg.name = "arm";
         msg.cmd = {0.0F, 0.0F, 0.0F, static_cast<float>(cmd_value)};
         publisher->publish(msg);
+
+        std::this_thread::sleep_until(now + LOOP_PERIOD);
       }
       RCLCPP_INFO(LOGGER, "Ending trajectory trace");
     }
