@@ -49,6 +49,8 @@ if colcon build --symlink-install; then
     source ~/MARIAM/install/setup.bash
 else
     echo "Failed to build Interbotix Arm ROS Packages."
+    echo "Did you source your ROS 2 installation? (source /opt/ros/humble/setup.bash)"
+    exit 1
 fi
 
 # Set up Environment Variables
