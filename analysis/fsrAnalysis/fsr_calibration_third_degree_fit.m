@@ -17,7 +17,7 @@ TData = readtable(filename);
 resistorNames = TData.Properties.VariableNames(2:end);
 totalResistors = size(resistorNames, 2);
 totalForces = size(resistorNames, 1);
-colors = cool(totalResistors);
+colors = summer(totalResistors);
 
 % Assign voltageOut and Force data from file
 voltageOut = TData(:, 2:end);
@@ -87,7 +87,7 @@ for i = 1:length(resistorNames)
 end
 coeffTable = array2table(coeffMatrix', 'VariableNames', resistorNames);
 
-% Estimate force using polynomial coefficients
+% Estimate force using polynomial coefficients at the measured points (existing computation)
 for i = 1:totalResistors
     forceEstimateArray(:, i) = ...
        coeffTable{1, i} * expVoltageOut{:, i}.^3 ...
@@ -97,17 +97,22 @@ for i = 1:totalResistors
 end
 forceEstimate = array2table(forceEstimateArray, 'VariableNames', expVoltageOut.Properties.VariableNames);
 
-% Plot observed vs estimated forces
+% Plot observed vs estimated forces using a continuous fitted curve from 0 to 5 V
 figure;
 legendTitles = {};
+x_fit = linspace(0, 5, 100);  % Continuous voltage values from 0 to 5 V
 for i = 1:length(resistorNames)
     varName = resistorNames{i};
-    plot((voltageOut.(varName)),(force),'linewidth',1,'Color', colors(i, :));
+    % Plot observed data points
+    plot(voltageOut.(varName), force, 'linewidth', 1, 'Color', colors(i, :));
     legendTitles{end+1} = ['Observed ' strrep(varName(2:end), '_', '.') ' Ohm'];
     hold on;
-    plot(voltageOut.(varName),forceEstimate{:, i},':','linewidth',3,'Color', colors(i, :));
+    % Compute the fitted curve using the polynomial coefficients
+    p = coeffMatrix(i, :);  % p(1) = coeff for x^3, p(2) for x^2, p(3) for x, p(4) constant
+    force_fit = p(1)*x_fit.^3 + p(2)*x_fit.^2 + p(3)*x_fit + p(4);
+    % Plot the continuous fitted curve
+    plot(x_fit, force_fit, ':', 'linewidth', 3, 'Color', colors(i, :));
     legendTitles{end+1} = ['Estimated ' strrep(varName(2:end), '_', '.') ' Ohm'];
-    hold on;
 end
 hold off;
 xlabel('Measured Voltage [V]');
