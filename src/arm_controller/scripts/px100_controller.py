@@ -10,6 +10,7 @@ from interbotix_common_modules.common_robot.robot import (
     robot_shutdown, robot_startup
 )
 from interbotix_xs_modules.xs_robot.arm import InterbotixManipulatorXS
+from interbotix_xs_msgs.srv import RegisterValues
 import numpy as np
 import rclpy
 from rclpy.utilities import remove_ros_args
@@ -29,7 +30,7 @@ class ArmController(InterbotixManipulatorXS):
     This class is a position controller for the Interbotix PX100.
     """
     # the rate at which the while loop in 'start_robot()' will run
-    loop_rate = 10
+    loop_rate = 500
     # the amount of time to spend moving to the desired position
     moving_time = 0.0
     # the amount of time to spend accelerating/decelerating
@@ -83,6 +84,10 @@ class ArmController(InterbotixManipulatorXS):
             accel_time=0.5,
             blocking=True
         )
+
+        # set the velocity and acceleration profiles to 0
+        self.set_motor_registers(register='Profile_Velocity', value=0)
+        self.set_motor_registers(register='Profile_Acceleration', value=0)
 
         try:
             robot_startup()
@@ -161,6 +166,16 @@ class ArmController(InterbotixManipulatorXS):
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
 
+    def set_motor_registers(self, register, value):
+        future = self.arm.core.srv_set_reg.call_async(
+            RegisterValues.Request(
+                cmd_type='group',
+                name=self.arm.group_name,
+                reg=register,
+                value=value,
+            )
+        )
+        self.arm.core.get_node().wait_until_future_complete(future)
 
 def main(args=None):
     p = argparse.ArgumentParser()

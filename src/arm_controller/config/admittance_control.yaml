@@ -1,7 +1,7 @@
 /**/admittance_controller_node:
   ros__parameters:
     mass:       5.0
-    damping:   50.0
+    damping:   20.0
     stiffness: 100.0
 
 /**/virtual_pose_publisher_node:
