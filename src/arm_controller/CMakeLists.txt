@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # find_package(interbotix_moveit_interface REQUIRED)
 # find_package(interbotix_moveit_interface_msgs REQUIRED)
 find_package(interbotix_xs_msgs REQUIRED)
@@ -192,6 +193,22 @@ install(TARGETS sine_wave_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
+##### For executable joint_delay_tracker.cpp #####
+add_executable(joint_delay_tracker src/joint_delay_tracker.cpp)
+target_include_directories(joint_delay_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(joint_delay_tracker PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  joint_delay_tracker
+  "rclcpp"
+  "interbotix_xs_msgs"
+  "sensor_msgs"
+)
+install(TARGETS joint_delay_tracker
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ##### Add launch file to share folder #####
 install(
   DIRECTORY
@@ -238,6 +255,7 @@ target_link_libraries(ellipse_publisher "${cpp_typesupport_target}")
 target_link_libraries(force_publisher "${cpp_typesupport_target}")
 target_link_libraries(pose_publisher "${cpp_typesupport_target}")
 target_link_libraries(sine_wave_publisher "${cpp_typesupport_target}")
+target_link_libraries(joint_delay_tracker "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

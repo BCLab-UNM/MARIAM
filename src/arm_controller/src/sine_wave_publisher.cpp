@@ -31,7 +31,7 @@ class SineWavePublisher : public rclcpp::Node {
     }
 
     void trajectory_trace() {
-      RCLCPP_INFO(LOGGER, "Starting trajectory trace");
+      RCLCPP_INFO(LOGGER, "Publishing joint commands");
 
       // wave parameters
       const double WAVE_PERIOD = 2.0; // in seconds
@@ -66,7 +66,7 @@ class SineWavePublisher : public rclcpp::Node {
 
         std::this_thread::sleep_until(now + LOOP_PERIOD);
       }
-      RCLCPP_INFO(LOGGER, "Ending trajectory trace");
+      RCLCPP_INFO(LOGGER, "Done");
     }
 
 
