@@ -2,6 +2,7 @@
 #include <chrono>
 #include "rclcpp/rclcpp.hpp"
 #include <cmath>
+#include <vector>
 #include "interbotix_xs_msgs/msg/joint_group_command.hpp"
 #include "interbotix_xs_msgs/msg/joint_single_command.hpp"
 //#include "sensor_msgs/msg/joint_state.hpp"
@@ -20,6 +21,8 @@ class JointDelayTracker : public rclcpp::Node {
     double max_diff = 10.0;
     // the time when the reference command was set
     std::chrono::steady_clock::time_point start;
+
+    std::vector<double> time_diffs = {};
 
     rclcpp::Subscription<interbotix_xs_msgs::msg::JointSingleCommand>::SharedPtr joint_cmd_sub;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_states_sub;
@@ -46,9 +49,20 @@ class JointDelayTracker : public rclcpp::Node {
       auto current_position = msg.position[3];
 
       if (current_position == desired_joint_position) {
+        double time_diff = std::chrono::duration<double>(now - start).count();
+        time_diffs.push_back(time_diff);
         RCLCPP_INFO(this->get_logger(), "Reached desired joint position in: %.6f",
-          std::chrono::duration<double>(now - start).count()
+          time_diff
         );
+
+        double avg = 0;
+
+        for (double time : time_diffs) {
+          avg += time;
+        }
+        avg /= time_diffs.size();
+
+        RCLCPP_INFO(this->get_logger(), "Current avg.: %.6f", avg);
       }
     }
 
