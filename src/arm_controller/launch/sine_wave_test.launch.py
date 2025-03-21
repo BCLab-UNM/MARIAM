@@ -1,26 +1,16 @@
 from launch import LaunchDescription
 
-from launch.substitutions import (
-    LaunchConfiguration,
-    PythonExpression,
-)
-from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.conditions import IfCondition
-
-from ament_index_python.packages import get_package_share_directory
-
-import os
 
 from interbotix_xs_modules.xs_launch import (
     declare_interbotix_xsarm_robot_description_launch_arguments
 )
 
-from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
-    OpaqueFunction,
+    TimerAction
 )
 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -30,8 +20,6 @@ from launch.substitutions import (
     PythonExpression,
 )
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import Node
-from launch.conditions import IfCondition
 
 
 def generate_launch_description():
@@ -43,8 +31,9 @@ def generate_launch_description():
     launch_driver_launch_arg = LaunchConfiguration('launch_driver')
     use_sim_launch_arg = LaunchConfiguration('use_sim')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
-    xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
-    
+    xs_driver_logging_level_launch_arg = LaunchConfiguration(
+        'xs_driver_logging_level')
+
     tracker_launch_arg = LaunchConfiguration('use_tracker')
 
     xsarm_control_launch = IncludeLaunchDescription(
@@ -146,7 +135,13 @@ def generate_launch_description():
         declare_interbotix_xsarm_robot_description_launch_arguments())
 
     return LaunchDescription(declared_arguments + [
-        sine_wave_publisher_node,
+        # launch sine_wave_publisher after 2 seconds have passed
+        TimerAction(
+            period=2.0,
+            actions=[
+                sine_wave_publisher_node
+            ]
+        ),
         xsarm_control_launch,
         joint_delay_tracker_node
     ])

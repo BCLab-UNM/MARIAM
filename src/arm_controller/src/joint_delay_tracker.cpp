@@ -12,15 +12,22 @@ using std::placeholders::_1;
 
 class JointDelayTracker : public rclcpp::Node {
   private:
-    // this is used to calculate the amount that passes
-    // between publishing the joint command and the joint
-    // reaching that position
+    /**  
+    * this is used to calculate the amount that passes
+    * between publishing the joint command and the joint
+    * reaching that position
+    * 
+    * NOTE: The message interface declares the joint command as a
+    * 32-bit FP value.
+    * */
     double desired_joint_position = 0.0;
     // the maximum amount of time to pass before
     // changing reference_joint_command
     double max_diff = 10.0;
     // the time when the reference command was set
     std::chrono::steady_clock::time_point start;
+
+    bool change_cmd = true;
 
     std::vector<double> time_diffs = {};
 
@@ -40,15 +47,14 @@ class JointDelayTracker : public rclcpp::Node {
         10,
         std::bind(&JointDelayTracker::joint_states_callback, this, _1)
       );
-
-      start = std::chrono::steady_clock::now();
     }
 
     void joint_states_callback(const sensor_msgs::msg::JointState &msg) {
       auto now = std::chrono::steady_clock::now();
-      auto current_position = msg.position[3];
+      float current_position = static_cast<float>(msg.position[3]);
+      double tol = 8e-3;
 
-      if (current_position == desired_joint_position) {
+      if (current_position - desired_joint_position <= tol && !change_cmd) {
         double time_diff = std::chrono::duration<double>(now - start).count();
         time_diffs.push_back(time_diff);
         RCLCPP_INFO(this->get_logger(), "Reached desired joint position in: %.6f",
@@ -63,6 +69,7 @@ class JointDelayTracker : public rclcpp::Node {
         avg /= time_diffs.size();
 
         RCLCPP_INFO(this->get_logger(), "Current avg.: %.6f", avg);
+        change_cmd = true;
       }
     }
 
@@ -76,10 +83,14 @@ class JointDelayTracker : public rclcpp::Node {
       auto cmd = msg.cmd;
       auto now = std::chrono::steady_clock::now();
 
-      if (max_diff <= std::chrono::duration<double>(now - start).count()) {
-        //RCLCPP_INFO(this->get_logger(), "Max amount of time has been reached.");
+      if (change_cmd || 
+          max_diff <= std::chrono::duration<double>(now - start).count()
+        ) {
+        // RCLCPP_INFO(this->get_logger(), "Max amount of time has been reached.");
         desired_joint_position = cmd;
+        RCLCPP_INFO(this->get_logger(), "Setting desired joint angle to %.6f", desired_joint_position);
         start = now;
+        change_cmd = false;
       }
     }
 };
