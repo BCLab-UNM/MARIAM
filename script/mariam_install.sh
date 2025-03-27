@@ -22,9 +22,9 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
     ros-humble-moveit ros-humble-tf-transformations ros-humble-joint-trajectory-controller \
     python3-rosdep python3-colcon-common-extensions python3-colcon-clean ros-humble-apriltag \
     ros-humble-moveit-visual-tools python3-pip ros-humble-usb-cam ros-humble-domain-bridge ros-humble-apriltag-ros \
-    ros-humble-navigation2 ros-humble-nav2-bringup \
+    ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-nav2-rviz-plugins \
     ros-humble-joint-state-publisher-gui ros-humble-robot-state-publisher ros-humble-xacro \
-    ros-humble-gazebo-ros-pkgs ros-humble-gazebo-plugins \
+    ros-humble-gazebo-ros-pkgs ros-humble-gazebo-plugins ros-humble-rqt-robot-steering \
 
 pip3 install transforms3d modern_robotics glob
 
@@ -49,6 +49,8 @@ if colcon build --symlink-install; then
     source ~/MARIAM/install/setup.bash
 else
     echo "Failed to build Interbotix Arm ROS Packages."
+    echo "Did you source your ROS 2 installation? (source /opt/ros/humble/setup.bash)"
+    exit 1
 fi
 
 # Set up Environment Variables
@@ -60,5 +62,41 @@ else
     echo "Environment variables already set!"
 fi
 
-echo -e "${GRN}NOTE: Remember to reboot the computer before using the robot!${OFF}"
+echo -e "\n\n${GRN}Configuration Setup for Robot Usage${OFF}"
 
+echo -e "\n${GRN}The following commands can be added to your ~/.bashrc to ensure your environment is properly set up when a terminal is created:${OFF}"
+
+# List of commands to source
+commands=(
+    "source /opt/ros/humble/setup.bash"
+    "source ~/MARIAM/install/setup.bash"
+    "source /usr/share/gazebo/setup.sh"
+)
+
+# Iterate over each command and ask user if they want to add it
+for cmd in "${commands[@]}"; do
+    echo -e "\n${GRN}Would you like to add the following command to your ~/.bashrc?${OFF}"
+    echo -e "${GRN}${cmd}${OFF}"
+    read -p "Enter Y to add it, or N to skip: " user_input
+    if [[ "$user_input" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+        # Check if already exists in ~/.bashrc to avoid duplicates
+        if grep -Fxq "$cmd" ~/.bashrc; then
+            echo -e "${GRN}Command already exists in ~/.bashrc. Skipping...${OFF}"
+        else
+            echo "$cmd" >> ~/.bashrc
+            echo -e "${GRN}Command added to ~/.bashrc.${OFF}"
+        fi
+    else
+        echo -e "${GRN}Skipping this command.${OFF}"
+    fi
+done
+
+# Ask if the user would like to reboot
+echo -e "\n${GRN}Would you like to reboot the computer now?${OFF}"
+read -p "Enter Y to reboot, or N to cancel: " reboot_input
+if [[ "$reboot_input" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+    echo -e "${GRN}Rebooting the computer...${OFF}"
+    sudo reboot
+else
+    echo -e "${GRN}Reboot cancelled. Please reboot manually later if necessary.${OFF}"
+fi

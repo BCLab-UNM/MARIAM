@@ -14,7 +14,7 @@ find_package(tf2_ros REQUIRED)
 
 # Install folders
 install(
-  DIRECTORY config maps params rviz mobility
+  DIRECTORY config maps params rviz launch
   DESTINATION share/${PROJECT_NAME}
 )
 

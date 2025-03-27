@@ -29,7 +29,7 @@ import threading
 swarmie_lock = threading.Lock()
 
 from .utils import block_detection, block_pose, filter_detections, is_moving
-from mobility import Sync
+from src import Sync
 
 class DriveException(Exception):
     def __init__(self, st):

@@ -4,16 +4,15 @@
 
 Assuming a prior install of `ros-humble-desktop-full`.
 
-### Easy-Peasy-Lemon-Squeezy Install (BAD)
-TODO: Fix this, now that forked submodules are being used.
+### Easy-Peasy-Lemon-Squeezy Install
 
 ```bash
 cd ~
 git clone --recursive git@github.com:BCLab-UNM/MARIAM.git
 sudo rosdep init
 rosdep update
-chmod +x ~/MARIAM/scripts/mariam_install.sh
-./MARIAM/scripts/mariam_install.sh
+chmod +x ~/MARIAM/script/mariam_install.sh
+./MARIAM/script/mariam_install.sh
 ```
 
 ### Manual Install

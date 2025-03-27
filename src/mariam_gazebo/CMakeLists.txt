@@ -13,7 +13,7 @@ find_package(gazebo_ros REQUIRED)
 
 # Install folders
 install(
-  DIRECTORY launch world
+  DIRECTORY launch worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
