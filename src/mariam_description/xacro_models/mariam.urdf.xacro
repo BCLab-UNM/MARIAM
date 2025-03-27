@@ -196,14 +196,17 @@
   </joint> -->
 
   <!-- *********************** MODIFIED INTERBOTIX SETUP **********************************  -->
-  <!-- Include the robotic arm xacro file -->
-  <!-- <xacro:include filename="$(find mariam_description)/models/px100_original.urdf.xacro" />
-   -->
-  <!-- Attach the robotic arm to the base_link -->
-  <!-- <joint name="arm_base_joint" type="fixed">
+    <!-- Attach the robotic arm to the base_link -->
+  <joint name="arm_base_joint" type="fixed">
     <parent link="base_link"/>
     <child link="px100/base_link"/>
-    <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/>
-  </joint> -->
+    <!-- <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/> -->
+    <origin
+        rpy="0 0 ${pi/2}"
+        xyz="0 0 0" />
+  </joint>
+
+  <!-- Include the robotic arm xacro file -->
+  <xacro:include filename="$(find mariam_description)/xacro_models/px100_modified.urdf.xacro" />
 
 </robot>

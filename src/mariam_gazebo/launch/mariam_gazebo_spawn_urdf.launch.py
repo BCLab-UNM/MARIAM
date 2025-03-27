@@ -149,7 +149,7 @@ def generate_launch_description():
   ld.add_action(start_robot_state_publisher_cmd)
   ld.add_action(start_rviz_cmd)
   ld.add_action(spawn_robot_cmd)
-  ld.add_action(rqt_robot_steering_cmd)
+  # ld.add_action(rqt_robot_steering_cmd)
   ld.add_action(start_depth_to_laserscan_cmd)
 
   return ld

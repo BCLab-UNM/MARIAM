@@ -8,7 +8,7 @@
     value="4"
     scope="global" />
 
-  <xacro:arg name="robot_name" default="${robot_model}" />
+  <xacro:arg name="robot_name" default="" />
   <xacro:arg name="base_link_frame" default="base_link" />
   <xacro:arg name="use_gripper" default="false" /> <!-- Modified from true -->
   <xacro:arg name="show_ar_tag" default="false" />
@@ -54,6 +54,11 @@
   <material name="interbotix_black">
     <texture filename="package://interbotix_xsarm_descriptions/meshes/interbotix_black.png" />
   </material>
+  
+  <material name="my_pink">
+        <color rgba="1 0.4 0.7 1.0" />  <!-- Pink color (R=1, G=0.4, B=0.7, fully opaque) -->
+  </material>
+  
 
   <xacro:if value="$(arg use_world_frame)">
     <link name="world" />
@@ -76,7 +81,7 @@
           filename="${mesh_directory}/base.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="interbotix_black" />
+      <material name="my_pink" />
     </visual>
     <collision>
       <origin
@@ -132,7 +137,7 @@
           filename="${mesh_directory}/shoulder.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="interbotix_black" />
+      <material name="my_pink" />
     </visual>
     <collision>
       <origin
@@ -188,7 +193,7 @@
           filename="${mesh_directory}/upper_arm.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="interbotix_black" />
+      <material name="my_pink" />
     </visual>
     <collision>
       <origin
@@ -244,7 +249,7 @@
           filename="${mesh_directory}/forearm.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="interbotix_black" />
+      <material name="my_pink" />
     </visual>
     <collision>
       <origin
@@ -383,7 +388,7 @@
             filename="${mesh_directory}/gripper_prop.stl"
             scale="0.001 0.001 0.001" />
         </geometry>
-        <material name="interbotix_black" />
+        <material name="my_pink" />
       </visual>
       <collision>
         <origin
@@ -442,7 +447,7 @@
               filename="${mesh_directory}/gripper_bar.stl"
               scale="0.001 0.001 0.001" />
           </geometry>
-          <material name="interbotix_black" />
+          <material name="my_pink" />
         </visual>
         <collision>
           <origin
@@ -526,7 +531,7 @@
                 filename="${mesh_directory}/gripper_finger.stl"
                 scale="0.001 0.001 0.001" />
             </geometry>
-            <material name="interbotix_black" />
+            <material name="my_pink" />
           </visual>
           <collision>
             <origin
@@ -588,7 +593,7 @@
                 filename="${mesh_directory}/gripper_finger.stl"
                 scale="0.001 0.001 0.001" />
             </geometry>
-            <material name="interbotix_black" />
+            <material name="my_pink" />
           </visual>
           <collision>
             <origin
