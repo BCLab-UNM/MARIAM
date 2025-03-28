@@ -6,7 +6,6 @@
 
 /**/virtual_pose_publisher_node:
   ros__parameters:
-    delay:     0.0
     frequency: 0.002
     x_pos:     0.0
     y_pos:     0.230
