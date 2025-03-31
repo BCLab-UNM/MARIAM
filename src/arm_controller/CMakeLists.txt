@@ -128,6 +128,7 @@ ament_target_dependencies(
   virtual_pose_publisher
   "rclcpp"
   "std_msgs"
+  "geometry_msgs"
 )
 install(TARGETS virtual_pose_publisher
   DESTINATION lib/${PROJECT_NAME}

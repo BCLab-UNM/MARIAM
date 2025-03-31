@@ -3,6 +3,7 @@
 #include "std_msgs/msg/float64.hpp"
 #include <thread>
 
+
 class LiftingNode : public rclcpp::Node {
   private:
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr virtual_z_pos_pub;
@@ -10,7 +11,7 @@ class LiftingNode : public rclcpp::Node {
   public:
     LiftingNode() : Node("lifting_node") {
       virtual_z_pos_pub = this->create_publisher<std_msgs::msg::Float64>(
-        "px100_virtual_pose_updater",
+        "/px100_virtual_pose_updater",
         10
       );
     }
@@ -29,12 +30,12 @@ int main(int argc, char * argv[]) {
   rclcpp::init(argc, argv);
   auto node = LiftingNode();
 
-  for(int i = 0; i < 5; i++) {
-    // increase the height by a centimeter
-    height += 0.01;
-    // publish a pose every 0.4 seconds
+  for(int i = 0; i < 50; i++) {
+    // increase the height by a millimeter
+    height += 0.001;
+    // publish a pose every 0.04 seconds
     node.publish_z_position(height);
-    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
   }
 
   rclcpp::shutdown();

@@ -1,17 +1,25 @@
 #include <chrono>
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "std_msgs/msg/float64.hpp"
 
-using namespace geometry_msgs::msg;
 using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 class VirtualPosePublisher : public rclcpp::Node {
   public:
     VirtualPosePublisher() : Node("virtual_pose_publisher") {
-      pose_publisher = this->create_publisher<Pose>(
+      pose_publisher = this->create_publisher<geometry_msgs::msg::Pose>(
         "px100_virtual_pose",
         10
       );
+
+      pose_updater_sub = this->create_subscription<std_msgs::msg::Float64>(
+        "/px100_virtual_pose_updater",
+        10,
+        std::bind(&VirtualPosePublisher::sub_callback, this, _1)
+      );
+
       // position parameters
       this->declare_parameter("x_pos", 0.0);
       this->declare_parameter("y_pos", 0.250048);
@@ -52,12 +60,14 @@ class VirtualPosePublisher : public rclcpp::Node {
       double y;
       double z;
       double frequency;
+
       rclcpp::TimerBase::SharedPtr timer;
-      rclcpp::Publisher<Pose>::SharedPtr pose_publisher;
+      rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher;
+      rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr pose_updater_sub;
       const rclcpp::Logger LOGGER = rclcpp::get_logger("virtual_pose_publisher");
 
       void callback() {
-        auto msg = Pose();
+        auto msg = geometry_msgs::msg::Pose();
 
         msg.position.x = x_pos;
         msg.position.y = y_pos;
@@ -80,6 +90,10 @@ class VirtualPosePublisher : public rclcpp::Node {
         // );
 
         pose_publisher->publish(msg);
+      }
+
+      void sub_callback(const std_msgs::msg::Float64::SharedPtr msg) {
+        z_pos = msg->data;
       }
 };
 
