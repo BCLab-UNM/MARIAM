@@ -7,6 +7,7 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     OpaqueFunction,
+    SetEnvironmentVariable
 )
 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -22,6 +23,7 @@ from launch.conditions import IfCondition
 def launch_setup(context, *args, **kwargs):
     robot_model_launch_arg = LaunchConfiguration('robot_model')
     robot_name_launch_arg = LaunchConfiguration('robot_name')
+    
     base_link_frame_launch_arg = LaunchConfiguration('base_link_frame')
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
     mode_configs_launch_arg = LaunchConfiguration('mode_configs')
@@ -32,8 +34,17 @@ def launch_setup(context, *args, **kwargs):
 
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
-    publish_poses_launch_arg = LaunchConfiguration('publish_poses')
 
+    #### Setting environment variable
+    if robot_name_launch_arg.perform(context) == 'ross':
+        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '42')
+    elif robot_name_launch_arg.perform(context) == 'monica':
+        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '43')
+    else:
+        # NOTE: 0 is the default domain ID for nodes
+        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '0')
+
+    #### Nodes and launch descriptions
     px100_controller_node = Node(
         name='px100_controller_node',
         package='arm_controller',
@@ -49,6 +60,7 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
+    ## Control node launch description
     xsarm_control_launch = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     PathJoinSubstitution([
@@ -69,7 +81,9 @@ def launch_setup(context, *args, **kwargs):
                 }.items(),
                 condition=IfCondition(launch_driver_launch_arg)
             )
+
     
+    ## Admittance Controller launch description
     admittance_control_launch = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     PathJoinSubstitution([
@@ -91,34 +105,11 @@ def launch_setup(context, *args, **kwargs):
                 )
             )
 
-
-    # node to publish poses for testing the speed of the arm
-    pose_publisher_node = Node(
-        package='arm_controller',
-        executable='pose_publisher',
-        name='pose_publisher_node',
-        namespace=robot_name_launch_arg,
-        parameters=[{
-            'delay': 1.0,
-            # This will change pose every 5 seconds
-            'frequency': 0.002,
-            'max_ticks': 2500,
-            # 2 minutes
-            'duration': 120.0
-        }],
-        condition=IfCondition(
-            PythonExpression([
-                "'", publish_poses_launch_arg,
-                "' == 'true'"
-            ])
-        )
-    )
-
     return [
+        domain_id,
         px100_controller_node,
         xsarm_control_launch,
-        admittance_control_launch,
-        pose_publisher_node
+        admittance_control_launch
     ]
 
 
@@ -131,9 +122,11 @@ def generate_launch_description():
             'robot_name',
             default_value=LaunchConfiguration('robot_model')
         ),
+
+        # NOTE: if use_sim == false, use_rviz == false
         DeclareLaunchArgument(
             'use_rviz',
-            default_value='true',
+            default_value=LaunchConfiguration('use_sim'),
             choices=('true', 'false'),
             description='launches RViz if set to `true`.',
         ),
@@ -172,21 +165,15 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_admittance_control',
-            default_value='false',
+            default_value='true',
             choices=('true', 'false'),
             description="Launches an admittance controller node when true."
         ),
         DeclareLaunchArgument(
             'use_fake_force',
-            default_value='true',
-            choices=('true', 'false'),
-            description="Launches a force publisher if use_admittance_control is also true."
-        ),
-        DeclareLaunchArgument(
-            'publish_poses',
             default_value='false',
             choices=('true', 'false'),
-            description="Launches the pose_publisher node when true."
+            description="Launches a force publisher if use_admittance_control is also true."
         )
     ]
     declared_arguments.extend(
