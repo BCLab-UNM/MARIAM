@@ -15,7 +15,7 @@ class VirtualPosePublisher : public rclcpp::Node {
       );
 
       pose_updater_sub = this->create_subscription<std_msgs::msg::Float64>(
-        "/px100_virtual_pose_updater",
+        "px100_virtual_pose_updater",
         10,
         std::bind(&VirtualPosePublisher::sub_callback, this, _1)
       );
