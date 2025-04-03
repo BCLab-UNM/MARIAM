@@ -6,8 +6,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
-    OpaqueFunction,
-    SetEnvironmentVariable
+    OpaqueFunction
 )
 
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -34,15 +33,6 @@ def launch_setup(context, *args, **kwargs):
 
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
-
-    #### Setting environment variable
-    if robot_name_launch_arg.perform(context) == 'ross':
-        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '42')
-    elif robot_name_launch_arg.perform(context) == 'monica':
-        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '43')
-    else:
-        # NOTE: 0 is the default domain ID for nodes
-        domain_id = SetEnvironmentVariable("ROS_DOMAIN_ID", '0')
 
     #### Nodes and launch descriptions
     px100_controller_node = Node(
@@ -106,7 +96,6 @@ def launch_setup(context, *args, **kwargs):
             )
 
     return [
-        domain_id,
         px100_controller_node,
         xsarm_control_launch,
         admittance_control_launch
