@@ -1,0 +1,33 @@
+# General settings
+frequency: 30.0             # How often to run the filter (Hz)
+sensor_timeout: 0.1         # Duration (in seconds) before a sensor is considered timed out
+publish_tf: true            # Publish TF between odom and base_link frames
+print_diagnostics: true     # Print diagnostic messages to the console
+two_d_mode: true            # Constrain state estimation to 2D (x, y, yaw)
+transform_time_offset: 0.0  # Time offset to account for transforms delays
+
+# Frame settings
+map_frame: map              # The map frame (if applicable)
+odom_frame: odom            # The odometry frame; must match your odometry data
+base_link_frame: base_link  # The robot's base link frame
+world_frame: odom           # The world frame; for 2D mode typically set to odom
+
+# Wheel odometry configuration (odom0)
+odom0: /ross/wheel/odom
+# Configuration order:
+#   [ x, y, z, roll, pitch, yaw, vx, vy, vz, v_roll, v_pitch, v_yaw ]
+# For wheel odom on a ground robot, we typically use x, y, yaw for both pose and twist.
+odom0_config: [true, true, false, false, false, true,  true, false, false, false, false, true]
+odom0_queue_size: 10
+odom0_nodelay: false
+
+# Camera IMU configuration (imu0)
+imu0: /ross/camera/imu
+# For the camera IMU:
+#   - Orientation is not used (the sensor returns zeros with a -1 covariance)
+#   - We use angular velocity measurements (v_roll, v_pitch, v_yaw) for attitude updates.
+imu0_config: [false, false, false, false, false, false, false, false, false, true, true, true]
+imu0_differential: false  # Set to true if your sensor data is to be differentiated
+imu0_relative: true       # Set true if the sensor data is relative to a fixed offset
+imu0_queue_size: 10
+imu0_nodelay: false
