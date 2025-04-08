@@ -25,6 +25,9 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
     ros-humble-navigation2 ros-humble-nav2-bringup ros-humble-nav2-rviz-plugins \
     ros-humble-joint-state-publisher-gui ros-humble-robot-state-publisher ros-humble-xacro \
     ros-humble-gazebo-ros-pkgs ros-humble-gazebo-plugins ros-humble-rqt-robot-steering \
+    ros-humble-rtabmap ros-humble-rtabmap-ros ros-humble-rtabmap-rviz-plugins \
+    ros-humble-imu-filter-madgwick sudo apt install ros-humble-realsense2-* \
+    sudo apt install ros-humble-librealsense2* \
 
 pip3 install transforms3d modern_robotics glob
 
