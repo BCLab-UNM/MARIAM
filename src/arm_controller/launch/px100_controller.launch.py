@@ -111,8 +111,15 @@ def generate_launch_description():
             'robot_name',
             default_value=LaunchConfiguration('robot_model')
         ),
-
-        # NOTE: if use_sim == false, use_rviz == false
+        DeclareLaunchArgument(
+            'use_sim',
+            default_value='true',
+            choices=('true', 'false'),
+            description=(
+                "if `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's"
+                ' motion; if `false`, the real DYNAMIXEL driver node is run.'
+            ),
+        ),
         DeclareLaunchArgument(
             'use_rviz',
             default_value=LaunchConfiguration('use_sim'),
@@ -142,15 +149,6 @@ def generate_launch_description():
             default_value='INFO',
             choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'FATAL'),
             description='set the logging level of the X-Series Driver.'
-        ),
-        DeclareLaunchArgument(
-            'use_sim',
-            default_value='true',
-            choices=('true', 'false'),
-            description=(
-                "if `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's"
-                ' motion; if `false`, the real DYNAMIXEL driver node is run.'
-            ),
         ),
         DeclareLaunchArgument(
             'use_admittance_control',
