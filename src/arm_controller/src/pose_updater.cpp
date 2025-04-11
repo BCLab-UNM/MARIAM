@@ -22,14 +22,17 @@ class LiftingNode : public rclcpp::Node {
       );
     }
 
-    void update_x_position(double x_pos) {
-
-    }
-
-    void update_z_position(double z_pos) {
+    /**
+     * This function will publish a new pose to /px100_target_pose for
+     * both robots.
+     * 
+     * @param y_pos: the new y position
+     * @param z_pos: the new z position
+     */
+    void update_position(double y_pos, double z_pos) {
       auto msg = geometry_msgs::msg::Pose();
       msg.position.x = 0.0;
-      msg.position.y = 0.23;
+      msg.position.y = y_pos;
       msg.position.z = z_pos;
 
       msg.orientation.w = 0.707;
@@ -39,30 +42,46 @@ class LiftingNode : public rclcpp::Node {
 
       ross_publisher->publish(msg);
       monica_publisher->publish(msg);
-      RCLCPP_INFO(this->get_logger(), "published %.4f", msg.position.z);
+      RCLCPP_DEBUG(this->get_logger(), "published %.4f", msg.position.z);
     }
 };
 
 int main(int argc, char * argv[]) {
   if (argc < 2) {
     std::cout << "Not enough arguments\n";
+    std::cout << "Please use 'lift' or 'squeeze'\n";
     return 1;
   }
   // initial height of the arm (in meters)
   std::string option = std::string(argv[1]);
-  double height = 0.067;
-  double y_position = 0.23;
+
+  // all positions are in meters
+  double initial_y_position = 0.23;
+  // the position of the arms when squeezing the object
+  double final_y_position = 
+                    initial_y_position + 0.05;
+  double height = 0.067; 
 
   rclcpp::init(argc, argv);
   auto node = LiftingNode();
 
-  if (option == "z") {
+  if (option == "squeeze") {
     for(int i = 0; i < 50; i++) {
+      // increase y_position by a millimeter
+      initial_y_position += 0.001;
+      // update the pose every 0.015 seconds
+      node.update_position(initial_y_position, height);
+      std::this_thread::sleep_for(std::chrono::milliseconds(15));
+    }
+  }
+
+  if (option == "lift") {
+    for(int i = 0; i < 100; i++) {
       // increase the height by a millimeter
       height += 0.001;
-      // publish a pose every 0.04 seconds
-      node.update_z_position(height);
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      // update the pose every 0.015 seconds
+      node.update_position(0.280, height);
+      std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
   }
 
