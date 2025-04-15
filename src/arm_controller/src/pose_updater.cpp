@@ -71,7 +71,7 @@ int main(int argc, char * argv[]) {
       initial_y_position += 0.001;
       // update the pose every 0.015 seconds
       node.update_position(initial_y_position, height);
-      std::this_thread::sleep_for(std::chrono::milliseconds(15));
+      std::this_thread::sleep_for(std::chrono::milliseconds(45));
     }
   }
 
@@ -79,9 +79,8 @@ int main(int argc, char * argv[]) {
     for(int i = 0; i < 100; i++) {
       // increase the height by a millimeter
       height += 0.001;
-      // update the pose every 0.015 seconds
-      node.update_position(0.280, height);
-      std::this_thread::sleep_for(std::chrono::milliseconds(15));
+      node.update_position(final_y_position, height);
+      std::this_thread::sleep_for(std::chrono::milliseconds(45));
     }
   }
 
