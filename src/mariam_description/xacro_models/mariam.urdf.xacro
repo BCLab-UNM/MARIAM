@@ -200,10 +200,10 @@
   <joint name="arm_base_joint" type="fixed">
     <parent link="base_link"/>
     <child link="px100/base_link"/>
-    <!-- <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/> -->
-    <origin
-        rpy="0 0 ${pi/2}"
-        xyz="0 0 0" />
+    <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/>
+    <!-- <origin -->
+        <!-- rpy="0 0 ${pi/2}" -->
+        <!-- xyz="0 0 0" /> -->
   </joint>
 
   <!-- Include the robotic arm xacro file -->

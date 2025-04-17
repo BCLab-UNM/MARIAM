@@ -8,7 +8,7 @@
     value="4"
     scope="global" />
 
-  <xacro:arg name="robot_name" default="" />
+  <xacro:arg name="robot_name" default="px100" />
   <xacro:arg name="base_link_frame" default="base_link" />
   <xacro:arg name="use_gripper" default="false" /> <!-- Modified from true -->
   <xacro:arg name="show_ar_tag" default="false" />
@@ -55,7 +55,7 @@
     <texture filename="package://interbotix_xsarm_descriptions/meshes/interbotix_black.png" />
   </material>
   
-  <material name="my_pink">
+  <material name="gripper_pink">
         <color rgba="1 0.4 0.7 1.0" />  <!-- Pink color (R=1, G=0.4, B=0.7, fully opaque) -->
   </material>
   
@@ -81,7 +81,7 @@
           filename="${mesh_directory}/base.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="my_pink" />
+      <material name="interbotix_black" />
     </visual>
     <collision>
       <origin
@@ -137,7 +137,7 @@
           filename="${mesh_directory}/shoulder.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="my_pink" />
+      <material name="interbotix_black" />
     </visual>
     <collision>
       <origin
@@ -193,7 +193,7 @@
           filename="${mesh_directory}/upper_arm.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="my_pink" />
+      <material name="interbotix_black" />
     </visual>
     <collision>
       <origin
@@ -249,7 +249,7 @@
           filename="${mesh_directory}/forearm.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="my_pink" />
+      <material name="interbotix_black" />
     </visual>
     <collision>
       <origin
@@ -305,9 +305,7 @@
           filename="${mesh_directory}/gripper_pink.stl"
           scale="0.001 0.001 0.001" />
       </geometry>
-      <material name="pink_material">
-        <color rgba="1 0.4 0.7 1.0" />  <!-- Pink color (R=1, G=0.4, B=0.7, fully opaque) -->
-      </material>
+      <material name="gripper_pink" />        
     </visual>
     <collision>
       <origin
@@ -388,7 +386,7 @@
             filename="${mesh_directory}/gripper_prop.stl"
             scale="0.001 0.001 0.001" />
         </geometry>
-        <material name="my_pink" />
+        <material name="interbotix_black" />
       </visual>
       <collision>
         <origin
@@ -447,7 +445,7 @@
               filename="${mesh_directory}/gripper_bar.stl"
               scale="0.001 0.001 0.001" />
           </geometry>
-          <material name="my_pink" />
+          <material name="interbotix_black" />
         </visual>
         <collision>
           <origin
@@ -531,7 +529,7 @@
                 filename="${mesh_directory}/gripper_finger.stl"
                 scale="0.001 0.001 0.001" />
             </geometry>
-            <material name="my_pink" />
+            <material name="interbotix_black" />
           </visual>
           <collision>
             <origin
@@ -593,7 +591,7 @@
                 filename="${mesh_directory}/gripper_finger.stl"
                 scale="0.001 0.001 0.001" />
             </geometry>
-            <material name="my_pink" />
+            <material name="interbotix_black" />
           </visual>
           <collision>
             <origin
@@ -653,7 +651,7 @@
   </xacro:if> <!--
   use_gripper -->
 
-  <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/control.urdf.xacro" />
+  <!-- <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/control.urdf.xacro" /> -->
   <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/gazebo_configs.urdf.xacro" />
 
   <xacro:if value="${hardware_type == 'gz_classic'}">

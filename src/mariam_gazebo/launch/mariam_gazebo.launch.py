@@ -116,12 +116,40 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
+    rqt_robot_steering_node = Node(
+        package='rqt_robot_steering',
+        executable='rqt_robot_steering',
+    )
+
+    # Start Depth to LaserScan Node
+    # use 'LIBGL_ALWAYS_SOFTWARE=1 rviz2' if crashes
+    start_depth_to_laserscan_node = Node(
+        package='depthimage_to_laserscan',
+        executable='depthimage_to_laserscan_node',
+        name='depthimage_to_laserscan',
+        output='screen',
+        parameters=[
+            {'scan_time': 0.033},
+            {'range_min': 0.45},
+            {'range_max': 100.0},
+            {'scan_height': 1},
+            {'output_frame': 'camera_link'},
+        ],
+        remappings=[
+            ('depth', '/camera/depth/image_raw'),
+            ('depth_camera_info', '/camera/depth/camera_info'),
+            ('scan', '/scan'),
+        ]
+    )
+
     return [
         gz_resource_path_env_var,
         gz_model_uri_env_var,
         gazebo_launch_include,
         mariam_description_launch_include,
-        spawn_robot_node
+        spawn_robot_node,
+        rqt_robot_steering_node,
+        start_depth_to_laserscan_node
     ]
 
 
