@@ -7,6 +7,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     OpaqueFunction,
     SetEnvironmentVariable,
+    RegisterEventHandler
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
@@ -16,6 +17,8 @@ from launch.substitutions import (
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch.event_handlers import OnProcessExit
+
 
 
 def launch_setup(context, *args, **kwargs):
@@ -102,6 +105,52 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
+    #### PX100 control nodes
+    spawn_joint_state_broadcaster_node = Node(
+        name='joint_state_broadcaster_spawner',
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            '-c',
+            'controller_manager',
+            'joint_state_broadcaster',
+            '--ros-args', '--log-level', 'DEBUG'
+
+        ],
+        parameters=[{
+            'use_sim_time': use_sim_time,
+        }],
+    )
+
+    spawn_arm_controller_node = Node(
+        name='arm_controller_spawner',
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            '-c',
+            'controller_manager',
+            'arm_controller',
+        ],
+        parameters=[{
+            'use_sim_time': use_sim_time,
+        }]
+    )
+
+    load_joint_state_broadcaster_event = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_robot_node,
+            on_exit=[spawn_joint_state_broadcaster_node]
+        )
+    )
+
+    load_arm_controller_event = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_joint_state_broadcaster_node,
+            on_exit=[spawn_arm_controller_node]
+        )
+    )
+
+    #### mariam description launch
     mariam_description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -146,6 +195,8 @@ def launch_setup(context, *args, **kwargs):
         gz_resource_path_env_var,
         gz_model_uri_env_var,
         gazebo_launch_include,
+        load_joint_state_broadcaster_event,
+        load_arm_controller_event,
         mariam_description_launch_include,
         spawn_robot_node,
         rqt_robot_steering_node,
