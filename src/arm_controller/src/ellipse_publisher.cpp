@@ -11,12 +11,12 @@ class EllipsePublisher : public rclcpp::Node
   public:
     EllipsePublisher() : rclcpp::Node("ellipse_publisher_node") {
       pose_publisher = this->create_publisher<Pose>(
-        "high_freq_target_pose",
+        "px100_target_pose",
         10
       );
-      this->declare_parameter("delay",     5.0);
+      this->declare_parameter("delay",     2.0);
       this->declare_parameter("duration",  300.0);
-      this->declare_parameter("frequency", 5.0);
+      this->declare_parameter("frequency", 1.0);
       this->declare_parameter("max_ticks", 500);
 
       this->get_parameter("delay",     delay);

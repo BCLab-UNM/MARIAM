@@ -11,6 +11,7 @@ find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # find_package(interbotix_moveit_interface REQUIRED)
 # find_package(interbotix_moveit_interface_msgs REQUIRED)
 find_package(interbotix_xs_msgs REQUIRED)
@@ -18,7 +19,7 @@ find_package(moveit_visual_tools REQUIRED)
 find_package(joy REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-
+find_package(visualization_msgs REQUIRED)
 
 # For executable pose_listener_moveit
 add_executable(pose_listener_moveit src/pose_listener_moveit.cpp)
@@ -100,6 +101,23 @@ install(TARGETS admittance_controller
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# For executable admittance_rviz_markers.cpp
+add_executable(admittance_rviz_markers src/admittance_rviz_markers.cpp)
+target_include_directories(admittance_rviz_markers PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(admittance_rviz_markers PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  admittance_rviz_markers
+  "rclcpp"
+  "std_msgs"
+  "geometry_msgs"
+  "visualization_msgs"
+)
+install(TARGETS admittance_rviz_markers
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 # For executable virtual_pose_publisher.cpp
 add_executable(virtual_pose_publisher src/virtual_pose_publisher.cpp)
 target_include_directories(virtual_pose_publisher PUBLIC
@@ -115,7 +133,7 @@ install(TARGETS virtual_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable ellipse_publisher.cpp
+##### For executable ellipse_publisher.cpp #####
 add_executable(ellipse_publisher src/ellipse_publisher.cpp)
 target_include_directories(ellipse_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -130,7 +148,7 @@ install(TARGETS ellipse_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable force_publisher.cpp
+##### For executable force_publisher.cpp #####
 add_executable(force_publisher src/force_publisher.cpp)
 target_include_directories(force_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -145,22 +163,53 @@ install(TARGETS force_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable high_freq_pose_publisher.cpp
-add_executable(high_freq_pose_publisher src/high_freq_pose_publisher.cpp)
-target_include_directories(high_freq_pose_publisher PUBLIC
+##### For executable pose_publisher.cpp #####
+add_executable(pose_publisher src/pose_publisher.cpp)
+target_include_directories(pose_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(high_freq_pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(pose_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 ament_target_dependencies(
-  high_freq_pose_publisher
+  pose_publisher
   "rclcpp"
   "std_msgs"
 )
-install(TARGETS high_freq_pose_publisher
+install(TARGETS pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Add launch file to share folder
+##### For executable sine_wave_publisher.cpp #####
+add_executable(sine_wave_publisher src/sine_wave_publisher.cpp)
+target_include_directories(sine_wave_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(sine_wave_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  sine_wave_publisher
+  "rclcpp"
+  "interbotix_xs_msgs"
+)
+install(TARGETS sine_wave_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+##### For executable joint_delay_tracker.cpp #####
+add_executable(joint_delay_tracker src/joint_delay_tracker.cpp)
+target_include_directories(joint_delay_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(joint_delay_tracker PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  joint_delay_tracker
+  "rclcpp"
+  "interbotix_xs_msgs"
+  "sensor_msgs"
+)
+install(TARGETS joint_delay_tracker
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+##### Add launch file to share folder #####
 install(
   DIRECTORY
     launch
@@ -168,11 +217,18 @@ install(
     share/${PROJECT_NAME}/
 )
 
+##### Add config files to share folder #####
+install(
+  DIRECTORY
+    config
+  DESTINATION
+    share/${PROJECT_NAME}/
+)
+
 ##### adding script to lib folder #####
 install(
   PROGRAMS
-    scripts/xsarm_robot.py
-    scripts/xsarm_ikpy_robot.py
+    scripts/px100_controller.py
   DESTINATION
     lib/${PROJECT_NAME}
 )
@@ -197,7 +253,9 @@ target_link_libraries(admittance_controller "${cpp_typesupport_target}")
 target_link_libraries(virtual_pose_publisher "${cpp_typesupport_target}")
 target_link_libraries(ellipse_publisher "${cpp_typesupport_target}")
 target_link_libraries(force_publisher "${cpp_typesupport_target}")
-target_link_libraries(high_freq_pose_publisher "${cpp_typesupport_target}")
+target_link_libraries(pose_publisher "${cpp_typesupport_target}")
+target_link_libraries(sine_wave_publisher "${cpp_typesupport_target}")
+target_link_libraries(joint_delay_tracker "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
