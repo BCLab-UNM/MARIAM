@@ -121,7 +121,7 @@
         </ros>
         <robot_param>robot_description</robot_param>
         <robot_param_node>robot_state_publisher</robot_param_node>
-        <parameters>$(find interbotix_xsarm_sim)/config/trajectory_controllers/${robot_model}_trajectory_controllers.yaml</parameters>
+        <parameters>$(find mariam_description)/xacro_models/px100_trajectory_controllers.yaml</parameters>
       </plugin>
 
     </gazebo>
