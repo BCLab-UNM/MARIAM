@@ -100,7 +100,8 @@ def launch_setup(context, *args, **kwargs):
             '-topic', '/robot_description',
             '-x', '0.0',
             '-y', '0.0',
-            '-z', '0.1'
+            '-z', '0.1',
+            # '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
     )
@@ -113,9 +114,7 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             '-c',
             'controller_manager',
-            'joint_state_broadcaster',
-            '--ros-args', '--log-level', 'DEBUG'
-
+            'joint_state_broadcaster'
         ],
         parameters=[{
             'use_sim_time': use_sim_time,
@@ -129,7 +128,7 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             '-c',
             'controller_manager',
-            'arm_controller',
+            'arm_controller'
         ],
         parameters=[{
             'use_sim_time': use_sim_time,
@@ -195,12 +194,14 @@ def launch_setup(context, *args, **kwargs):
         gz_resource_path_env_var,
         gz_model_uri_env_var,
         gazebo_launch_include,
-        load_joint_state_broadcaster_event,
-        load_arm_controller_event,
-        mariam_description_launch_include,
+
         spawn_robot_node,
         rqt_robot_steering_node,
-        start_depth_to_laserscan_node
+        start_depth_to_laserscan_node,
+
+        load_joint_state_broadcaster_event,
+        load_arm_controller_event,
+        mariam_description_launch_include
     ]
 
 

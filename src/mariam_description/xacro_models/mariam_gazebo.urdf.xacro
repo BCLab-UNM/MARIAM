@@ -186,10 +186,16 @@
   </gazebo>
 
   <!-- *********************** GAZEBO ROS CONTROL *********************   -->
-  <gazebo>
-    <plugin name="mariam_gazebo_ros_control" filename="libgazebo_ros_control.so">
-      <robotNamespace>/</robotNamespace>
+  <!-- <gazebo>
+    <plugin name="mariam_gazebo_ros_control" filename="libgazebo_ros2_control.so">
+      <ros>
+        <robotNamespace>/</robotNamespace>
+      </ros>
+
+      <robot_param>robot_description</robot_param>
+      <robot_param_node>robot_state_publisher</robot_param_node>
+      <parameters>$(find interbotix_xsarm_sim)/config/trajectory_controllers/px100_trajectory_controllers.yaml</parameters>
     </plugin>
-  </gazebo>
+  </gazebo> -->
 
 </robot>
