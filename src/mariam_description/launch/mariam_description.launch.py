@@ -8,7 +8,8 @@ from launch.substitutions import (
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.actions import TimerAction
+
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def launch_setup(context, *args, **kwargs):
@@ -33,8 +34,9 @@ def launch_setup(context, *args, **kwargs):
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{
-            'robot_description':
+            'robot_description': ParameterValue(
                 Command(['xacro', ' ', model_launch_arg]),
+                value_type=str),
             'use_sim_time': use_sim_time,
         }],
         # arguments=['--ros-args', '--log-level', 'DEBUG'],

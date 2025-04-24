@@ -114,7 +114,6 @@
   <!-- Load the gazebo_ros2_control plugin if using Gazebo hardware -->
   <xacro:if value="${hardware_type == 'gz_classic'}">
     <gazebo>
-
       <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
         <ros>
           <namespace>/</namespace>

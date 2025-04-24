@@ -198,4 +198,18 @@
     </plugin>
   </gazebo> -->
 
+    <!-- *********************** FORCE SENSOR *********************   -->
+  <gazebo reference="wrist_angle">
+     <sensor name="wrist_angle_force_torque" type="force_torque">
+      <always_on>true</always_on>
+      <update_rate>20.0</update_rate>
+      <visualize>true</visualize>
+      <force_torque>
+        <frame>sensor</frame>
+        <measure_direction>child_to_parent</measure_direction>
+      </force_torque>
+    </sensor>
+  </gazebo>
+
+
 </robot>
