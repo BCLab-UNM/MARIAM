@@ -13,6 +13,13 @@ namespace gazebo
     ForceSensorPlugin() : SensorPlugin() {}
 
     void Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf) {
+      // Initialize ROS2 node
+      ros_node = rclcpp::Node::make_shared("force_sensor_plugin");
+      force_publisher = ros_node->create_publisher<std_msgs::msg::Float64>(
+        "/force",
+        10
+      );
+
       // Ensure the sensor is a ForceTorqueSensor
       this->forceTorqueSensor = std::dynamic_pointer_cast<sensors::ForceTorqueSensor>(_sensor);
       
@@ -38,7 +45,12 @@ namespace gazebo
       // ignition::math::Vector3d torque = this->forceTorqueSensor->Torque();
 
       // Output the readings to the console
-      std::cout << "Force: " << force << std::endl;
+      // std::cout << "Force: " << force << std::endl;
+
+      // Create a message to publish
+      auto msg = std_msgs::msg::Float64();
+      msg.data = force.X();
+      force_publisher->publish(msg);
     }
 
     // Pointer to the ForceTorqueSensor
@@ -48,7 +60,8 @@ namespace gazebo
     event::ConnectionPtr updateConnection;
 
     // ros2 node and publisher
-
+    rclcpp::Node::SharedPtr ros_node;
+    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr force_publisher;
   };
 
   // Register the plugin with Gazebo
