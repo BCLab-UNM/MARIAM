@@ -9,13 +9,29 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(gazebo_ros REQUIRED)
+find_package(gazebo REQUIRED)
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS}")
+
+include_directories(${GAZEBO_INCLUDE_DIRS})
+link_directories(${GAZEBO_LIBRARY_DIRS})
+list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
+
+
+#### Add libraries
+add_library(force_sensor SHARED src/force_sensor.cc)
+target_link_libraries(force_sensor ${GAZEBO_LIBRARIES})
+install(
+  TARGETS force_sensor
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # Install folders
 install(
   DIRECTORY launch worlds
   DESTINATION share/${PROJECT_NAME}
 )
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
