@@ -21,6 +21,11 @@ list(APPEND CMAKE_CXX_FLAGS "${GAZEBO_CXX_FLAGS}")
 #### Add libraries
 add_library(force_sensor SHARED src/force_sensor.cc)
 target_link_libraries(force_sensor ${GAZEBO_LIBRARIES})
+ament_target_dependencies(
+  force_sensor
+  "rclcpp"
+  "std_msgs"
+)
 install(
   TARGETS force_sensor
   DESTINATION lib/${PROJECT_NAME}

@@ -1,25 +1,22 @@
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/sensors/Sensor.hh>
-#include <gazebo/sensors/SensorManager.hh>
 #include <gazebo/sensors/ForceTorqueSensor.hh>
-#include <gazebo/transport/Node.hh>
-#include <gazebo/transport/Publisher.hh>
-#include <gazebo/msgs/msgs.hh>
 #include <iostream>
+
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 namespace gazebo
 {
-  class ForceSensorPlugin : public SensorPlugin
-  {
+  class ForceSensorPlugin : public SensorPlugin {
   public:
     ForceSensorPlugin() : SensorPlugin() {}
 
-    virtual void Load(sensors::SensorPtr _sensor, sdf::ElementPtr /*_sdf*/)
-    {
+    void Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf) {
       // Ensure the sensor is a ForceTorqueSensor
       this->forceTorqueSensor = std::dynamic_pointer_cast<sensors::ForceTorqueSensor>(_sensor);
-      if (!this->forceTorqueSensor)
-      {
+      
+      if (!this->forceTorqueSensor) {
         gzerr << "ForceSensorPlugin requires a ForceTorqueSensor.\n";
         return;
       }
@@ -31,12 +28,11 @@ namespace gazebo
       // Activate the sensor
       this->forceTorqueSensor->SetActive(true);
 
-      gzdbg << "ForceSensorPlugin loaded successfully.\n";
+      std::cout << "ForceSensorPlugin loaded successfully.\n";
     }
 
   private:
-    void OnUpdate()
-    {
+    void OnUpdate() {
       // Get the force and torque readings
       ignition::math::Vector3d force = this->forceTorqueSensor->Force();
       // ignition::math::Vector3d torque = this->forceTorqueSensor->Torque();
@@ -50,6 +46,9 @@ namespace gazebo
 
     // Connection to the sensor update event
     event::ConnectionPtr updateConnection;
+
+    // ros2 node and publisher
+
   };
 
   // Register the plugin with Gazebo
