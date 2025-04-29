@@ -12,7 +12,7 @@ from rclpy.utilities import remove_ros_args
 from geometry_msgs.msg import Pose, Point, Quaternion
 from scipy.spatial.transform import Rotation as R
 
-from trajectory_msgs.msg import JointTrajectory
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
 from modern_robotics import IKinSpace
 
@@ -53,7 +53,7 @@ class ArmController(rclpy.Node):
         # sets the rate at which the control loop will run
         self.rate = self.core.get_node().create_rate(self.loop_rate)
 
-        self.joint_group_pub = self.core.get_node().create_publisher(
+        self.joint_trajectory_pub = self.core.get_node().create_publisher(
             JointTrajectory,
             'arm_controller/joint_trajectory',
             10
@@ -69,10 +69,16 @@ class ArmController(rclpy.Node):
         self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
 
     def start_robot(self) -> None:
-        self.arm.start_lift(
-            moving_time=1.5,
-            accel_time=0.5,
-            blocking=True
+        self.log_info('Starting robot...')
+        self.joint_trajectory_pub.publish(
+            JointTrajectory(
+                joint_names=['waist', 'shoulder', 'elbow', 'wrist_angle'],
+                points=[JointTrajectoryPoint(
+                    positions=[1.5, 0.52447963, 0.67205733, -1.17653696],
+                    # in nanoseconds
+                    time_from_start=2_000_000_000
+                )]
+            )
         )
 
         while rclpy.ok():
@@ -122,10 +128,18 @@ class ArmController(rclpy.Node):
             # end = self.core.get_node().get_clock().now()
 
             if success:
-                msg = JointTrajectory()
+                msg = JointTrajectory(
+                    joint_names=['waist', 'shoulder', 'elbow', 'wrist_angle'],
+                    points=[JointTrajectoryPoint(
+                        positions=joint_cmds,
+                        # in nanoseconds
+                        time_from_start=2_000_000_000
+                    )]
+                )
                 self.joint_group_pub.publish(msg)
             else:
                 self.log_info('Failed to solve for target pose')
+
 
     def update_desired_pose_cb(self, msg: Pose):
         """
