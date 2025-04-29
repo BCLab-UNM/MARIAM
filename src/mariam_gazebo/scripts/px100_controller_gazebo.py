@@ -7,22 +7,26 @@ import copy
 from threading import Lock
 
 import numpy as np
+
 import rclpy
+from rclpy.node import Node
 from rclpy.utilities import remove_ros_args
+
+from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Pose, Point, Quaternion
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+
 from scipy.spatial.transform import Rotation as R
 
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
 
 from modern_robotics import IKinSpace
 
-class ArmController(rclpy.Node):
+class ArmController(Node):
     """
     This class is a position controller for the Interbotix PX100.
     """
-    # the rate at which the while loop in 'start_robot()' will run
-    loop_rate = 500
-
     # used to lock the desired_pose field to avoid race conditions
     lock = Lock()
 
@@ -49,34 +53,44 @@ class ArmController(rclpy.Node):
         [0.0, 0.0, 0.0, 1.0]
     ])
 
-    def __init__(self, pargs, args=None):
-        # sets the rate at which the control loop will run
-        self.rate = self.core.get_node().create_rate(self.loop_rate)
+    joint_names = ['waist', 'shoulder', 'elbow', 'wrist_angle']
 
-        self.joint_trajectory_pub = self.core.get_node().create_publisher(
+    duration = Duration()
+
+
+    def __init__(self, pargs, args=None):
+        super().__init__('px100_controller')
+        # the rate at which the while loop in 'start_robot()' will run
+        loop_rate = 500
+        # sets the rate at which the control loop will run
+        self.rate = self.create_rate(loop_rate)
+
+        self.duration.nanosec = 2_000_000_000
+
+        self.joint_trajectory_pub = self.create_publisher(
             JointTrajectory,
             'arm_controller/joint_trajectory',
             10
         )
 
-        self.core.get_node().create_subscription(
+        self.create_subscription(
             Pose,
             'px100_target_pose',
             self.update_desired_pose_cb,
             10
         )
 
-        self.core.get_node().loginfo(f'Robot name: {pargs.robot_name}')
+        self.log_info(f'Robot name: {pargs.robot_name}')
 
     def start_robot(self) -> None:
         self.log_info('Starting robot...')
         self.joint_trajectory_pub.publish(
             JointTrajectory(
-                joint_names=['waist', 'shoulder', 'elbow', 'wrist_angle'],
+                joint_names=self.joint_names,
                 points=[JointTrajectoryPoint(
                     positions=[1.5, 0.52447963, 0.67205733, -1.17653696],
                     # in nanoseconds
-                    time_from_start=2_000_000_000
+                    time_from_start=self.duration
                 )]
             )
         )
@@ -118,25 +132,25 @@ class ArmController(rclpy.Node):
             desired_trans_matrix[:3, 3] - trans_matrix[:3, 3])
 
         if (np.any(position_error) > cartesian_pos_tolerance):
-            # start = self.core.get_node().get_clock().now()
             joint_cmds, success = IKinSpace(
                 Slist=self.Slist,
                 M=self.M,
                 T=desired_trans_matrix,
                 thetalist0=self.joint_cmds,
             )
-            # end = self.core.get_node().get_clock().now()
 
             if success:
-                msg = JointTrajectory(
-                    joint_names=['waist', 'shoulder', 'elbow', 'wrist_angle'],
-                    points=[JointTrajectoryPoint(
-                        positions=joint_cmds,
-                        # in nanoseconds
-                        time_from_start=2_000_000_000
-                    )]
+                trajectory_point = JointTrajectoryPoint(
+                    positions=joint_cmds,
+                    time_from_start=self.duration
                 )
-                self.joint_group_pub.publish(msg)
+                
+                trajectory_msg = JointTrajectory()
+                trajectory_msg.joint_names = self.joint_names
+                trajectory_msg.points = trajectory_point
+                trajectory_msg.header.stamp = self.get_clock().now().to_msg()
+
+                self.joint_group_pub.publish(trajectory_msg)
             else:
                 self.log_info('Failed to solve for target pose')
 
@@ -156,7 +170,7 @@ class ArmController(rclpy.Node):
             self.desired_pose = copy.deepcopy(msg)
 
     def log_info(self, msg):
-        self.core.get_node().get_logger().info(f'{msg}')
+        self.get_logger().info(f'{msg}')
 
 
 def main(args=None):
@@ -168,8 +182,17 @@ def main(args=None):
     command_line_args = remove_ros_args(args=sys.argv)[1:]
     ros_args = p.parse_args(command_line_args)
 
-    bot = ArmController(ros_args, args=args)
-    bot.start_robot()
+    rclpy.init(args=args)
+
+    arm_controller = ArmController(ros_args, args=args)
+    # rclpy.spin(arm_controller)
+    arm_controller.start_robot()
+
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    arm_controller.destroy_node()
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

@@ -37,6 +37,13 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
+##### adding script to lib folder #####
+install(
+  PROGRAMS
+    scripts/px100_controller_gazebo.py
+  DESTINATION
+    lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
