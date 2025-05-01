@@ -20,8 +20,8 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from scipy.spatial.transform import Rotation as R
 
 
-
 from modern_robotics import IKinSpace
+
 
 class ArmController(Node):
     """
@@ -36,6 +36,8 @@ class ArmController(Node):
         position=Point(x=0.0, y=0.230, z=0.067),
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
+
+    last_trans_matrix = np.eye(4)
 
     joint_cmds = [0.0, 0.0, 0.0, 0.0]
 
@@ -56,7 +58,6 @@ class ArmController(Node):
     joint_names = ['waist', 'shoulder', 'elbow', 'wrist_angle']
 
     duration = Duration()
-
 
     def __init__(self, pargs, args=None):
         super().__init__('px100_controller')
@@ -95,14 +96,20 @@ class ArmController(Node):
             )
         )
 
-        while rclpy.ok():
-            self.move_end_effector()
-            self.rate.sleep()
+        try:
+            while True:
+                self.get_logger().debug('Running control loop...')
+                self.move_end_effector()
+                self.rate.sleep()
 
+        except KeyboardInterrupt:
+            self.get_logger().info('Shutting down...')
+            return
 
     def move_end_effector(self) -> None:
         """
         """
+        self.get_logger().debug('Moving end effector...')
         cartesian_pos_tolerance = 1e-3
 
         with self.lock:
@@ -125,18 +132,18 @@ class ArmController(Node):
         desired_trans_matrix[1, 3] = desired_pose.position.y
         desired_trans_matrix[2, 3] = desired_pose.position.z
 
-        trans_matrix = self.arm.get_ee_pose_command()
-
         # computing the cartesian position error
         position_error = np.abs(
-            desired_trans_matrix[:3, 3] - trans_matrix[:3, 3])
+            desired_trans_matrix[:3, 3] - self.last_trans_matrix[:3, 3])
 
-        if (np.any(position_error) > cartesian_pos_tolerance):
+        if (np.any(position_error > cartesian_pos_tolerance)):
             joint_cmds, success = IKinSpace(
                 Slist=self.Slist,
                 M=self.M,
                 T=desired_trans_matrix,
                 thetalist0=self.joint_cmds,
+                eomg=0.001,
+                ev=0.001
             )
 
             if success:
@@ -144,16 +151,16 @@ class ArmController(Node):
                     positions=joint_cmds,
                     time_from_start=self.duration
                 )
-                
+
                 trajectory_msg = JointTrajectory()
                 trajectory_msg.joint_names = self.joint_names
-                trajectory_msg.points = trajectory_point
+                trajectory_msg.points = [trajectory_point]
                 trajectory_msg.header.stamp = self.get_clock().now().to_msg()
-
-                self.joint_group_pub.publish(trajectory_msg)
+                self.get_logger().debug(f'Joint commands: {joint_cmds}')
+                self.get_logger().debug(f'Position error: {position_error}')
+                self.joint_trajectory_pub.publish(trajectory_msg)
             else:
                 self.log_info('Failed to solve for target pose')
-
 
     def update_desired_pose_cb(self, msg: Pose):
         """
@@ -188,9 +195,6 @@ def main(args=None):
     # rclpy.spin(arm_controller)
     arm_controller.start_robot()
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
     arm_controller.destroy_node()
     rclpy.shutdown()
 
