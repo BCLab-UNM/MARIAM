@@ -2,25 +2,22 @@
 
 import argparse
 import sys
-
 import copy
 from threading import Lock
-
-import numpy as np
+import time
+from threading import Thread
 
 import rclpy
 from rclpy.node import Node
 from rclpy.utilities import remove_ros_args
-
 from builtin_interfaces.msg import Duration
 from geometry_msgs.msg import Pose, Point, Quaternion
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
-
+import numpy as np
 from scipy.spatial.transform import Rotation as R
-
-
 from modern_robotics import IKinSpace
+
 
 
 class ArmController(Node):
@@ -39,8 +36,6 @@ class ArmController(Node):
 
     last_trans_matrix = np.eye(4)
 
-    joint_cmds = [0.0, 0.0, 0.0, 0.0]
-
     Slist = np.array([
         [0.0, 0.0, 1.0, 0.0,     0.0, 0.0],
         [0.0, 1.0, 0.0, -0.0931, 0.0, 0.0],
@@ -55,6 +50,9 @@ class ArmController(Node):
         [0.0, 0.0, 0.0, 1.0]
     ])
 
+
+    last_joint_cmds = np.array([0.0, 0.0, 0.0, 0.0])
+
     joint_names = ['waist', 'shoulder', 'elbow', 'wrist_angle']
 
     duration = Duration()
@@ -62,11 +60,11 @@ class ArmController(Node):
     def __init__(self, pargs, args=None):
         super().__init__('px100_controller')
         # the rate at which the while loop in 'start_robot()' will run
-        loop_rate = 500
-        # sets the rate at which the control loop will run
-        self.rate = self.create_rate(loop_rate)
+        # (in seconds)
+        self.loop_rate = 2
 
-        self.duration.nanosec = 2_000_000_000
+        self.duration.sec = 0
+        self.duration.nanosec = 500_000_000
 
         self.joint_trajectory_pub = self.create_publisher(
             JointTrajectory,
@@ -85,31 +83,19 @@ class ArmController(Node):
 
     def start_robot(self) -> None:
         self.log_info('Starting robot...')
-        self.joint_trajectory_pub.publish(
-            JointTrajectory(
-                joint_names=self.joint_names,
-                points=[JointTrajectoryPoint(
-                    positions=[1.5, 0.52447963, 0.67205733, -1.17653696],
-                    # in nanoseconds
-                    time_from_start=self.duration
-                )]
-            )
-        )
 
         try:
-            while True:
-                self.get_logger().debug('Running control loop...')
+            while rclpy.ok():
                 self.move_end_effector()
-                self.rate.sleep()
+                time.sleep(self.loop_rate)
 
         except KeyboardInterrupt:
             self.get_logger().info('Shutting down...')
-            return
+
 
     def move_end_effector(self) -> None:
         """
         """
-        self.get_logger().debug('Moving end effector...')
         cartesian_pos_tolerance = 1e-3
 
         with self.lock:
@@ -141,24 +127,29 @@ class ArmController(Node):
                 Slist=self.Slist,
                 M=self.M,
                 T=desired_trans_matrix,
-                thetalist0=self.joint_cmds,
+                thetalist0=self.last_joint_cmds,
                 eomg=0.001,
                 ev=0.001
             )
 
+            self.get_logger().debug(f'Joint commands & success: {type(joint_cmds)}, {success}')
+
             if success:
-                trajectory_point = JointTrajectoryPoint(
-                    positions=joint_cmds,
-                    time_from_start=self.duration
-                )
+                trajectory_point = JointTrajectoryPoint()
+                trajectory_point.positions = [j for j in joint_cmds]
+                trajectory_point.time_from_start = self.duration
 
                 trajectory_msg = JointTrajectory()
+
                 trajectory_msg.joint_names = self.joint_names
                 trajectory_msg.points = [trajectory_point]
-                trajectory_msg.header.stamp = self.get_clock().now().to_msg()
+                
                 self.get_logger().debug(f'Joint commands: {joint_cmds}')
                 self.get_logger().debug(f'Position error: {position_error}')
                 self.joint_trajectory_pub.publish(trajectory_msg)
+
+                # self.last_trans_matrix = desired_trans_matrix
+                # self.last_joint_cmds = joint_cmds
             else:
                 self.log_info('Failed to solve for target pose')
 
@@ -192,7 +183,6 @@ def main(args=None):
     rclpy.init(args=args)
 
     arm_controller = ArmController(ros_args, args=args)
-    # rclpy.spin(arm_controller)
     arm_controller.start_robot()
 
     arm_controller.destroy_node()
