@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from interbotix_xs_modules.xs_launch.xs_launch import determine_use_sim_time_param
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
@@ -14,16 +13,17 @@ from launch.substitutions import (
     EnvironmentVariable,
     LaunchConfiguration,
     PathJoinSubstitution,
+    PythonExpression
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.event_handlers import OnProcessExit
-
+from launch.conditions import IfCondition
 
 
 def launch_setup(context, *args, **kwargs):
     #### Launch configurations
-
+    robot_name_launch_arg = LaunchConfiguration('robot_name')
     # RViz launch configurations
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
 
@@ -37,6 +37,10 @@ def launch_setup(context, *args, **kwargs):
     verbose_launch_arg = LaunchConfiguration('verbose')
     world_file_path_launch_arg = LaunchConfiguration('world_file_path')
     paused_launch_arg = LaunchConfiguration('paused')
+    
+    admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
+    use_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
+    use_fake_force_launch_arg = LaunchConfiguration('use_fake_force')
 
 
     #### Setting GZ environment variables
@@ -107,6 +111,16 @@ def launch_setup(context, *args, **kwargs):
     )
 
     #### PX100 control nodes
+    px100_controller_node = Node(
+        package='mariam_gazebo',
+        executable='px100_controller_gazebo.py',
+        name='px100_controller',
+        output='screen',
+        arguments=[
+            # '--ros-args', '--log-level', 'DEBUG'
+        ]
+    )
+
     spawn_joint_state_broadcaster_node = Node(
         name='joint_state_broadcaster_spawner',
         package='controller_manager',
@@ -164,9 +178,26 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    rqt_robot_steering_node = Node(
-        package='rqt_robot_steering',
-        executable='rqt_robot_steering',
+    #### Admittance control launch
+    admittance_control_description = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('arm_controller'),
+                'launch',
+                'admittance_controller.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': robot_name_launch_arg,
+            'use_fake_force': use_fake_force_launch_arg,
+            'use_rviz_markers': use_rviz_markers_launch_arg
+        }.items(),
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
     )
 
     # Start Depth to LaserScan Node
@@ -196,17 +227,24 @@ def launch_setup(context, *args, **kwargs):
         gazebo_launch_include,
 
         spawn_robot_node,
-        rqt_robot_steering_node,
         start_depth_to_laserscan_node,
 
+        px100_controller_node,
         load_joint_state_broadcaster_event,
         load_arm_controller_event,
-        mariam_description_launch_include
+        mariam_description_launch_include,
+        admittance_control_description
     ]
 
 
 def generate_launch_description():
     declared_arguments = []
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'robot_name',
+            default_value=''
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_rviz',
@@ -250,6 +288,36 @@ def generate_launch_description():
             description=(
                 'tells ROS nodes asking for time to get the Gazebo-published simulation time, '
                 'published over the ROS topic /clock.'
+            )
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_admittance_control',
+            default_value='true',
+            choices=('true', 'false'),
+            description=(
+                "Launches nodes for admittance control."
+            )
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_rviz_markers',
+            default_value='false',
+            choices=('true', 'false'),
+            description=(
+                "Displays an RViz marker for the position computed by the admittance controller."
+            )
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_fake_force',
+            default_value='false',
+            choices=('true', 'false'),
+            description=(
+                "launches a node to publish fake force readings"
             )
         )
     )
