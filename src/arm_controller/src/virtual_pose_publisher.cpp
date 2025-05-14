@@ -1,19 +1,25 @@
 #include <chrono>
-#include <map>
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-#include "rcl_interfaces/msg/set_parameters_result.hpp"
+#include "std_msgs/msg/float64.hpp"
 
-using namespace geometry_msgs::msg;
 using namespace std::chrono_literals;
+using std::placeholders::_1;
 
 class VirtualPosePublisher : public rclcpp::Node {
   public:
     VirtualPosePublisher() : Node("virtual_pose_publisher") {
-      pose_publisher = this->create_publisher<Pose>(
+      pose_publisher = this->create_publisher<geometry_msgs::msg::Pose>(
         "px100_virtual_pose",
         10
       );
+
+      pose_updater_sub = this->create_subscription<std_msgs::msg::Float64>(
+        "px100_virtual_pose_updater",
+        10,
+        std::bind(&VirtualPosePublisher::sub_callback, this, _1)
+      );
+
       // position parameters
       this->declare_parameter("x_pos", 0.0);
       this->declare_parameter("y_pos", 0.250048);
@@ -30,7 +36,7 @@ class VirtualPosePublisher : public rclcpp::Node {
 
       this->get_parameter("x_pos", x_pos);
       this->get_parameter("y_pos", y_pos);
-      this->get_parameter("z_pos", z_pos_param);
+      this->get_parameter("z_pos", z_pos);
       
       this->get_parameter("w", w);
       this->get_parameter("x", x);
@@ -38,11 +44,6 @@ class VirtualPosePublisher : public rclcpp::Node {
       this->get_parameter("z", z);
       
       this->get_parameter("frequency", frequency);
-
-      z_pos = z_pos_param;
-
-      param_callback_handle = this->add_on_set_parameters_callback(
-        std::bind(&VirtualPosePublisher::parametersCallback, this, std::placeholders::_1));
 
       timer = this->create_wall_timer(
         frequency * 1s,
@@ -53,27 +54,20 @@ class VirtualPosePublisher : public rclcpp::Node {
     private:
       double x_pos;
       double y_pos;
-      double z_pos_param;
       double z_pos;
       double w;
       double x;
       double y;
       double z;
       double frequency;
+
       rclcpp::TimerBase::SharedPtr timer;
-      rclcpp::Publisher<Pose>::SharedPtr pose_publisher;
-      OnSetParametersCallbackHandle::SharedPtr param_callback_handle;
+      rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher;
+      rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr pose_updater_sub;
       const rclcpp::Logger LOGGER = rclcpp::get_logger("virtual_pose_publisher");
 
       void callback() {
-        auto msg = Pose();
-
-        if (z_pos != z_pos_param) {
-          double sign = (std::signbit(z_pos_param - z_pos) == 0) ? 1 : -1;
-          // RCLCPP_INFO(LOGGER, "sign: %.4f", sign);
-          z_pos += sign * 0.0001;
-          // RCLCPP_INFO(LOGGER, "updated z_pos to: %.4f", z_pos);
-        }
+        auto msg = geometry_msgs::msg::Pose();
 
         msg.position.x = x_pos;
         msg.position.y = y_pos;
@@ -98,20 +92,8 @@ class VirtualPosePublisher : public rclcpp::Node {
         pose_publisher->publish(msg);
       }
 
-      rcl_interfaces::msg::SetParametersResult parametersCallback(
-        const std::vector<rclcpp::Parameter> &parameters
-      ) {
-        rcl_interfaces::msg::SetParametersResult result;
-        result.successful = true;
-        result.reason = "success";
-        const auto param = parameters[0];
-        
-        if (param.get_name() == "z_pos") {
-          z_pos_param = param.as_double();
-          RCLCPP_INFO(LOGGER, "Setting z_pos_param to: %.4f", z_pos_param);
-        }
-    
-        return result;
+      void sub_callback(const std_msgs::msg::Float64::SharedPtr msg) {
+        z_pos = msg->data;
       }
 };
 

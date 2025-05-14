@@ -128,6 +128,7 @@ ament_target_dependencies(
   virtual_pose_publisher
   "rclcpp"
   "std_msgs"
+  "geometry_msgs"
 )
 install(TARGETS virtual_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
@@ -209,6 +210,36 @@ install(TARGETS joint_delay_tracker
   DESTINATION lib/${PROJECT_NAME}
 )
 
+##### For executable lifting_node.cpp #####
+add_executable(lifting_node src/lifting_node.cpp)
+target_include_directories(lifting_node PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(lifting_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  lifting_node
+  "rclcpp"
+  "std_msgs"
+)
+install(TARGETS lifting_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+##### For executable pose_updater.cpp #####
+add_executable(pose_updater src/pose_updater.cpp)
+target_include_directories(pose_updater PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(pose_updater PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  pose_updater
+  "rclcpp"
+  "geometry_msgs"
+)
+install(TARGETS pose_updater
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ##### Add launch file to share folder #####
 install(
   DIRECTORY
@@ -256,6 +287,8 @@ target_link_libraries(force_publisher "${cpp_typesupport_target}")
 target_link_libraries(pose_publisher "${cpp_typesupport_target}")
 target_link_libraries(sine_wave_publisher "${cpp_typesupport_target}")
 target_link_libraries(joint_delay_tracker "${cpp_typesupport_target}")
+target_link_libraries(lifting_node "${cpp_typesupport_target}")
+target_link_libraries(pose_updater "${cpp_typesupport_target}")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
