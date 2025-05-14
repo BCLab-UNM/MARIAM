@@ -1,7 +1,7 @@
-
 #include "rclcpp.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
-#include "std_msgs/msg/float64.hpp"
+// NOTE: should switch to float 64 in the future?
+#include "std_msgs/msg/float32.hpp"
 
 /**
  * This node is used to command the robot(s) in the simulation.
@@ -14,7 +14,7 @@ class CommandNode : public rclcpp::Node {
   private:
     // publishers
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped> cmd_vel_pub;
-    rclcpp::Publisher<geometry_msgs::msg::TwistStamped> arm_control_pub;
+    rclcpp::Publisher<std_msgs::msg::Float32> arm_control_pub;
 
     public:
       CommandNode() {
@@ -30,8 +30,13 @@ class CommandNode : public rclcpp::Node {
         );
       }
 
-      void logMessage(std::string message) {
-        RCLCPP(this->get_logger(), "%s", message);
+      void publish_new_y_position(float y) {
+        auto msg = std_msgs::msg::Float32();
+        msg.data = 
+      }
+
+      void publish_new_z_position(float z) {
+        
       }
 }
 
@@ -51,7 +56,9 @@ int main(int argc, char* argv[]) {
   char* command_arm_forward = "cmd_arm_forward";
 
   if (std::strcmp(argv[1], command_velocity)){}
-  else if(std::strcmp(argv[1], command_arm_up)) {}
+  else if(std::strcmp(argv[1], command_arm_up)) {
+
+  }
   else if(std::strcmp(argv[1], command_arm_forward)) {}
   
   return 0;
