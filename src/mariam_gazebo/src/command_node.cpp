@@ -16,28 +16,36 @@ class CommandNode : public rclcpp::Node {
     rclcpp::Publisher<geometry_msgs::msg::TwistStamped> cmd_vel_pub;
     rclcpp::Publisher<std_msgs::msg::Float32> arm_control_pub;
 
-    public:
-      CommandNode() {
-        // initialize the publishers
-        cmd_vel_pub = this->create_publisher(
-          "cmd_vel",
-          10
-        );
+  public:
+    CommandNode() {
+      // initialize the publishers
+      cmd_vel_pub = this->create_publisher(
+        "cmd_vel",
+        10
+      );
 
-        arm_control_pub = this->create_publisher(
-          "update_virtual_y_position",
-          10
-        );
-      }
+      arm_control_pub = this->create_publisher(
+        "px100_virtual_pose_updater",
+        10
+      );
+    }
 
-      void publish_new_y_position(float y) {
-        auto msg = std_msgs::msg::Float32();
-        msg.data = 
-      }
+    void update_virtual_z_position(float z) {
+      auto msg = std_msgs::msg::Float32();
+      msg.data = z;
+      arm_control_pub.publish(msg);
+    }
 
-      void publish_new_z_position(float z) {
-        
-      }
+    void cmd_vel(double x) {
+      auto msg = geometry_msgs::msg::Twist();
+      msg.linear.x = x;
+      msg.linear.y = 0.0;
+      msg.linear.z = 0.0;
+      msg.angular.x = 0.0;
+      msg.angular.y = 0.0;
+      msg.angular.z = 0.0;
+      cmd_vel_pub.publish(msgs);
+    }
 }
 
 
@@ -49,17 +57,25 @@ int main(int argc, char* argv[]) {
 
   rclcpp::init(argc, argv);
 
-
   auto command_node = CommandNode();
   char* command_velocity = "cmd_vel";
   char* command_arm_up = "cmd_arm_up";
-  char* command_arm_forward = "cmd_arm_forward";
 
-  if (std::strcmp(argv[1], command_velocity)){}
-  else if(std::strcmp(argv[1], command_arm_up)) {
-
+  if(std::strcmp(argv[1], command_arm_up)) {
+    int height = 0.067;
+    for(int i = 0; i < 50; i++) {
+      // increase the height by a millimeter
+      height += 0.001;
+      // publish a pose every 0.04 seconds
+      command_node.arm_control_pub(height);
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
   }
-  else if(std::strcmp(argv[1], command_arm_forward)) {}
+  else if(std::strcmp(argv[1], command_arm_forward)) {
+    // command the robot to move one meter
+    // TODO: should be +1 meter for the other robot
+    command_node.cmd_vel(-1.0);
+  }
   
   return 0;
 }
