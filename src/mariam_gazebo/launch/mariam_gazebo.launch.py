@@ -95,17 +95,21 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
 
+    #######################################
+    # SPAWNING ROSS
+    #######################################
+
     spawn_robot_node = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
-        name=f'spawn_mariam',
+        name=f'spawn_ross',
         arguments=[
-            '-entity', 'mariam',
-            '-topic', '/robot_description',
+            '-entity', 'ross',
+            '-topic', '/ross/robot_description',
             '-x', '0.0',
             '-y', '0.0',
             '-z', '0.1',
-            # '--ros-args', '--log-level', 'DEBUG'
+            '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
     )
@@ -115,6 +119,7 @@ def launch_setup(context, *args, **kwargs):
         package='mariam_gazebo',
         executable='px100_controller_gazebo.py',
         name='px100_controller',
+        namespace='ross',
         output='screen',
         arguments=[
             # '--ros-args', '--log-level', 'DEBUG'
@@ -125,6 +130,7 @@ def launch_setup(context, *args, **kwargs):
         name='joint_state_broadcaster_spawner',
         package='controller_manager',
         executable='spawner',
+        namespace='ross',
         arguments=[
             '-c',
             'controller_manager',
@@ -139,6 +145,7 @@ def launch_setup(context, *args, **kwargs):
         name='arm_controller_spawner',
         package='controller_manager',
         executable='spawner',
+        namespace='ross',
         arguments=[
             '-c',
             'controller_manager',
@@ -173,6 +180,7 @@ def launch_setup(context, *args, **kwargs):
             ])
         ]),
         launch_arguments={
+            'robot_name': 'ross',
             'use_rviz': use_rviz_launch_arg,
             'use_sim_time': use_sim_time,
         }.items(),
@@ -233,7 +241,7 @@ def launch_setup(context, *args, **kwargs):
         load_joint_state_broadcaster_event,
         load_arm_controller_event,
         mariam_description_launch_include,
-        admittance_control_description
+        # admittance_control_description
     ]
 
 
@@ -242,7 +250,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_name',
-            default_value=''
+            default_value='mariam'
         )
     )
     declared_arguments.append(

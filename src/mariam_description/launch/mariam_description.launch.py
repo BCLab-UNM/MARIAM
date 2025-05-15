@@ -15,6 +15,7 @@ from launch_ros.parameter_descriptions import ParameterValue
 def launch_setup(context, *args, **kwargs):
     #### Creating launch configurations
     # path to the model
+    robot_name_launch_arg = LaunchConfiguration('robot_name')
     model_launch_arg = LaunchConfiguration('model')
 
     # RViz launch configurations
@@ -30,12 +31,18 @@ def launch_setup(context, *args, **kwargs):
 
 
     #### Nodes and Launch Descriptions
+    # NOTE: the robot state publisher cannot be launched under a namespace.
+    # It will never publish the robot description
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
+        namespace=robot_name_launch_arg,
         parameters=[{
             'robot_description': ParameterValue(
-                Command(['xacro', ' ', model_launch_arg]),
+                Command([
+                    'xacro', ' ', model_launch_arg, ' ',
+                    'robot_name:=', robot_name_launch_arg
+                ]),
                 value_type=str),
             'use_sim_time': use_sim_time,
         }],
@@ -47,6 +54,7 @@ def launch_setup(context, *args, **kwargs):
         condition=IfCondition(use_joint_pub_launch_arg),
         package='joint_state_publisher',
         executable='joint_state_publisher',
+        namespace=robot_name_launch_arg,
         parameters=[{
             'use_sim_time': use_sim_time,
         }],
