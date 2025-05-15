@@ -200,7 +200,7 @@
     <!-- Attach the robotic arm to the base_link -->
   <joint name="arm_base_joint" type="fixed">
     <parent link="base_link"/>
-    <child link="$(arg robot_name)/px100_base_link"/>
+    <child link="px100/px100_base_link"/>
     <origin xyz="${base_length/1.5} 0 ${base_height/2}" rpy="0 0 -${pi/2}"/>
     <!-- <origin -->
         <!-- rpy="0 0 ${pi/2}" -->

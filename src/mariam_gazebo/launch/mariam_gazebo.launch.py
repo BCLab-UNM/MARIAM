@@ -105,16 +105,17 @@ def launch_setup(context, *args, **kwargs):
         name=f'spawn_ross',
         arguments=[
             '-entity', 'ross',
+            # topic to read the robot description from
             '-topic', '/ross/robot_description',
             '-x', '0.0',
             '-y', '0.0',
             '-z', '0.1',
-            '--ros-args', '--log-level', 'DEBUG'
+            # '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
     )
 
-    #### PX100 control nodes
+
     px100_controller_node = Node(
         package='mariam_gazebo',
         executable='px100_controller_gazebo.py',
@@ -139,6 +140,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'use_sim_time': use_sim_time,
         }],
+        output='screen'
     )
 
     spawn_arm_controller_node = Node(
@@ -153,7 +155,8 @@ def launch_setup(context, *args, **kwargs):
         ],
         parameters=[{
             'use_sim_time': use_sim_time,
-        }]
+        }],
+        output='screen'
     )
 
     load_joint_state_broadcaster_event = RegisterEventHandler(
@@ -170,7 +173,7 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    #### mariam description launch
+    #### mariam description launch for ross
     mariam_description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -186,7 +189,7 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    #### Admittance control launch
+    # TODO: Admittance control launch for ross
     admittance_control_description = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -208,6 +211,7 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
+    # TODO: laser scan node for ross
     # Start Depth to LaserScan Node
     # use 'LIBGL_ALWAYS_SOFTWARE=1 rviz2' if crashes
     start_depth_to_laserscan_node = Node(

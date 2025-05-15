@@ -8,7 +8,7 @@
     value="4"
     scope="global" />
 
-  <!-- <xacro:arg name="robot_name" default="px100" /> -->
+  <xacro:arg name="arm_name" default="px100" />
   <xacro:arg name="base_link_frame" default="px100_base_link" />
   <xacro:arg name="use_gripper" default="false" /> <!-- Modified from true -->
   <xacro:arg name="show_ar_tag" default="false" />
@@ -66,12 +66,12 @@
       <parent
         link="world" />
       <child
-        link="$(arg robot_name)/$(arg base_link_frame)" />
+        link="$(arg arm_name)/$(arg base_link_frame)" />
     </joint>
   </xacro:if> <!--
   use_world_frame -->
 
-  <link name="$(arg robot_name)/$(arg base_link_frame)">
+  <link name="$(arg arm_name)/$(arg base_link_frame)">
     <visual>
       <origin
         rpy="0 0 ${pi/2}"
@@ -119,15 +119,15 @@
       rpy="0 0 0"
       xyz="0 0 0.05085" />
     <parent
-      link="$(arg robot_name)/$(arg base_link_frame)" />
+      link="$(arg arm_name)/$(arg base_link_frame)" />
     <child
-      link="$(arg robot_name)/shoulder_link" />
+      link="$(arg arm_name)/shoulder_link" />
     <dynamics
       friction="0.1"
       damping="0.1" />
   </joint>
 
-  <link name="$(arg robot_name)/shoulder_link">
+  <link name="$(arg arm_name)/shoulder_link">
     <visual>
       <origin
         rpy="0 0 ${pi/2}"
@@ -175,15 +175,15 @@
       rpy="0 0 0"
       xyz="0 0 0.04225" />
     <parent
-      link="$(arg robot_name)/shoulder_link" />
+      link="$(arg arm_name)/shoulder_link" />
     <child
-      link="$(arg robot_name)/upper_arm_link" />
+      link="$(arg arm_name)/upper_arm_link" />
     <dynamics
       friction="0.1"
       damping="0.1" />
   </joint>
 
-  <link name="$(arg robot_name)/upper_arm_link">
+  <link name="$(arg arm_name)/upper_arm_link">
     <visual>
       <origin
         rpy="0 0 ${pi/2}"
@@ -231,15 +231,15 @@
       rpy="0 0 0"
       xyz="0.035 0 0.1" />
     <parent
-      link="$(arg robot_name)/upper_arm_link" />
+      link="$(arg arm_name)/upper_arm_link" />
     <child
-      link="$(arg robot_name)/forearm_link" />
+      link="$(arg arm_name)/forearm_link" />
     <dynamics
       friction="0.1"
       damping="0.1" />
   </joint>
 
-  <link name="$(arg robot_name)/forearm_link">
+  <link name="$(arg arm_name)/forearm_link">
     <visual>
       <origin
         rpy="0 0 ${pi/2}"
@@ -287,15 +287,15 @@
       rpy="0 0 0"
       xyz="0.1 0 0" />
     <parent
-      link="$(arg robot_name)/forearm_link" />
+      link="$(arg arm_name)/forearm_link" />
     <child
-      link="$(arg robot_name)/gripper_link" />
+      link="$(arg arm_name)/gripper_link" />
     <dynamics
       friction="0.1"
       damping="0.1" />
   </joint>
 
-  <link name="$(arg robot_name)/gripper_link">
+  <link name="$(arg arm_name)/gripper_link">
     <visual>
       <origin
         rpy="0 0 ${pi/2}"
@@ -338,12 +338,12 @@
       rpy="0 0 0"
       xyz="0.10 0 0.01" />
     <parent
-      link="$(arg robot_name)/gripper_link" />
+      link="$(arg arm_name)/gripper_link" />
     <child
-      link="$(arg robot_name)/ee_arm_link" />
+      link="$(arg arm_name)/ee_arm_link" />
   </joint>
 
-  <link name="$(arg robot_name)/ee_arm_link">
+  <link name="$(arg arm_name)/ee_arm_link">
     <inertial>
       <mass value="0.001" />
       <inertia
@@ -368,15 +368,15 @@
         rpy="0 0 0"
         xyz="0.0055 0 0" />
       <parent
-        link="$(arg robot_name)/ee_arm_link" />
+        link="$(arg arm_name)/ee_arm_link" />
       <child
-        link="$(arg robot_name)/gripper_prop_link" />
+        link="$(arg arm_name)/gripper_prop_link" />
       <dynamics
         friction="0.1"
         damping="0.1" />
     </joint>
 
-    <link name="$(arg robot_name)/gripper_prop_link">
+    <link name="$(arg arm_name)/gripper_prop_link">
       <visual>
         <origin
           rpy="0 0 ${pi/2}"
@@ -430,12 +430,12 @@
           rpy="0 0 0"
           xyz="0 0 0" />
         <parent
-          link="$(arg robot_name)/ee_arm_link" />
+          link="$(arg arm_name)/ee_arm_link" />
         <child
-          link="$(arg robot_name)/gripper_bar_link" />
+          link="$(arg arm_name)/gripper_bar_link" />
       </joint>
 
-      <link name="$(arg robot_name)/gripper_bar_link">
+      <link name="$(arg arm_name)/gripper_bar_link">
         <visual>
           <origin
             rpy="0 0 ${pi/2}"
@@ -478,12 +478,12 @@
           rpy="0 0 0"
           xyz="0.023 0 0" />
         <parent
-          link="$(arg robot_name)/gripper_bar_link" />
+          link="$(arg arm_name)/gripper_bar_link" />
         <child
-          link="$(arg robot_name)/fingers_link" />
+          link="$(arg arm_name)/fingers_link" />
       </joint>
 
-      <link name="$(arg robot_name)/fingers_link">
+      <link name="$(arg arm_name)/fingers_link">
         <inertial>
           <mass value="0.001" />
           <inertia
@@ -511,15 +511,15 @@
             rpy="0 0 0"
             xyz="0 0 0" />
           <parent
-            link="$(arg robot_name)/fingers_link" />
+            link="$(arg arm_name)/fingers_link" />
           <child
-            link="$(arg robot_name)/left_finger_link" />
+            link="$(arg arm_name)/left_finger_link" />
           <dynamics
             friction="0.1"
             damping="0.1" />
         </joint>
 
-        <link name="$(arg robot_name)/left_finger_link">
+        <link name="$(arg arm_name)/left_finger_link">
           <visual>
             <origin
               rpy="${pi} ${pi} 0"
@@ -567,9 +567,9 @@
             rpy="0 0 0"
             xyz="0 0 0" />
           <parent
-            link="$(arg robot_name)/fingers_link" />
+            link="$(arg arm_name)/fingers_link" />
           <child
-            link="$(arg robot_name)/right_finger_link" />
+            link="$(arg arm_name)/right_finger_link" />
           <dynamics
             friction="0.1"
             damping="0.1" />
@@ -581,7 +581,7 @@
           </xacro:if>
         </joint>
 
-        <link name="$(arg robot_name)/right_finger_link">
+        <link name="$(arg arm_name)/right_finger_link">
           <visual>
             <origin
               rpy="0 ${pi} 0"
@@ -624,12 +624,12 @@
             rpy="0 0 0"
             xyz="0.027575 0 0" />
           <parent
-            link="$(arg robot_name)/fingers_link" />
+            link="$(arg arm_name)/fingers_link" />
           <child
-            link="$(arg robot_name)/ee_gripper_link" />
+            link="$(arg arm_name)/ee_gripper_link" />
         </joint>
 
-        <link name="$(arg robot_name)/ee_gripper_link">
+        <link name="$(arg arm_name)/ee_gripper_link">
           <inertial>
             <mass value="0.001" />
             <inertia
