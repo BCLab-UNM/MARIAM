@@ -1,5 +1,6 @@
 <sdf version='1.7'>
   <world name='default'>
+    
     <light name='sun' type='directional'>
       <cast_shadows>1</cast_shadows>
       <pose>0 0 10 0 -0 0</pose>
@@ -18,6 +19,7 @@
         <falloff>0</falloff>
       </spot>
     </light>
+    
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
@@ -65,6 +67,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <gravity>0 0 -9.8</gravity>
     <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
     <atmosphere type='adiabatic'/>
@@ -73,15 +76,18 @@
       <real_time_factor>1</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
     </physics>
+    
     <scene>
       <ambient>0.4 0.4 0.4 1</ambient>
       <background>0.7 0.7 0.7 1</background>
       <shadows>1</shadows>
     </scene>
+    
     <audio>
       <device>default</device>
     </audio>
     <wind/>
+
     <spherical_coordinates>
       <surface_model>EARTH_WGS84</surface_model>
       <latitude_deg>0</latitude_deg>
@@ -89,6 +95,68 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
+
+    <!------------------------------------------>
+    <!------------------------------------------>
+    <!-- OBJECTS                              -->
+    <!------------------------------------------>
+    <!------------------------------------------>
+
+    <!-- box for the robot's to pick up -->
+    <model name='experiment_box'>
+      <pose>0.75 0.0 1.0 0 -0 0</pose>
+      <link name='link'>
+        <inertial>
+          <mass>1</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+          <pose>0 0 0 0 -0 0</pose>
+        </inertial>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.10 0.10 0.10</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>0.10 0.10 0.10</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <name>Gazebo/Green</name>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+
     <model name='unit_box'>
       <pose>-1.56195 2.56953 0.5 0 -0 0</pose>
       <link name='link'>
@@ -142,6 +210,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_cylinder'>
       <pose>3.14798 1.71637 0.5 0 -0 0</pose>
       <link name='link'>
@@ -197,6 +266,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_cylinder_0'>
       <pose>4.6223 0.438539 0.5 0 -0 0</pose>
       <link name='link'>
@@ -252,6 +322,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_box_0'>
       <pose>-4.50269 0.286675 0.5 0 -0 0</pose>
       <link name='link'>
@@ -305,6 +376,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_box_1'>
       <pose>0.700286 6.98975 0.5 0 -0 0</pose>
       <link name='link'>
@@ -358,6 +430,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_cylinder_1'>
       <pose>2.39163 -2.35601 0.5 0 -0 0</pose>
       <link name='link'>
@@ -413,6 +486,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <state world_name='default'>
       <sim_time>233 287000000</sim_time>
       <real_time>233 832544038</real_time>
@@ -512,6 +586,7 @@
         <pose>0 0 10 0 -0 0</pose>
       </light>
     </state>
+    
     <model name='unit_box_clone'>
       <pose>0.148709 -3.39066 0.5 -0 -0 -0</pose>
       <link name='link'>
@@ -565,6 +640,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <model name='unit_cylinder_clone'>
       <pose>6.2496 -1.97088 0.5 -0 -0 -0</pose>
       <link name='link'>
@@ -620,6 +696,7 @@
         <kinematic>0</kinematic>
       </link>
     </model>
+    
     <gui fullscreen='0'>
       <camera name='user_camera'>
         <pose>-11.1227 -1.23652 9.83988 -0 0.609798 0.040203</pose>
@@ -627,5 +704,6 @@
         <projection_type>perspective</projection_type>
       </camera>
     </gui>
+  
   </world>
 </sdf>
