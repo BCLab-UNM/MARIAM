@@ -652,7 +652,7 @@
   use_gripper -->
 
   <xacro:include filename="$(find mariam_description)/xacro_models/px100_control.urdf.xacro" />
-  <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/gazebo_configs.urdf.xacro" />
+  <xacro:include filename="$(find mariam_description)/xacro_models/px100_gazebo_configs.urdf.xacro" />
 
   <xacro:if value="${hardware_type == 'gz_classic'}">
     <xacro:gazebo_configs />
