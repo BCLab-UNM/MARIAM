@@ -33,8 +33,9 @@ instances of mariam_description.launch.py.
 
 
 def launch_setup(context, *args, **kwargs):
-    #### Launch configurations
-    robot_name_launch_arg = LaunchConfiguration('robot_name')
+    ######################################
+    # Launch configurations
+    ######################################
     # RViz launch configurations
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
 
@@ -253,9 +254,12 @@ def launch_setup(context, *args, **kwargs):
             '-entity', 'monica',
             # topic to read the robot description from
             '-topic', '/monica/robot_description',
-            '-x', '1.0',
+            '-x', '1.5',
             '-y', '0.0',
             '-z', '0.1',
+            '-R', '0.0',
+            '-P', '0.0',
+            '-Y', '3.14159',
             # '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
@@ -408,12 +412,6 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     declared_arguments = []
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'robot_name',
-            default_value='mariam'
-        )
-    )
     declared_arguments.append(
         DeclareLaunchArgument(
             'use_rviz',
