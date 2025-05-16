@@ -207,16 +207,17 @@
   <gazebo reference="wrist_angle">
      <sensor name="wrist_angle_force_torque" type="force_torque">
       <always_on>true</always_on>
-      <update_rate>20.0</update_rate>
+      <update_rate>1000.0</update_rate>
       <visualize>true</visualize>
       <force_torque>
-        <frame>sensor</frame>
+        <frame>parent</frame>
         <measure_direction>parent_to_child</measure_direction>
       </force_torque>
       <plugin name="ForceSensorPlugin" filename="libforce_sensor.so">
         <ros>
           <namespace>/$(arg robot_name)</namespace>
         </ros>
+        <topic>/$(arg robot_name)/force</topic>
       </plugin>
     </sensor>
   </gazebo>

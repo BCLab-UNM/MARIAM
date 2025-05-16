@@ -13,10 +13,16 @@ namespace gazebo
     ForceSensorPlugin() : SensorPlugin() {}
 
     void Load(sensors::SensorPtr _sensor, sdf::ElementPtr _sdf) {
+      std::string topic_name = "/force";
+
+      if (_sdf->HasElement("topic")) {
+        topic_name = _sdf->Get<std::string>("topic");
+      }
+
       // Initialize ROS2 node
       ros_node = rclcpp::Node::make_shared("force_sensor_plugin");
       force_publisher = ros_node->create_publisher<std_msgs::msg::Float64>(
-        "/force",
+        topic_name,
         10
       );
 
