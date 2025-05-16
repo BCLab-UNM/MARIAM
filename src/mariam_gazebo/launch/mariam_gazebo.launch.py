@@ -21,6 +21,17 @@ from launch.event_handlers import OnProcessExit
 from launch.conditions import IfCondition
 
 
+""" 
+NOTE: In this launch file, we create two different instances of the
+robot_state_publisher; one for ross and one for monica.
+
+The reason is we want to create two separate instances of the
+ros2_gazebo_control node, and this can only be done with two separate
+instances of mariam_description.launch.py.
+
+"""
+
+
 def launch_setup(context, *args, **kwargs):
     #### Launch configurations
     robot_name_launch_arg = LaunchConfiguration('robot_name')
@@ -43,8 +54,9 @@ def launch_setup(context, *args, **kwargs):
     use_fake_force_launch_arg = LaunchConfiguration('use_fake_force')
 
 
-    #### Setting GZ environment variables
-    # Set gazebo resource path
+    # Setting GZ environment variables. Prevents Gazebo from 
+    # downloading unnecessary models, and adds all necessary model paths
+    # to the appropriate environment variables.
     gz_resource_path_env_var = SetEnvironmentVariable(
         name='GAZEBO_MODEL_PATH',
         value=[
@@ -79,7 +91,7 @@ def launch_setup(context, *args, **kwargs):
         value=['']
     )
 
-    #### Nodes and launch descriptions
+    # launches both the gzserver and gzclient
     gazebo_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -98,8 +110,7 @@ def launch_setup(context, *args, **kwargs):
     #######################################
     # SPAWNING ROSS
     #######################################
-
-    spawn_robot_node = Node(
+    spawn_ross_node = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
         name=f'spawn_ross',
@@ -115,8 +126,7 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
-
-    px100_controller_node = Node(
+    ross_px100_controller_node = Node(
         package='mariam_gazebo',
         executable='px100_controller_gazebo.py',
         name='px100_controller',
@@ -127,7 +137,7 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
-    spawn_joint_state_broadcaster_node = Node(
+    ross_spawn_joint_state_broadcaster_node = Node(
         name='joint_state_broadcaster_spawner',
         package='controller_manager',
         executable='spawner',
@@ -143,7 +153,7 @@ def launch_setup(context, *args, **kwargs):
         output='screen'
     )
 
-    spawn_arm_controller_node = Node(
+    ross_spawn_arm_controller_node = Node(
         name='arm_controller_spawner',
         package='controller_manager',
         executable='spawner',
@@ -159,22 +169,22 @@ def launch_setup(context, *args, **kwargs):
         output='screen'
     )
 
-    load_joint_state_broadcaster_event = RegisterEventHandler(
+    ross_load_joint_state_broadcaster_event = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=spawn_robot_node,
-            on_exit=[spawn_joint_state_broadcaster_node]
+            target_action=spawn_ross_node,
+            on_exit=[ross_spawn_joint_state_broadcaster_node]
         )
     )
 
-    load_arm_controller_event = RegisterEventHandler(
+    ross_load_arm_controller_event = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=spawn_joint_state_broadcaster_node,
-            on_exit=[spawn_arm_controller_node]
+            target_action=ross_spawn_joint_state_broadcaster_node,
+            on_exit=[ross_spawn_arm_controller_node]
         )
     )
 
-    #### mariam description launch for ross
-    mariam_description_launch_include = IncludeLaunchDescription(
+    # This launches the robot description for Ross
+    ross_description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare('mariam_description'),
@@ -189,8 +199,7 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
-    # TODO: Admittance control launch for ross
-    admittance_control_description = IncludeLaunchDescription(
+    ross_admittance_control_description = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare('arm_controller'),
@@ -199,8 +208,8 @@ def launch_setup(context, *args, **kwargs):
             ])
         ]),
         launch_arguments={
-            'robot_name': robot_name_launch_arg,
-            'use_fake_force': use_fake_force_launch_arg,
+            'robot_name': 'ross',
+            'use_fake_force': 'false',
             'use_rviz_markers': use_rviz_markers_launch_arg
         }.items(),
         condition=IfCondition(
@@ -211,13 +220,13 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    # TODO: laser scan node for ross
     # Start Depth to LaserScan Node
     # use 'LIBGL_ALWAYS_SOFTWARE=1 rviz2' if crashes
-    start_depth_to_laserscan_node = Node(
+    ross_start_depth_to_laserscan_node = Node(
         package='depthimage_to_laserscan',
         executable='depthimage_to_laserscan_node',
         name='depthimage_to_laserscan',
+        namespace='ross',
         output='screen',
         parameters=[
             {'scan_time': 0.033},
@@ -227,9 +236,146 @@ def launch_setup(context, *args, **kwargs):
             {'output_frame': 'camera_link'},
         ],
         remappings=[
-            ('depth', '/camera/depth/image_raw'),
-            ('depth_camera_info', '/camera/depth/camera_info'),
-            ('scan', '/scan'),
+            ('depth', '/ross/camera/depth/image_raw'),
+            ('depth_camera_info', '/ross/camera/depth/camera_info'),
+            ('scan', '/ross/scan'),
+        ]
+    )
+
+    #######################################
+    # SPAWNING MONICA
+    #######################################
+    spawn_monica_node = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        name=f'spawn_ross',
+        arguments=[
+            '-entity', 'monica',
+            # topic to read the robot description from
+            '-topic', '/monica/robot_description',
+            '-x', '1.0',
+            '-y', '0.0',
+            '-z', '0.1',
+            # '--ros-args', '--log-level', 'DEBUG'
+        ],
+        output='screen',
+    )
+
+    monica_px100_controller_node = Node(
+        package='mariam_gazebo',
+        executable='px100_controller_gazebo.py',
+        name='px100_controller',
+        namespace='monica',
+        output='screen',
+        arguments=[
+            # '--ros-args', '--log-level', 'DEBUG'
+        ]
+    )
+
+    monica_spawn_joint_state_broadcaster_node = Node(
+        name='joint_state_broadcaster_spawner',
+        package='controller_manager',
+        executable='spawner',
+        namespace='monica',
+        arguments=[
+            '-c',
+            'controller_manager',
+            'joint_state_broadcaster'
+        ],
+        parameters=[{
+            'use_sim_time': use_sim_time,
+        }],
+        output='screen'
+    )
+
+    monica_spawn_arm_controller_node = Node(
+        name='arm_controller_spawner',
+        package='controller_manager',
+        executable='spawner',
+        namespace='monica',
+        arguments=[
+            '-c',
+            'controller_manager',
+            'arm_controller'
+        ],
+        parameters=[{
+            'use_sim_time': use_sim_time,
+        }],
+        output='screen'
+    )
+
+    monica_load_joint_state_broadcaster_event = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=spawn_monica_node,
+            on_exit=[monica_spawn_joint_state_broadcaster_node]
+        )
+    )
+
+    monica_load_arm_controller_event = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=monica_spawn_joint_state_broadcaster_node,
+            on_exit=[monica_spawn_arm_controller_node]
+        )
+    )
+
+    # This launches the robot description for Ross
+    monica_description_launch_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_description'),
+                'launch',
+                'mariam_description.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': 'monica',
+            # TODO: for monica, just don't launch rviz.
+            # In the future, maybe we should only launch RViz here 
+            'use_rviz': 'false',
+            'use_sim_time': use_sim_time,
+        }.items(),
+    )
+
+    monica_admittance_control_description = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('arm_controller'),
+                'launch',
+                'admittance_controller.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': 'monica',
+            'use_fake_force': 'false',
+            'use_rviz_markers': use_rviz_markers_launch_arg
+        }.items(),
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
+
+    # Start Depth to LaserScan Node
+    # use 'LIBGL_ALWAYS_SOFTWARE=1 rviz2' if crashes
+    monica_start_depth_to_laserscan_node = Node(
+        package='depthimage_to_laserscan',
+        executable='depthimage_to_laserscan_node',
+        name='depthimage_to_laserscan',
+        namespace='monica',
+        output='screen',
+        parameters=[
+            {'scan_time': 0.033},
+            {'range_min': 0.45},
+            {'range_max': 100.0},
+            {'scan_height': 1},
+            {'output_frame': 'camera_link'},
+        ],
+        remappings=[
+            ('depth', '/monica/camera/depth/image_raw'),
+            ('depth_camera_info', '/monica/camera/depth/camera_info'),
+            ('scan', '/monica/scan'),
         ]
     )
 
@@ -238,14 +384,25 @@ def launch_setup(context, *args, **kwargs):
         gz_model_uri_env_var,
         gazebo_launch_include,
 
-        spawn_robot_node,
-        start_depth_to_laserscan_node,
+        # nodes for ross
+        spawn_ross_node,
+        ross_start_depth_to_laserscan_node,
 
-        px100_controller_node,
-        load_joint_state_broadcaster_event,
-        load_arm_controller_event,
-        mariam_description_launch_include,
-        # admittance_control_description
+        ross_px100_controller_node,
+        ross_load_joint_state_broadcaster_event,
+        ross_load_arm_controller_event,
+        ross_description_launch_include,
+        ross_admittance_control_description,
+
+        # nodes for monica
+        spawn_monica_node,
+        monica_start_depth_to_laserscan_node,
+
+        monica_px100_controller_node,
+        monica_load_joint_state_broadcaster_event,
+        monica_load_arm_controller_event,
+        monica_description_launch_include,
+        monica_admittance_control_description
     ]
 
 
@@ -320,16 +477,6 @@ def generate_launch_description():
             choices=('true', 'false'),
             description=(
                 "Displays an RViz marker for the position computed by the admittance controller."
-            )
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_fake_force',
-            default_value='false',
-            choices=('true', 'false'),
-            description=(
-                "launches a node to publish fake force readings"
             )
         )
     )
