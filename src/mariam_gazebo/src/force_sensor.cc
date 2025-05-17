@@ -4,7 +4,8 @@
 #include <iostream>
 
 #include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/float64.hpp"
+// #include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/float32.hpp"
 
 namespace gazebo
 {
@@ -21,7 +22,7 @@ namespace gazebo
 
       // Initialize ROS2 node
       ros_node = rclcpp::Node::make_shared("force_sensor_plugin");
-      force_publisher = ros_node->create_publisher<std_msgs::msg::Float64>(
+      force_publisher = ros_node->create_publisher<std_msgs::msg::Float32>(
         topic_name,
         10
       );
@@ -54,7 +55,7 @@ namespace gazebo
       // std::cout << "Force: " << force << std::endl;
 
       // Create a message to publish
-      auto msg = std_msgs::msg::Float64();
+      auto msg = std_msgs::msg::Float32();
       msg.data = force.X();
       force_publisher->publish(msg);
     }
@@ -67,7 +68,7 @@ namespace gazebo
 
     // ros2 node and publisher
     rclcpp::Node::SharedPtr ros_node;
-    rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr force_publisher;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr force_publisher;
   };
 
   // Register the plugin with Gazebo

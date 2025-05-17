@@ -204,7 +204,7 @@
   </gazebo> -->
 
     <!-- *********************** FORCE SENSOR *********************   -->
-  <gazebo reference="wrist_angle">
+  <gazebo reference="ee_arm">
      <sensor name="wrist_angle_force_torque" type="force_torque">
       <always_on>true</always_on>
       <update_rate>1000.0</update_rate>
