@@ -92,6 +92,11 @@ def generate_launch_description():
 
     declared_arguments.append(
         DeclareLaunchArgument(
+            'robot_name'
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'model',
             default_value=PathJoinSubstitution([
                 mariam_share_pkg,

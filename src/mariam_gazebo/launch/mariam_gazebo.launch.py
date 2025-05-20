@@ -122,6 +122,7 @@ def launch_setup(context, *args, **kwargs):
             '-x', '0.0',
             '-y', '0.0',
             '-z', '0.1',
+            '-robot_namespace', 'ross'
             # '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
@@ -249,7 +250,7 @@ def launch_setup(context, *args, **kwargs):
     spawn_monica_node = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
-        name=f'spawn_ross',
+        name=f'spawn_monica',
         arguments=[
             '-entity', 'monica',
             # topic to read the robot description from
@@ -260,6 +261,7 @@ def launch_setup(context, *args, **kwargs):
             '-R', '0.0',
             '-P', '0.0',
             '-Y', '3.14159',
+            '-robot_namespace', 'monica'
             # '--ros-args', '--log-level', 'DEBUG'
         ],
         output='screen',
@@ -398,7 +400,6 @@ def launch_setup(context, *args, **kwargs):
         ross_description_launch_include,
         ross_admittance_control_description,
 
-        # nodes for monica
         spawn_monica_node,
         monica_start_depth_to_laserscan_node,
 
