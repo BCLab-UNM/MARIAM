@@ -17,7 +17,7 @@ sudo apt -y autoremove
 
 echo "Installing packages..."
 sudo apt install python3-serial ros-humble-realsense2-camera \
-    ros-humble-dynamixel-sdk ros-humble-ros2-control ros-humble-ros2-control-test-assets \
+    ros-humble-dynamixel-sdk  \
     ros-humble-graph-msgs ros-humble-rviz-visual-tools ros-humble-hardware-interface \
     ros-humble-moveit ros-humble-tf-transformations ros-humble-joint-trajectory-controller \
     python3-rosdep python3-colcon-common-extensions python3-colcon-clean ros-humble-apriltag \
