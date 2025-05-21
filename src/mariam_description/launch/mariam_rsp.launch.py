@@ -8,6 +8,9 @@ from launch_ros.substitutions import FindPackageShare
 
 import xacro
 
+# Launch instructions:
+# ros2 launch mariam_description mariam_rsp.launch.py namespace:=robot1
+
 def generate_launch_description():
     # Locate the package share directory.
     pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
@@ -63,7 +66,11 @@ def generate_launch_description():
         namespace=namespace,
         parameters=[{
             'robot_description': Command(['xacro ', model])
-        }]
+        }],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static','tf_static')
+        ]
     )
   
     # Optional RViz node.
@@ -74,7 +81,11 @@ def generate_launch_description():
         namespace=namespace,
         name='rviz2',
         output='screen',
-        arguments=['-d', rviz_config_file]
+        arguments=['-d', rviz_config_file],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static','tf_static')
+        ]
     )
   
     # Create the launch description and add actions.

@@ -9,9 +9,14 @@ from ament_index_python.packages import get_package_share_directory
 
 import os
 
+# Launch instructions:
+# ros2 launch mariam_slam realsense_imu.launch.py tf_prefix:=robot1 camera_namespace:=robot1
+
+
 def generate_launch_description():
     # Launch arguments.
     camera_namespace = LaunchConfiguration('camera_namespace')
+    tf_prefix = LaunchConfiguration('tf_prefix')
     enable_gyro = LaunchConfiguration('enable_gyro')
     enable_accel = LaunchConfiguration('enable_accel')
 
@@ -24,7 +29,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(rs_launch_file),
         launch_arguments={
             'camera_namespace': camera_namespace,
-            # Map our 'enable_gyo' launch arg to the 'enable_gyro' parameter expected by rs_launch.py.
+            'tf_prefix': tf_prefix,
             'enable_gyro': enable_gyro,
             'enable_accel': enable_accel,
         }.items()
@@ -36,6 +41,11 @@ def generate_launch_description():
             'camera_namespace',
             default_value='camera',
             description='Namespace for the camera'
+        ),
+        DeclareLaunchArgument(
+            'tf_prefix',
+            default_value='',
+            description='Namespace for /tf and /tf_static'
         ),
         DeclareLaunchArgument(
             'enable_gyro',

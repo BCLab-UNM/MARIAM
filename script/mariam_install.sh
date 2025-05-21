@@ -16,7 +16,7 @@ sudo apt-get update && sudo apt -y upgrade
 sudo apt -y autoremove
 
 echo "Installing packages..."
-sudo apt install python3-serial ros-humble-realsense2-camera \
+sudo apt install python3-serial \
     ros-humble-dynamixel-sdk ros-humble-ros2-control ros-humble-ros2-control-test-assets \
     ros-humble-graph-msgs ros-humble-rviz-visual-tools ros-humble-hardware-interface \
     ros-humble-moveit ros-humble-tf-transformations ros-humble-joint-trajectory-controller \
@@ -26,7 +26,7 @@ sudo apt install python3-serial ros-humble-realsense2-camera \
     ros-humble-joint-state-publisher-gui ros-humble-robot-state-publisher ros-humble-xacro \
     ros-humble-gazebo-ros-pkgs ros-humble-gazebo-plugins ros-humble-rqt-robot-steering \
     ros-humble-rtabmap ros-humble-rtabmap-ros ros-humble-rtabmap-rviz-plugins \
-    ros-humble-imu-filter-madgwick sudo apt install ros-humble-realsense2-* \
+    ros-humble-imu-filter-madgwick sudo apt install \
     sudo apt install ros-humble-librealsense2* \
 
 pip3 install transforms3d modern_robotics glob
