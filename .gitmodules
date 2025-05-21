@@ -17,6 +17,7 @@
 [submodule "src/realsense-ros"]
 	path = src/realsense-ros
 	url = git@github.com:BCLab-UNM/realsense-ros.git
+	branch = tf_prefix_4.55.1
 [submodule "src/hector_multi_robot_tools"]
 	path = src/hector_multi_robot_tools
 	url = git@github.com:BCLab-UNM/hector_multi_robot_tools.git
