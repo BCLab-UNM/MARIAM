@@ -17,3 +17,6 @@
 [submodule "src/realsense-ros"]
 	path = src/realsense-ros
 	url = git@github.com:BCLab-UNM/realsense-ros.git
+[submodule "src/hector_multi_robot_tools"]
+	path = src/hector_multi_robot_tools
+	url = git@github.com:BCLab-UNM/hector_multi_robot_tools.git
