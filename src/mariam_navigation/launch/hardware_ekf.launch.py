@@ -12,6 +12,7 @@ def generate_launch_description():
         'config',
         'ekf_hardware.yaml'
     )
+    print(f"Looking for config file at: {config_path}")
 
     # Declare the launch argument for the namespace.
     namespace_arg = DeclareLaunchArgument(
@@ -31,6 +32,14 @@ def generate_launch_description():
         namespace=namespace,
         output='screen',
         parameters=[config_path],
+        remappings=[
+            # TF remappings
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+            # Input topic remappings
+            ('/wheel/odom', 'wheel/odom'),
+            ('/camera/imu', 'camera/imu')
+        ]
     )
 
     return LaunchDescription([
