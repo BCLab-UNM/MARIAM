@@ -14,3 +14,6 @@
 	path = src/motion_capture_tracking
 	url = git@github.com:BCLab-UNM/motion_capture_tracking.git
 	branch = ros2
+[submodule "src/hector_multi_robot_tools"]
+	path = src/hector_multi_robot_tools
+	url = git@github.com:BCLab-UNM/hector_multi_robot_tools.git

@@ -1,5 +1,5 @@
 <package format="3">
-  <name>mariam_slam</name>
+  <name>mariam_vision</name>
   <version>0.0.0</version>
   <description>Package containing launch files for SLAM.</description>
 
