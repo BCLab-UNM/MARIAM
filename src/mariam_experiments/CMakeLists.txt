@@ -10,6 +10,23 @@ find_package(ament_cmake REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+
+
+add_executable(command_node src/command_node.cpp)
+target_compile_features(command_node PUBLIC c_std_99 cxx_std_17)
+ament_target_dependencies(
+  command_node
+  "rclcpp"
+  "std_msgs"
+  "geometry_msgs"
+)
+
+install(TARGETS command_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
