@@ -36,6 +36,7 @@ def generate_launch_description():
             # TF remappings
             ('/tf', 'tf'),
             ('/tf_static', 'tf_static'),
+            ('/joint_states', 'joint_states'),
             # Input topic remappings
             ('/wheel/odom', 'wheel/odom'),
             ('/camera/imu', 'camera/imu')

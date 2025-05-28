@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'mariam_slam'
+package_name = 'mariam_vision'
 
 setup(
     name=package_name,

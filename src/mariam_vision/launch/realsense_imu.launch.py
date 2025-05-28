@@ -10,7 +10,7 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 # Launch instructions:
-# ros2 launch mariam_slam realsense_imu.launch.py tf_prefix:=robot1 camera_namespace:=robot1
+# ros2 launch mariam_vision realsense_imu.launch.py tf_prefix:=robot1 camera_namespace:=robot1
 
 
 def generate_launch_description():
@@ -21,8 +21,8 @@ def generate_launch_description():
     enable_accel = LaunchConfiguration('enable_accel')
 
     # Determine the path to the rs_launch.py file.
-    realsense2_package_share_directory = get_package_share_directory('realsense2_camera')
-    rs_launch_file = os.path.join(realsense2_package_share_directory, 'launch', 'rs_launch.py')
+    realsense2_package_share_directory = get_package_share_directory('mariam_vision')
+    rs_launch_file = os.path.join(realsense2_package_share_directory, 'launch', 'rs_launch_modified.py')
 
     # Include rs_launch.py and pass the parameters.
     rs_launch_include = IncludeLaunchDescription(

@@ -238,10 +238,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    float coef_0 = 0.035582; // coef for x^0
-    float coef_1 = -0.055113; // coef for x^1
-    float coef_2 = 0.38334; // coef for x^2
-    float coef_3 = -0.057718; // coef for x^3
+    float coef_0 = 0.035582; // coef for x^3
+    float coef_1 = -0.055113; // coef for x^2
+    float coef_2 = 0.38334; // coef for x^1
+    float coef_3 = -0.057718; // coef for x^0
     force_msg.data = coef_0 * pow(raw_force_data, 3) 
                 + coef_1 * pow(raw_force_data, 2) 
                 + coef_2 * raw_force_data
@@ -272,10 +272,17 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     joint_state_msg.velocity.data[2] = left_current_speed / wheel_radius;   // left back
     joint_state_msg.velocity.data[3] = right_current_speed / wheel_radius;  // right back
 
-    joint_state_msg.header.stamp.sec = 0;
-    joint_state_msg.header.stamp.nanosec = 0;
-    odom_msg.header.stamp.sec = 0;
-    odom_msg.header.stamp.nanosec = 0;
+    // Get corrected epoch time using micro-ROS time sync
+    int64_t time_ns = rmw_uros_epoch_nanos();
+
+    // Convert to required format and set timestamps
+    builtin_interfaces__msg__Time synchronized_timestamp;
+    synchronized_timestamp.sec = (int32_t)(time_ns / 1000000000);
+    synchronized_timestamp.nanosec = (uint32_t)(time_ns % 1000000000);
+
+    // Apply synchronized timestamp to both messages
+    joint_state_msg.header.stamp = synchronized_timestamp;
+    odom_msg.header.stamp = synchronized_timestamp;
 
     // Publish joint states
     RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
@@ -383,11 +390,12 @@ void setup() {
   // Create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
 
-  // ADD THIS LINE - Enable time synchronization
-  rmw_uros_sync_session(1000); // Sync with 1 second timeout
-
   // Create ROS2 node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
+
+  // Synchronize time with the agent
+  const int timeout_ms = 1000;
+  rmw_uros_sync_session(timeout_ms);
 
   // --------------------------------------------------------------------------
   //                    Create publishers
