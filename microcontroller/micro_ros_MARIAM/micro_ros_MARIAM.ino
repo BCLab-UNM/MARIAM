@@ -16,6 +16,7 @@
 // Misc libraries
 #include <micro_ros_arduino.h>
 #include <stdio.h>
+#include <rmw_microros/rmw_microros.h>
 
 // ROS2 functions
 #include <rcl/rcl.h>
@@ -271,10 +272,11 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     joint_state_msg.velocity.data[2] = left_current_speed / wheel_radius;   // left back
     joint_state_msg.velocity.data[3] = right_current_speed / wheel_radius;  // right back
 
-    // Set timestamp using the current_time already available
-    joint_state_msg.header.stamp.sec = current_time / 1000000000;
-    joint_state_msg.header.stamp.nanosec = current_time % 1000000000;
-    
+    joint_state_msg.header.stamp.sec = 0;
+    joint_state_msg.header.stamp.nanosec = 0;
+    odom_msg.header.stamp.sec = 0;
+    odom_msg.header.stamp.nanosec = 0;
+
     // Publish joint states
     RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
 
@@ -380,6 +382,9 @@ void setup() {
 
   // Create init_options
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+
+  // ADD THIS LINE - Enable time synchronization
+  rmw_uros_sync_session(1000); // Sync with 1 second timeout
 
   // Create ROS2 node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
@@ -496,6 +501,8 @@ void setup() {
   joint_state_msg.velocity.data = (double*)malloc(4 * sizeof(double));
   joint_state_msg.velocity.size = 4;
   joint_state_msg.velocity.capacity = 4;
+
+  joint_state_msg.header.frame_id.data = "base_link";
   
   // Create executors
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));

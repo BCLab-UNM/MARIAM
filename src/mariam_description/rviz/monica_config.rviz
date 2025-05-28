@@ -147,28 +147,27 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        base_footprint:
-          base_link:
-            camera_link:
-              camera_accel_frame:
-                camera_accel_optical_frame:
-                  {}
-              camera_gyro_frame:
-                camera_gyro_optical_frame:
-                  {}
-                camera_imu_frame:
-                  camera_imu_optical_frame:
-                    {}
-            drivewheel_left_back_link:
-              {}
-            drivewheel_left_front_link:
-              {}
-            drivewheel_right_back_link:
-              {}
-            drivewheel_right_front_link:
-              {}
         odom:
-          {}
+          base_footprint:
+            base_link:
+              camera_link:
+                camera_accel_frame:
+                  camera_accel_optical_frame:
+                    {}
+                camera_gyro_frame:
+                  camera_gyro_optical_frame:
+                    {}
+                  camera_imu_frame:
+                    camera_imu_optical_frame:
+                      {}
+              drivewheel_left_back_link:
+                {}
+              drivewheel_left_front_link:
+                {}
+              drivewheel_right_back_link:
+                {}
+              drivewheel_right_front_link:
+                {}
       Update Interval: 0
       Value: true
     - Angle Tolerance: 0.10000000149011612
@@ -213,7 +212,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
