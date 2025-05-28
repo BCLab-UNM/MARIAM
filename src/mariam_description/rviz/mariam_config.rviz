@@ -10,6 +10,9 @@ Panels:
     Tree Height: 552
 Visualization Manager:
   Class: ""
+  #########################################
+  # DISPLAY FOR ROSS
+  #########################################
   Displays:
     - Alpha: 0.5
       Cell Size: 1
@@ -29,6 +32,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
+
     - Alpha: 0.8999999761581421
       Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
@@ -39,7 +43,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /robot_description
+        Value: /ross/robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -118,6 +122,8 @@ Visualization Manager:
       Update Interval: 0
       Value: true
       Visual Enabled: true
+    
+    
     - Class: rviz_default_plugins/TF
       Enabled: true
       Frame Timeout: 15
@@ -238,6 +244,7 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+  
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

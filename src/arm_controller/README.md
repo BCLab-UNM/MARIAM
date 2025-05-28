@@ -19,20 +19,19 @@ ros2 launch arm_controller px100_controller.launch.py use_sim:=false
 
 Launch command for admittance control demo
 ```bash
-ros2 launch arm_controller px100_controller.launch.py use_admittance_control:=true
+ros2 launch arm_controller px100_controller.launch.py use_admittance_control:=true use_fake_force:=true
 ```
 
 All parameters:
-- threshold: Value from 0 to 1 defining joystick sensitivity; a larger number means the joystick will be less sensitive. Default is 0.75.
+- robot_name: the namespace all nodes will be under. If `ross`, the domain ID will be set to 42. If `monica`, the domain ID will be set to 43. Otherwise, the domain ID will be 0 (default value for nodes). The value of the parameter defaults to `px100`.
 
-- use_rviz: Can be `true` or `false`. Launches RViz if set to `true`. Default is `true`.
+- use_rviz: Can be `true` or `false`. Launches RViz if set to `true`. Default is the value of `use_sim`.
 
 - use_sim: Can be `true` or `false`. If `true`, the DYNAMIXEL simulator node is run; use RViz to visualize the robot's motion; if `false`, the real DYNAMIXEL driver node is run. This is used to run a simulation of the arm instead of using an actual arm. Default is `true`.
 
-- use_admittance_control: launches the admittance controller node and the virutal pose publisher.
-  - use_fake_force: launches an additional node to publish fake force measurements.
+- use_admittance_control: launches the admittance controller node and the virutal pose publisher. Defaults to `true`.
+  - use_fake_force: launches an additional node to publish fake force measurements. Defaults to `false`.
 
-- publish_poses: launches the pose_publisher node
 
 Best practices when moving the arm using the Python-ROS interface: https://docs.trossenrobotics.com/interbotix_xsarms_docs/python_ros_interface.html#tips-best-practices
 
