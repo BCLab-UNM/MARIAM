@@ -1,47 +1,53 @@
-## This file is to launch on robots and will use their name as the namespace. Runs camera and rtabmap for odom and imu
-# Does NOT run SLAM
+# Copyright 2023 Intel Corporation. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# Requirements:
-#   A realsense D455f
-#   Install realsense2 ros2 package (ros-$ROS_DISTRO-realsense2-camera)
-# Example:
-#   $ ros2 launch realsense_robot.launch.py
+# A modified version of the original rs_launch.py file from the 
+# realsense2_camera package. This one includes additional parameters 
+# that allow the /tf and /tf_static topics to be remapped.
 
+"""Launch realsense2_camera node."""
 import os
 import yaml
-import socket 
 from launch import LaunchDescription
 import launch_ros.actions
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
 
-# Get name of robot
-host = socket.gethostname()
 
-# Parameters for camera
-configurable_parameters = [{'name': 'camera_name',                  'default': host + '_camera', 'description': 'camera unique name'},
-                           {'name': 'camera_namespace',             'default': host + '/camera', 'description': 'namespace for camera'},
+configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
+                           {'name': 'camera_namespace',             'default': 'camera', 'description': 'namespace for camera'},
                            {'name': 'serial_no',                    'default': "''", 'description': 'choose device by serial number'},
                            {'name': 'usb_port_id',                  'default': "''", 'description': 'choose device by usb port id'},
                            {'name': 'device_type',                  'default': "''", 'description': 'choose device by type'},
                            {'name': 'config_file',                  'default': "''", 'description': 'yaml config file'},
                            {'name': 'json_file_path',               'default': "''", 'description': 'allows advanced configuration'},
                            {'name': 'initial_reset',                'default': 'false', 'description': "''"},
-                           {'name': 'accelerate_with_gpu',          'default': "0", 'description': '[0-No_GPU, 1-GL_GPU]'},
+                           {'name': 'accelerate_gpu_with_glsl',     'default': "false", 'description': 'enable GPU acceleration with GLSL'},
                            {'name': 'rosbag_filename',              'default': "''", 'description': 'A realsense bagfile to run from as a device'},
                            {'name': 'log_level',                    'default': 'info', 'description': 'debug log level [DEBUG|INFO|WARN|ERROR|FATAL]'},
                            {'name': 'output',                       'default': 'screen', 'description': 'pipe node output [screen|log]'},
                            {'name': 'enable_color',                 'default': 'true', 'description': 'enable color stream'},
-                           {'name': 'rgb_camera.profile',           'default': '0,0,0', 'description': 'color image width'},
+                           {'name': 'rgb_camera.color_profile',     'default': '0,0,0', 'description': 'color stream profile'},
                            {'name': 'rgb_camera.color_format',      'default': 'RGB8', 'description': 'color stream format'},
                            {'name': 'rgb_camera.enable_auto_exposure', 'default': 'true', 'description': 'enable/disable auto exposure for color image'},
                            {'name': 'enable_depth',                 'default': 'true', 'description': 'enable depth stream'},
                            {'name': 'enable_infra',                 'default': 'false', 'description': 'enable infra0 stream'},
                            {'name': 'enable_infra1',                'default': 'false', 'description': 'enable infra1 stream'},
                            {'name': 'enable_infra2',                'default': 'false', 'description': 'enable infra2 stream'},
-                           {'name': 'depth_module.profile',         'default': '0,0,0', 'description': 'depth module profile'},
+                           {'name': 'depth_module.depth_profile',   'default': '0,0,0', 'description': 'depth stream profile'},
                            {'name': 'depth_module.depth_format',    'default': 'Z16', 'description': 'depth stream format'},
+                           {'name': 'depth_module.infra_profile',   'default': '0,0,0', 'description': 'infra streams (0/1/2) profile'},
                            {'name': 'depth_module.infra_format',    'default': 'RGB8', 'description': 'infra0 stream format'},
                            {'name': 'depth_module.infra1_format',   'default': 'Y8', 'description': 'infra1 stream format'},
                            {'name': 'depth_module.infra2_format',   'default': 'Y8', 'description': 'infra2 stream format'},
@@ -53,20 +59,21 @@ configurable_parameters = [{'name': 'camera_name',                  'default': h
                            {'name': 'depth_module.gain.1',          'default': '16', 'description': 'Depth module first gain value. Used for hdr_merge filter'},
                            {'name': 'depth_module.exposure.2',      'default': '1', 'description': 'Depth module second exposure value. Used for hdr_merge filter'},
                            {'name': 'depth_module.gain.2',          'default': '16', 'description': 'Depth module second gain value. Used for hdr_merge filter'},
-                           {'name': 'enable_sync',                  'default': 'true', 'description': "'enable sync mode'"},
+                           {'name': 'enable_sync',                  'default': 'false', 'description': "'enable sync mode'"},
                            {'name': 'enable_rgbd',                  'default': 'false', 'description': "'enable rgbd topic'"},
-                           {'name': 'enable_gyro',                  'default': 'true', 'description': "'enable gyro stream'"},
-                           {'name': 'enable_accel',                 'default': 'true', 'description': "'enable accel stream'"},
+                           {'name': 'enable_gyro',                  'default': 'false', 'description': "'enable gyro stream'"},
+                           {'name': 'enable_accel',                 'default': 'false', 'description': "'enable accel stream'"},
                            {'name': 'gyro_fps',                     'default': '0', 'description': "''"},
                            {'name': 'accel_fps',                    'default': '0', 'description': "''"},
-                           {'name': 'unite_imu_method',             'default': "1", 'description': '[0-None, 1-copy, 2-linear_interpolation]'},
+                           {'name': 'unite_imu_method',             'default': "0", 'description': '[0-None, 1-copy, 2-linear_interpolation]'},
                            {'name': 'clip_distance',                'default': '-2.', 'description': "''"},
                            {'name': 'angular_velocity_cov',         'default': '0.01', 'description': "''"},
                            {'name': 'linear_accel_cov',             'default': '0.01', 'description': "''"},
                            {'name': 'diagnostics_period',           'default': '0.0', 'description': 'Rate of publishing diagnostics. 0=Disabled'},
                            {'name': 'publish_tf',                   'default': 'true', 'description': '[bool] enable/disable publishing static & dynamic TF'},
                            {'name': 'tf_publish_rate',              'default': '0.0', 'description': '[double] rate in Hz for publishing dynamic TF'},
-                           {'name': 'pointcloud.enable',            'default': 'true', 'description': ''},
+                           {'name': 'tf_prefix',                    'default': "''", 'description': 'prefix for the tf frame IDs'}, 
+                           {'name': 'pointcloud.enable',            'default': 'false', 'description': ''},
                            {'name': 'pointcloud.stream_filter',     'default': '2', 'description': 'texture stream for pointcloud'},
                            {'name': 'pointcloud.stream_index_filter','default': '0', 'description': 'texture stream index for pointcloud'},
                            {'name': 'pointcloud.ordered_pc',        'default': 'false', 'description': ''},
@@ -83,7 +90,6 @@ configurable_parameters = [{'name': 'camera_name',                  'default': h
                            {'name': 'reconnect_timeout',            'default': '6.', 'description': 'Timeout(seconds) between consequtive reconnection attempts'},
                           ]
 
-# -------------- CAMERA ------------------------ #
 def declare_configurable_parameters(parameters):
     return [DeclareLaunchArgument(param['name'], default_value=param['default'], description=param['description']) for param in parameters]
 
@@ -97,6 +103,25 @@ def yaml_to_dict(path_to_yaml):
 def launch_setup(context, params, param_name_suffix=''):
     _config_file = LaunchConfiguration('config_file' + param_name_suffix).perform(context)
     params_from_file = {} if _config_file == "''" else yaml_to_dict(_config_file)
+
+    _output = LaunchConfiguration('output' + param_name_suffix)
+    if(os.getenv('ROS_DISTRO') == 'foxy'):
+        # Foxy doesn't support output as substitution object (LaunchConfiguration object)
+        # but supports it as string, so we fetch the string from this substitution object
+        # see related PR that was merged for humble, iron, rolling: https://github.com/ros2/launch/pull/577
+        _output = context.perform_substitution(_output)
+
+    # Get tf_prefix for potential remappings
+    _tf_prefix = LaunchConfiguration('tf_prefix' + param_name_suffix).perform(context)
+    
+    # Create remappings list
+    remappings = []
+    if _tf_prefix and _tf_prefix != "''":
+        remappings = [
+            ('/tf', f'/{_tf_prefix}/tf'),
+            ('/tf_static', f'/{_tf_prefix}/tf_static')
+        ]
+
     return [
         launch_ros.actions.Node(
             package='realsense2_camera',
@@ -104,79 +129,14 @@ def launch_setup(context, params, param_name_suffix=''):
             name=LaunchConfiguration('camera_name' + param_name_suffix),
             executable='realsense2_camera_node',
             parameters=[params, params_from_file],
-            output=LaunchConfiguration('output' + param_name_suffix),
+            output=_output,
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level' + param_name_suffix)],
             emulate_tty=True,
+            remappings=remappings,
             )
     ]
-# -------------- CAMERA ------------------------ #
 
 def generate_launch_description():
-    parameters=[{
-          'frame_id':host+'_camera_link',
-          'subscribe_depth':True,
-          'subscribe_odom_info':True,
-          'approx_sync':False,
-          'wait_imu_to_init':True}]
-
-    remappings=[
-            ('imu', '/{}/imu/data'.format(host)),
-            ('rgb/image', '/{}/camera/color/image_raw'.format(host)),
-            ('rgb/camera_info', '/{}/camera/color/camera_info'.format(host)),
-            ('depth/image', '/{}/camera/realigned_depth_to_color/image_raw'.format(host)),
-            ('odom','/{}/odom_slam'.format(host))]
-
-    return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [ 
-        # Camera launch
-        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})]  +
-        
-        [        # Rtabmap nodes to launch       
-        Node(
-            package='rtabmap_odom', executable='rgbd_odometry', output='screen',
-            parameters=parameters,
-            remappings=remappings,
-            namespace=host),
-
-        Node(
-            package='rtabmap_slam', executable='rtabmap', output='screen',
-            parameters=parameters,
-            remappings=remappings,
-            arguments=['-d'],
-            namespace=host),
-        
-        # Because of this issue: https://github.com/IntelRealSense/realsense-ros/issues/2564
-        # Generate point cloud from not aligned depth
-        Node(
-            package='rtabmap_util', executable='point_cloud_xyz', output='screen',
-            parameters=[{'approx_sync':False}],
-            remappings=[('depth/image',       '/{}/camera/depth/image_rect_raw'.format(host)),
-                        ('depth/camera_info', '/{}/camera/depth/camera_info'.format(host)),
-                        ('cloud',             '/{}/camera/cloud_from_depth'.format(host))],
-                        namespace=host),
-        
-        # Generate aligned depth to color camera from the point cloud above       
-        Node(
-            package='rtabmap_util', executable='pointcloud_to_depthimage', output='screen',
-            parameters=[{ 'decimation':2,
-                          'fixed_frame_id':host+'_camera_link',
-                          'fill_holes_size':1}],
-            remappings=[('camera_info', '/{}/camera/color/camera_info'.format(host)),
-                        ('cloud',       '/{}/camera/cloud_from_depth'.format(host)),
-                        ('image_raw',   '/{}/camera/realigned_depth_to_color/image_raw'.format(host))],
-                        namespace=host),
-        
-        # Compute quaternion of the IMU
-        Node(
-            package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
-            parameters=[{'use_mag': False, 
-                         'world_frame':'enu', 
-                         'publish_tf':False}],
-            remappings=[('imu/data_raw', '/{}/camera/imu'.format(host))],
-            namespace=host),
-        
-        # The IMU frame is missing in TF tree, add it:
-        Node(
-            package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', host + '/camera_gyro_optical_frame', host + '/camera_imu_optical_frame'],
-            namespace=host),        
+    return LaunchDescription(declare_configurable_parameters(configurable_parameters) + [
+        OpaqueFunction(function=launch_setup, kwargs = {'params' : set_configurable_parameters(configurable_parameters)})
     ])

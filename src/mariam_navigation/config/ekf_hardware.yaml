@@ -1,0 +1,28 @@
+/**/ekf_filter_node:
+  ros__parameters:
+    # General settings
+    frequency: 30.0
+    sensor_timeout: 0.1
+    publish_tf: true
+    print_diagnostics: true
+    two_d_mode: true
+    transform_time_offset: 0.0
+    
+    # Frame settings - keep simple, no namespaces
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_footprint  # Match your odometry message
+    world_frame: odom
+    
+    # Topics - use relative names, remapping handles the namespacing
+    odom0: wheel/odom
+    odom0_config: [true, true, false, false, false, true, true, false, false, false, false, true]
+    odom0_queue_size: 10
+    odom0_nodelay: false
+    
+    imu0: camera/imu
+    imu0_config: [false, false, false, false, false, false, false, false, false, true, true, true]
+    imu0_differential: false
+    imu0_relative: true
+    imu0_queue_size: 10
+    imu0_nodelay: false

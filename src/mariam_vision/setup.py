@@ -2,7 +2,7 @@ from setuptools import setup
 import os
 from glob import glob
 
-package_name = 'mariam_slam'
+package_name = 'mariam_vision'
 
 setup(
     name=package_name,
@@ -10,7 +10,7 @@ setup(
     packages=[package_name],
     data_files=[
         # Install the launch files
-        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         # Install package.xml
         (os.path.join('share', package_name), ['package.xml']),
     ],

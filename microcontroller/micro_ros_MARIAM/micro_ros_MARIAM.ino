@@ -1,6 +1,6 @@
 // Topic defines
-// #define NAMESPACE "monica"
-#define NAMESPACE "ross"
+#define NAMESPACE "monica"
+// #define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
@@ -11,10 +11,12 @@
 #define RIGHT_SET_POINT_TOPIC_NAME NAMESPACE "/right_set_point"
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 #define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
+#define JOINT_STATES_TOPIC_NAME NAMESPACE "/joint_states"
 
 // Misc libraries
 #include <micro_ros_arduino.h>
 #include <stdio.h>
+#include <rmw_microros/rmw_microros.h>
 
 // ROS2 functions
 #include <rcl/rcl.h>
@@ -29,6 +31,7 @@
 #include <nav_msgs/msg/odometry.h>
 #include <geometry_msgs/msg/twist.h>
 #include <geometry_msgs/msg/point.h>
+#include <sensor_msgs/msg/joint_state.h>
 
 // Motor control classes
 #include <Movement.h>
@@ -64,6 +67,7 @@ rcl_publisher_t left_pid_output_publisher;
 rcl_publisher_t left_set_point_publisher;
 rcl_publisher_t right_pid_output_publisher;
 rcl_publisher_t right_set_point_publisher;
+rcl_publisher_t joint_state_publisher;
 
 std_msgs__msg__Int32 left_ticks;
 std_msgs__msg__Int32 right_ticks;
@@ -96,6 +100,7 @@ rcl_timer_t timer;
 // Create ros message object
 nav_msgs__msg__Odometry odom_msg;
 geometry_msgs__msg__Twist twist_msg;
+sensor_msgs__msg__JointState joint_state_msg;
 
 // Physical measurements in meters
 const double wheel_base = 0.3397; // Distance between left and right wheels
@@ -104,6 +109,10 @@ const double ticks_per_rotation = 8400;
 double theta_heading = 0;
 double previous_x_pos = 0.0;
 double previous_y_pos = 0.0;
+double left_front_wheel_position = 0.0;   // Cumulative rotation in radians
+double right_front_wheel_position = 0.0;  // Cumulative rotation in radians
+double left_back_wheel_position = 0.0;    // Cumulative rotation in radians
+double right_back_wheel_position = 0.0;   // Cumulative rotation in radians
 
 bool estop = true;
 
@@ -229,10 +238,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
     float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
 
     // Determine force data using fitted curve
-    float coef_0 = 0.035582; // coef for x^0
-    float coef_1 = -0.055113; // coef for x^1
-    float coef_2 = 0.38334; // coef for x^2
-    float coef_3 = -0.057718; // coef for x^3
+    float coef_0 = 0.035582; // coef for x^3
+    float coef_1 = -0.055113; // coef for x^2
+    float coef_2 = 0.38334; // coef for x^1
+    float coef_3 = -0.057718; // coef for x^0
     force_msg.data = coef_0 * pow(raw_force_data, 3) 
                 + coef_1 * pow(raw_force_data, 2) 
                 + coef_2 * raw_force_data
@@ -240,6 +249,43 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
    
     force_msg.data = max(force_msg.data, 0.0f); // Ensure force_msg.data is positive
 
+    // Update joint positions (cumulative wheel rotations in radians)
+    double left_rotation = (2.0 * PI * left_ticks.data) / ticks_per_rotation;
+    double right_rotation = (2.0 * PI * right_ticks.data) / ticks_per_rotation;
+
+    // Since you have differential drive with 4 wheels, assuming left/right sides move together
+    left_front_wheel_position += left_rotation;
+    left_back_wheel_position += left_rotation;
+    right_front_wheel_position += right_rotation;
+    right_back_wheel_position += right_rotation;
+
+    // Update joint state message for all 4 wheels
+    joint_state_msg.position.data[0] = left_front_wheel_position;   // left front
+    joint_state_msg.position.data[1] = right_front_wheel_position;  // right front
+    joint_state_msg.position.data[2] = left_back_wheel_position;    // left back
+    joint_state_msg.position.data[3] = right_back_wheel_position;   // right back
+
+    // Convert m/s to rad/s for velocities
+    double wheel_radius = wheel_circumference / (2.0 * PI);
+    joint_state_msg.velocity.data[0] = left_current_speed / wheel_radius;   // left front
+    joint_state_msg.velocity.data[1] = right_current_speed / wheel_radius;  // right front
+    joint_state_msg.velocity.data[2] = left_current_speed / wheel_radius;   // left back
+    joint_state_msg.velocity.data[3] = right_current_speed / wheel_radius;  // right back
+
+    // Get corrected epoch time using micro-ROS time sync
+    int64_t time_ns = rmw_uros_epoch_nanos();
+
+    // Convert to required format and set timestamps
+    builtin_interfaces__msg__Time synchronized_timestamp;
+    synchronized_timestamp.sec = (int32_t)(time_ns / 1000000000);
+    synchronized_timestamp.nanosec = (uint32_t)(time_ns % 1000000000);
+
+    // Apply synchronized timestamp to both messages
+    joint_state_msg.header.stamp = synchronized_timestamp;
+    odom_msg.header.stamp = synchronized_timestamp;
+
+    // Publish joint states
+    RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
 
     // Publish force and odom values to ROS2 network
     RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
@@ -347,7 +393,13 @@ void setup() {
   // Create ROS2 node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
-  // Create publishers
+  // Synchronize time with the agent
+  const int timeout_ms = 1000;
+  rmw_uros_sync_session(timeout_ms);
+
+  // --------------------------------------------------------------------------
+  //                    Create publishers
+  // --------------------------------------------------------------------------
   // Left PID output publisher
   RCCHECK(rclc_publisher_init_default(
     &left_pid_output_publisher,
@@ -384,7 +436,15 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), ODOM_TOPIC_NAME));
 
-  // Create subscribers
+  // Joint state publisher
+  RCCHECK(rclc_publisher_init_default(
+    &joint_state_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState), JOINT_STATES_TOPIC_NAME));
+
+  // --------------------------------------------------------------------------
+  //                    Create subscribers
+  // --------------------------------------------------------------------------
   // Command velocity subscriber
   RCCHECK(rclc_subscription_init_default(
     &subscriber_cmd_vel,
@@ -420,6 +480,37 @@ void setup() {
   right_PID.SetMode(AUTOMATIC);
   left_PID.SetOutputLimits(-255,255);
   right_PID.SetOutputLimits(-255,255);
+
+  // Set joint state defaults for 4 wheels
+  joint_state_msg.name.data = (rosidl_runtime_c__String*)malloc(4 * sizeof(rosidl_runtime_c__String));
+  joint_state_msg.name.size = 4;
+  joint_state_msg.name.capacity = 4;
+
+  joint_state_msg.name.data[0].data = "drivewheel_left_front_joint";
+  joint_state_msg.name.data[0].size = strlen("drivewheel_left_front_joint");
+  joint_state_msg.name.data[0].capacity = joint_state_msg.name.data[0].size + 1;
+
+  joint_state_msg.name.data[1].data = "drivewheel_right_front_joint";
+  joint_state_msg.name.data[1].size = strlen("drivewheel_right_front_joint");
+  joint_state_msg.name.data[1].capacity = joint_state_msg.name.data[1].size + 1;
+
+  joint_state_msg.name.data[2].data = "drivewheel_left_back_joint";
+  joint_state_msg.name.data[2].size = strlen("drivewheel_left_back_joint");
+  joint_state_msg.name.data[2].capacity = joint_state_msg.name.data[2].size + 1;
+
+  joint_state_msg.name.data[3].data = "drivewheel_right_back_joint";
+  joint_state_msg.name.data[3].size = strlen("drivewheel_right_back_joint");
+  joint_state_msg.name.data[3].capacity = joint_state_msg.name.data[3].size + 1;
+
+  joint_state_msg.position.data = (double*)malloc(4 * sizeof(double));
+  joint_state_msg.position.size = 4;
+  joint_state_msg.position.capacity = 4;
+
+  joint_state_msg.velocity.data = (double*)malloc(4 * sizeof(double));
+  joint_state_msg.velocity.size = 4;
+  joint_state_msg.velocity.capacity = 4;
+
+  joint_state_msg.header.frame_id.data = "base_link";
   
   // Create executors
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
