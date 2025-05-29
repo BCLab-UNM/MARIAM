@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fabric import SerialGroup
+from fabric import SerialGroup, Connection
 import rclpy
 from rclpy.node import Node
 
@@ -9,6 +9,7 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Pose, Twist
 
 import time
+from threading import Thread
 
 class ExperimentNode(Node):
 
@@ -45,8 +46,9 @@ class ExperimentNode(Node):
         # starting up the robots
         # -------------------------------------------------
         self.get_logger().info('Starting up the robots...')
-        self.start_robots()
-        
+        # start up monica
+        self.start_robots()        
+
     # -----------------------------------------------------
     # methods for each stage of the experiment
     # -----------------------------------------------------
@@ -93,46 +95,64 @@ class ExperimentNode(Node):
 
 
     def start_robots(self):
-        serial_group = SerialGroup(
-            'ross.local', 'monica.local',
-            user='swarmie',
-            # searches for SSH keys
+        """
+        :param hostname: the hostname of the robot to connect to
+        :param robot_name: the name of the robot to start
+        """
+        # establish an SSH connection using an SSH key
+        self.monica_conn = Connection(
+            f'swarmie@monica.local',
             connect_kwargs={'look_for_keys': True}
-        ).run('cd MARIAM')
+        )
 
-        for (conn, _), robot_name in zip(serial_group.items(), ['ross', 'monica']):
-            self.get_logger().info(f'Starting robot: {robot_name}')
-            conn.run(f'ros2 launch mariam_experiments experiment.launch.py robot_name:={robot_name} use_gazebo:=false use_admittance_control:=true')
-            self.get_logger().info(f'Robot {robot_name} started successfully.')
+        # start up the robot
+        result = self.monica_conn.run(f'./MARIAM/script/robot_manager.sh monica true &', hide=True)
+
+        if result.ok:
+            self.get_logger().info(f'Successfully started monica')
+        else:
+            self.get_logger().error(f'Failed to start monica: {result.stderr}')
+
+    def shutdown_robots(self, hostname):
+        """
+        This method will shutdown the robots by closing the connections.
+        """
+        self.get_logger().info('Shutting down the robots...')
+
+        # shutdown the robot
+        result = self.monica_conn.run('./MARIAM/script/robot_manager.sh kill')
+
+        if result.ok:
+            self.get_logger().info(f'Successfully shut down monica')
+        else:
+            self.get_logger().error(f'Failed to shut down monica: {result.stderr}')
 
 
 def main(args=None):
     rclpy.init(args=args)
     experiment_node = ExperimentNode()
 
-    try:
-        # drive up to the object
-        experiment_node.drive_robots(
-            speed=0.1,  # meters per second
-            distance=0.25  # meters
-        )
-        experiment_node.lift_object()
-        # drive away from the object
-        experiment_node.drive_robots(
-            speed=0.1,  # meters per second
-            distance=1.0  # meters
-        )
+    try:        
+        while rclpy.ok():
+            input('Press Enter to start an experiment ')
+            # drive up to the object
+            # experiment_node.drive_robots(
+            #     speed=0.1,  # meters per second
+            #     distance=0.25  # meters
+            # )
+            # experiment_node.lift_object()
+            # # drive away from the object
+            # experiment_node.drive_robots(
+            #     speed=0.1,  # meters per second
+            #     distance=1.0  # meters
+            # )
     
     except KeyboardInterrupt:
-        # TODO: handle the keyboard interrupt gracefully.
-        # this should properly stop each robot using the
-        # connections created by the SerialGroup
-        pass
-    
-    finally:
         experiment_node.get_logger().info('Shutting down the experiment node...')
+        experiment_node.shutdown_robots(hostname='monica.local')
         experiment_node.destroy_node()
         rclpy.shutdown()
+        
 
 if __name__ == '__main__':
     main()
