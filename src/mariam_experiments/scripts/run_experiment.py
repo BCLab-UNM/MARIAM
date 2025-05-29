@@ -106,7 +106,7 @@ class ExperimentNode(Node):
         )
 
         # start up the robot
-        result = self.monica_conn.run(f'./MARIAM/script/robot_manager.sh monica true &', hide=True)
+        result = self.monica_conn.run(f'./MARIAM/script/startup_robot.sh monica true &', hide=True)
 
         if result.ok:
             self.get_logger().info(f'Successfully started monica')
@@ -120,7 +120,7 @@ class ExperimentNode(Node):
         self.get_logger().info('Shutting down the robots...')
 
         # shutdown the robot
-        result = self.monica_conn.run('./MARIAM/script/robot_manager.sh kill')
+        result = self.monica_conn.run('pkill -2 -f "mariam_experiments"', hide=True)
 
         if result.ok:
             self.get_logger().info(f'Successfully shut down monica')
