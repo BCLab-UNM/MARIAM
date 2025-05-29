@@ -6,7 +6,7 @@ from launch.actions import (
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -32,7 +32,7 @@ def launch_setup(context, *args, **kwargs):
     # -----------------------------------------------------
     px100_controller_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(
+            PathJoinSubstitution(
                 FindPackageShare('arm_controller'),
                 'launch',
                 'px100_controller.launch.py'
@@ -54,7 +54,7 @@ def launch_setup(context, *args, **kwargs):
 
     micro_ros_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(
+            PathJoinSubstitution(
                 FindPackageShare('mariam_microros'),
                 'launch',
                 'micro_ros_agent_launch.py'
