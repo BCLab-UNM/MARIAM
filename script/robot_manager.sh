@@ -10,17 +10,13 @@ if [ "$1" == "kill" ]; then
   echo "Killing all processes"
   # first, interrupt the processes gracefully
   pkill -2 -f "ros2 launch mariam_experiments"
-  pkill -2 -f "/home/swarmie/MARIAM/*"
-  pkill -2 -f "realsense2_camera"
-  pkill -2 -f "robot_state_publisher"
-  pkill -2 -f "micro_ros_agent"
 
   # kill any ghost processes
-  pkill -2 -f "mariam_experiments"
-  pkill -2 -f "/home/swarmie/MARIAM/*"
-  pkill -2 -f "realsense2_camera"
-  pkill -2 -f "robot_state_publisher"
-  pkill -2 -f "micro_ros_agent"
+  pkill -9 -f "mariam_experiments"
+  pkill -9 -f "/home/swarmie/MARIAM/*"
+  pkill -9 -f "realsense2_camera"
+  pkill -9 -f "robot_state_publisher"
+  pkill -9 -f "micro_ros_agent"
 
 else
   source /opt/ros/humble/setup.bash
