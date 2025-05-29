@@ -15,10 +15,12 @@ import os
 
 def generate_launch_description():
     # Launch arguments.
-    camera_namespace = LaunchConfiguration('camera_namespace')
-    tf_prefix = LaunchConfiguration('tf_prefix')
+    namespace = LaunchConfiguration('namespace')
     enable_gyro = LaunchConfiguration('enable_gyro')
     enable_accel = LaunchConfiguration('enable_accel')
+    unite_imu_method = LaunchConfiguration('unite_imu_method')
+    enable_depth = LaunchConfiguration('enable_depth')
+    enable_color = LaunchConfiguration('enable_color')
 
     # Determine the path to the rs_launch.py file.
     realsense2_package_share_directory = get_package_share_directory('mariam_vision')
@@ -28,24 +30,22 @@ def generate_launch_description():
     rs_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(rs_launch_file),
         launch_arguments={
-            'camera_namespace': camera_namespace,
-            'tf_prefix': tf_prefix,
+            'camera_namespace': namespace,
+            'tf_prefix': namespace,
             'enable_gyro': enable_gyro,
             'enable_accel': enable_accel,
+            'unite_imu_method': unite_imu_method,
+            'enable_depth': enable_depth,
+            'enable_color': enable_color,
         }.items()
     )
 
     return LaunchDescription([
         # Declare launch arguments.
         DeclareLaunchArgument(
-            'camera_namespace',
-            default_value='camera',
-            description='Namespace for the camera'
-        ),
-        DeclareLaunchArgument(
-            'tf_prefix',
+            'namespace',
             default_value='',
-            description='Namespace for /tf and /tf_static'
+            description='Namespace for the camera and tf frames'
         ),
         DeclareLaunchArgument(
             'enable_gyro',
