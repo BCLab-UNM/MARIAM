@@ -129,33 +129,12 @@ def launch_setup(context, *args, **kwargs):
 
     # TODO: add additional nodes for the real robot here
 
-
-    #-----------------------------------------------------
-    # Stuff for the gazebo simulation
-    #-----------------------------------------------------
-    gazebo_sim_included_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(
-                FindPackageShare('mariam_gazebo'),
-                'launch',
-                'mariam_gazebo.launch.py'
-            )
-        ),
-        condition=IfCondition(
-            PythonExpression([
-                "'", use_gazebo_launch_arg,
-                "' == 'true'"
-            ])
-        )
-    )
-
     return [
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_imu_launch_desc,
-        hardware_ekf_launch_desc,
-        gazebo_sim_included_launch
+        hardware_ekf_launch_desc
     ]
 
 
@@ -166,12 +145,7 @@ def generate_launch_description():
     declared_launch_arguments = [
         DeclareLaunchArgument(
             'robot_name',
-            description='The name of the robot (ross or monica). Only used for the real robots.',
-        ),
-        DeclareLaunchArgument(
-            'use_gazebo',
-            default_value='false',
-            description='Whether to use the Gazebo simulation'
+            description='The name of the robot (ross or monica).',
         ),
         DeclareLaunchArgument(
             'use_admittance_control',
