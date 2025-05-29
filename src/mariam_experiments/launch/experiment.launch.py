@@ -7,7 +7,6 @@ from launch.actions import (
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -69,7 +68,64 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-
+    mariam_description_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                FindPackageShare('mariam_description'),
+                'launch',
+                'mariam_rsp.launch.py'
+            )
+        ),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+            # TODO: does this need to be set???
+            # 'use_sim_time': 'false',
+        },
+        condition=IfCondition(
+            PythonExpression([
+                "'", use_gazebo_launch_arg,
+                "' == 'false'"
+            ])
+        )
+    )
+    
+    realsense_imu_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                FindPackageShare('mariam_vision'),
+                'launch',
+                'realsense_imu.launch.py'
+            )
+        ),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        },
+        condition=IfCondition(
+            PythonExpression([
+                "'", use_gazebo_launch_arg,
+                "' == 'false'"
+            ])
+        )
+    )
+    
+    hardware_ekf_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                FindPackageShare('mariam_navigation'),
+                'launch',
+                'hardware_ekf.launch.py'
+            )
+        ),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        },
+        condition=IfCondition(
+            PythonExpression([
+                "'", use_gazebo_launch_arg,
+                "' == 'false'"
+            ])
+        )
+    )
 
     # TODO: add additional nodes for the real robot here
 
@@ -96,6 +152,9 @@ def launch_setup(context, *args, **kwargs):
     return [
         px100_controller_desc,
         micro_ros_desc,
+        mariam_description_launch_desc,
+        realsense_imu_launch_desc,
+        hardware_ekf_launch_desc,
         gazebo_sim_included_launch
     ]
 
@@ -116,7 +175,8 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_admittance_control',
-            default_value='false',
+            default_value='true',
+            choices=('true', 'false'),
             description='Whether to use admittance control'
         )
     ]
