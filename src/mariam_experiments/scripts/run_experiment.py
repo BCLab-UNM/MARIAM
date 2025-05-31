@@ -84,7 +84,8 @@ class ExperimentNode(Node):
         :param same_direction: if True, both robots will drive in the same direction
                                  (monica will drive backwards)
         """
-        sleep_period = distance / speed  # time to drive up
+        # the amount of time it should take to get from point A to point B
+        sleep_period = distance / speed
         
         ross_twist = Twist()
         ross_twist.linear.x = speed
@@ -106,7 +107,6 @@ class ExperimentNode(Node):
 
         self.ross_cmd_vel_publisher.publish(ross_twist)
         self.monica_cmd_vel_publisher.publish(monica_twist)
-        # sleep for 0.5 seconds
         time.sleep(sleep_period)
 
         ross_twist = Twist()
@@ -141,9 +141,6 @@ class ExperimentNode(Node):
 
 
     def reset_arm_positions(self):
-        """
-        This method will reset the arm positions of the robots.
-        """
         self.get_logger().info('Resetting arm positions...')
 
         # reset the arm positions to 0.067 meters
@@ -231,6 +228,7 @@ def main(args=None):
             )
 
             input('Press Enter to reset the arm positions\n')
+            experiment_node.reset_arm_positions()
     
     except KeyboardInterrupt:
         # Unclear if this will work when CTRL+C is pressed
