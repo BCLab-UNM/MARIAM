@@ -152,13 +152,13 @@ class ExperimentNode(Node):
 
 
     def start_robots(self, conn, robot_name):
-        with self.conn.cd('MARIAM'):
+        with conn.cd('MARIAM'):
             # this command will start up the robot and save the output to a log file
             # this log file is mostly used for debugging purposes
             cmd = f'./script/startup_robot.sh {robot_name} true > ./log/experiment.log &'
             
             # start up the robot
-            result = self.conn.run(
+            result = conn.run(
                 cmd,
                 hide=True,
                 # pty=True,
@@ -200,11 +200,7 @@ def main(args=None):
 
     try:        
         while rclpy.ok():
-            user_in = input("Press Enter to start an experiment or type 'e' + Enter to shutdown the robots\n")
-
-            if user_in == 'e':
-                experiment_node.shutdown_robots()
-                break
+            input("Press Enter to start an experiment\n")
 
             # drive up to the object
             experiment_node.drive_robots(
@@ -226,12 +222,8 @@ def main(args=None):
                 distance=drive_away_distance,
                 same_direction=True
             )
-
-            input('Press Enter to reset the arm positions\n')
-            experiment_node.reset_arm_positions()
     
     except KeyboardInterrupt:
-        # Unclear if this will work when CTRL+C is pressed
         experiment_node.shutdown_robots()
         experiment_node.destroy_node()
         rclpy.shutdown()
