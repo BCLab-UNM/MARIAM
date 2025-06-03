@@ -31,6 +31,7 @@ def launch_setup(context, *args, **kwargs):
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
     use_rsp_launch_arg = LaunchConfiguration('use_rsp')
+    use_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
 
     admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
@@ -87,7 +88,7 @@ def launch_setup(context, *args, **kwargs):
                 launch_arguments={
                     'robot_name': robot_name_launch_arg,
                     'use_fake_force': force_node_launch_arg,
-                    'use_rviz_markers': use_rviz_launch_arg
+                    'use_rviz_markers': use_rviz_markers_launch_arg
                 }.items(),
                 condition=IfCondition(
                     PythonExpression([
@@ -169,7 +170,13 @@ def generate_launch_description():
             default_value='true',
             choices=('true', 'false'),
             description='if `true`, the robot_state_publisher node is launched; if `false`, it is not.',
-        )
+        ),
+        DeclareLaunchArgument(
+            'use_rviz_markers',
+            default_value='true',
+            choices=('true', 'false'),
+            description='launches RViz markers if set to `true`.',
+        ),
     ]
     declared_arguments.extend(
         declare_interbotix_xsarm_robot_description_launch_arguments(
