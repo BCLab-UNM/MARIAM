@@ -14,7 +14,7 @@
   <joint name="base_to_arm_mount" type="fixed">
     <parent link="base_link"/>  <!-- from swarmie -->
     <child link="px100/px100_base_link"/>   <!-- from px100 -->
-    <origin xyz="0 0 0.1" rpy="0 0 0"/>  <!-- adjust as needed -->
+    <origin xyz="${0.24/1.5} 0 ${0.06/2}" rpy="0 0 -${pi/2}"/>
   </joint>
 
 </robot>
