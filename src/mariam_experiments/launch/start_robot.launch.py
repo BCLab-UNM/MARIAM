@@ -30,6 +30,7 @@ def launch_setup(context, *args, **kwargs):
             'use_admittance_control': admittance_control_launch_arg,
             'use_fake_force': 'false',
             'use_sim': 'false'
+            'use_rsp': 'false',
         }.items()
     )
 
