@@ -179,10 +179,16 @@ class ExperimentNode(Node):
         This method will shutdown the robots by closing the connections.
         """
         self.get_logger().info('Shutting down the robots...')
-        cmd = 'pkill -2 -f "mariam_experiments"'
+        shutdown_robot_cmd = 'pkill -2 -f "mariam_experiments"'
+        reset_arduino_cmd = 'stty - F / dev/ttyACM0 hupcl && echo "reset" > /dev/ttyACM0'
+
         # shutdown the robots
-        self.monica_conn.run(cmd)
-        self.ross_conn.run(cmd)
+        self.monica_conn.run(shutdown_robot_cmd)
+        self.ross_conn.run(shutdown_robot_cmd)
+
+        # Reset Arduino by toggling DTR
+        self.monica_conn.run(reset_arduino_cmd)
+        self.ross_conn.run(reset_arduino_cmd)
 
 
 
