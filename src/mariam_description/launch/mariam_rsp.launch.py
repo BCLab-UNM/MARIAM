@@ -16,8 +16,7 @@ def generate_launch_description():
     pkg_share = FindPackageShare(package='mariam_description').find('mariam_description')
     
     # Define the robot model and rviz config file paths.
-    robot_name_in_urdf = 'mariam'
-    xacro_model_path = os.path.join(pkg_share, 'xacro_models/mariam.urdf.xacro')
+    xacro_model_path = os.path.join(pkg_share, 'xacro_models/mariam_agent.urdf.xacro')
   
     # Launch configuration variables.
     model = LaunchConfiguration('model')
@@ -43,7 +42,7 @@ def generate_launch_description():
         executable='robot_state_publisher',
         namespace=namespace,
         parameters=[{
-            'robot_description': Command(['xacro ', model])
+            'robot_description': Command(['xacro ', model]),
         }],
         remappings=[
             ('/tf', 'tf'),

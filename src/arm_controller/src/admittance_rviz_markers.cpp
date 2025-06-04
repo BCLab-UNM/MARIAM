@@ -30,12 +30,12 @@ private:
   rclcpp::Subscription<Pose>::SharedPtr virtual_pose_sub;
 
   // Assign unique marker IDs for each pose type (target and virtual)
-  const int TARGET_POSE_ID = 0;
-  const int VIRTUAL_POSE_ID = 1;
+  const int TARGET_POSE_ID = 1;
+  const int VIRTUAL_POSE_ID = 2;
 
   void target_pose_callback(const Pose::SharedPtr msg) {
     // First, clear the old markers for the target pose
-    clear_old_markers(target_marker_publisher);
+    // clear_old_markers(target_marker_publisher);
 
     // Create a marker array and add both pose and text markers for the target_pose
     MarkerArray marker_array;
@@ -48,7 +48,7 @@ private:
 
   void virtual_pose_callback(const Pose::SharedPtr msg) {
     // First, clear the old markers for the virtual pose
-    clear_old_markers(virtual_marker_publisher);
+    // clear_old_markers(virtual_marker_publisher);
 
     // Create a marker array and add both pose and text markers for the virtual_pose
     MarkerArray marker_array;
@@ -62,13 +62,16 @@ private:
   Marker create_pose_marker(const Pose &pose, const std::string &label, int marker_id, float r, float g, float b) {
     // Create the pose marker (as a smaller arrow)
     Marker marker;
-    marker.header.frame_id = "world";  // Set frame of reference
-    marker.header.stamp = this->now();
+    marker.header.frame_id = "px100/px100_base_link";  // Set frame of reference
+    marker.header.stamp = rclcpp::Time(0);
+    marker.texture.header.frame_id = "px100/px100_base_link";
+    marker.texture.header.stamp = rclcpp::Time(0);
     marker.ns = label;
     marker.id = marker_id;  // Use consistent marker IDs to overwrite old markers
     marker.type = Marker::ARROW;
     marker.action = Marker::ADD;
     marker.pose = pose;
+    marker.lifetime = rclcpp::Duration::from_nanoseconds(0); 
 
     // Even smaller scale for the arrow
     marker.scale.x = 0.1;  // Shorter arrow length
@@ -85,12 +88,15 @@ private:
   Marker create_text_marker(const Pose &pose, const std::string &label, int marker_id) {
     // Create the text marker
     Marker marker;
-    marker.header.frame_id = "world";
-    marker.header.stamp = this->now();
+    marker.header.frame_id = "px100/px100_base_link";
+    marker.header.stamp = rclcpp::Time(0);
+    marker.texture.header.frame_id = "px100/px100_base_link";
+    marker.texture.header.stamp = rclcpp::Time(0);
     marker.ns = label;
     marker.id = marker_id + 100;  // Ensure text markers have different IDs from pose markers
     marker.type = Marker::TEXT_VIEW_FACING;
     marker.action = Marker::ADD;
+    marker.lifetime = rclcpp::Duration::from_nanoseconds(0); 
 
     // Position the text slightly above the pose
     marker.pose.position = pose.position;
@@ -111,6 +117,8 @@ private:
     // Create a marker array with a DELETEALL action to clear previous markers
     MarkerArray marker_array;
     Marker delete_marker;
+    delete_marker.header.frame_id = "px100/px100_base_link";
+    delete_marker.header.stamp = this->now();
     delete_marker.action = Marker::DELETEALL;
     marker_array.markers.push_back(delete_marker);
 

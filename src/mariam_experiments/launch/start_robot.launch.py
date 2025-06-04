@@ -29,7 +29,8 @@ def launch_setup(context, *args, **kwargs):
             'robot_name': robot_name_launch_arg,
             'use_admittance_control': admittance_control_launch_arg,
             'use_fake_force': 'false',
-            'use_sim': 'false'
+            'use_sim': 'false',
+            'use_rsp': 'false',
         }.items()
     )
 

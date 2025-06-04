@@ -1,0 +1,20 @@
+<?xml version="1.0" ?>
+<robot name="mariam_agent" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ****************** Include Mobile Base ******************************* -->
+  <xacro:include filename="$(find mariam_description)/xacro_models/swarmie.urdf.xacro"/>
+
+  <!-- ****************** Include PX100 Manipulator ************************* -->
+  <xacro:include filename="$(find mariam_description)/xacro_models/px100_modified.urdf.xacro" />
+
+  <!-- ****************** Include Gazebo Setup ****************************** -->
+  <xacro:include filename="$(find mariam_description)/xacro_models/mariam_gazebo.urdf.xacro"/>
+
+  <!-- ****************** Connect Base to Arm ****************************** -->
+  <joint name="base_to_arm_mount" type="fixed">
+    <parent link="base_link"/>  <!-- from swarmie -->
+    <child link="px100/px100_base_link"/>   <!-- from px100 -->
+    <origin xyz="${0.24/1.5} 0 ${0.06/2}" rpy="0 0 -${pi/2}"/>
+  </joint>
+
+</robot>
