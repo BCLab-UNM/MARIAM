@@ -42,19 +42,7 @@ def generate_launch_description():
         executable='robot_state_publisher',
         namespace=namespace,
         parameters=[{
-            'robot_description': Command([
-                'xacro ',
-                model,
-                # ' robot_name:=px100',
-                # ' base_link_frame:=base_link',
-                # ' use_gripper:=false',
-                # ' show_ar_tag:=false',
-                # ' show_gripper_bar:=false',
-                # ' show_gripper_fingers:=false',
-                # ' use_world_frame:=true',
-                # ' external_urdf_loc:=false',
-                # ' hardware_type:=actual',
-            ])
+            'robot_description': Command(['xacro ', model]),
         }],
         remappings=[
             ('/tf', 'tf'),
