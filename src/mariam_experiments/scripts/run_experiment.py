@@ -180,7 +180,7 @@ class ExperimentNode(Node):
         """
         self.get_logger().info('Shutting down the robots...')
         shutdown_robot_cmd = 'pkill -2 -f "mariam_experiments"'
-        reset_arduino_cmd = 'stty - F / dev/ttyACM0 hupcl && echo "reset" > /dev/ttyACM0'
+        reset_arduino_cmd = 'stty -F /dev/ttyACM0 hupcl && echo "reset" > /dev/ttyACM0 && sleep 2'
 
         # shutdown the robots
         self.monica_conn.run(shutdown_robot_cmd)
