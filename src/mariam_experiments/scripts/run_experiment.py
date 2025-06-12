@@ -179,11 +179,11 @@ class ExperimentNode(Node):
         This method will shutdown the robots by closing the connections.
         """
         self.get_logger().info('Shutting down the robots...')
-        cmd = 'pkill -2 -f "mariam_experiments"'
-        # shutdown the robots
-        self.monica_conn.run(cmd)
-        self.ross_conn.run(cmd)
+        shutdown_robot_cmd = 'pkill -2 -f "mariam_experiments"'
 
+        # shutdown the robots
+        self.monica_conn.run(shutdown_robot_cmd)
+        self.ross_conn.run(shutdown_robot_cmd)
 
 
 def main(args=None):
