@@ -38,6 +38,15 @@
 #include <Encoder.h> // @TODO Test with and without this above #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <PID_v1.h>
 
+// For tracking the state of the Agent
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED,
+  ERROR
+} state;
+
 // Pin assignments (VNH5019 Motor Driver Carrier)
 byte rightDirectionB = A9; // "counterclockwise" input
 byte rightDirectionA = A8; // "clockwise" input
@@ -138,6 +147,8 @@ void error_loop(){
   digitalWrite(LED_PIN, !digitalRead(LED_PIN));
   delay(100);
   asm volatile("ldr pc, =0x00000000"); //resets the program counter to the begining like a hardware reset
+
+  state = ERROR;
 
   while(1){
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
@@ -358,16 +369,13 @@ void subscription_wheel_analog_callback(const void *msgin) {
 }
 
 // =============================================================
-// ===================== MAIN CONTROL LOOP =====================
+// ===================== ENTITY MANAGEMENT =====================
 // =============================================================
 
-// Initial microcontroller setup
-void setup() {
-  set_microros_transports();
-  
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);  
-
+/**
+ * This function creates the ROS2 entities (publishers, subscribers, etc.)
+ */
+void create_entities() {
   // Zero encoders
   leftEncoder.write(0); 
   rightEncoder.write(0);
@@ -380,7 +388,7 @@ void setup() {
   // Wait
   delay(2000);
 
-  // An allocator facilitates dynamic memoory management
+  // An allocator facilitates dynamic memory management
   allocator = rcl_get_default_allocator();
 
   // Set initial time for last command received
@@ -523,16 +531,98 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(&executor_sub_wheel_analog, &subscriber_wheel_analog, &twist_msg, &subscription_wheel_analog_callback, ON_NEW_DATA));
 }
 
-// Functions to be looped continiously
+/**
+ * This function destroys all the ROS2 entities (publishers, subscribers, etc.)
+ */
+void destroy_entities() {
+  rmw_context_t * rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void) rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+  // destroy publishers
+  rcl_publisher_fini(&odom_publisher,             &node);
+  rcl_publisher_fini(&force_publisher,            &node);
+  rcl_publisher_fini(&left_pid_output_publisher,  &node);
+  // rcl_publisher_fini(&left_set_point_publisher,   &node);
+  rcl_publisher_fini(&right_pid_output_publisher, &node);
+  // rcl_publisher_fini(&right_set_point_publisher,  &node);
+  rcl_publisher_fini(&joint_state_publisher,      &node);
+
+  // destroy subscribers
+  rcl_subscriber_fini(&subscriber_cmd_vel,      &node);
+  rcl_subscriber_fini(&subscriber_pid,          &node);
+  rcl_subscriber_fini(&subscriber_wheel_analog, &node);
+  
+  // destroy timer
+  rcl_timer_fini(&timer);
+  
+  // destroy executors
+  rclc_executor_fini(&executor);
+  rclc_executor_fini(&executor_sub_cmd_vel);
+  rclc_executor_fini(&executor_sub_pid);
+  rclc_executor_fini(&executor_sub_wheel_analog);
+  
+  // destroy the node
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
+
+  // free the memory allocated for the joint_state_msg
+  free(joint_state_msg.name.data);
+  free(joint_state_msg.position.data);
+  free(joint_state_msg.velocity.data);
+}
+
+// =============================================================
+// ===================== MAIN CONTROL LOOP =====================
+// =============================================================
+
+// Initial microcontroller setup
+void setup() {
+  set_microros_transports();
+  
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);  
+
+  create_entities();
+}
+
+// Function to be looped continuously
 // This results in close to a publish rate of 1khz and a sub rate of 100hz
 void loop() {
+  switch (state) {
+    case WAITING_AGENT:
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      break;
 
-  // Spin for in ns
-  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100))); 
+    case AGENT_AVAILABLE:
+      create_entities();
 
-  // Read cmd vel for 1ns then swich back
-  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_cmd_vel, RCL_MS_TO_NS(1))); 
+      // if an error occurred in create_entities
+      // destroy any created entities
+      if (state == ERROR) {
+        destroy_entities();
+      };
+      break;
+    
+    case AGENT_CONNECTED:
+      // ping the agent to verify it is still up
+      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      if (state == AGENT_CONNECTED) {
+          // Spin for in ns
+          RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 
-  // Read pid values for 1ns then swich back
-  RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10))); 
+          // Read cmd vel for 1ns then swich back
+          RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_cmd_vel, RCL_MS_TO_NS(1)));
+
+          // Read pid values for 1ns then swich back
+          RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10)));
+      }
+      break;
+    
+    case AGENT_DISCONNECTED:
+      destroy_entities();
+      state = WAITING_AGENT;
+      break;
+    
+    default:
+      break;
 }
