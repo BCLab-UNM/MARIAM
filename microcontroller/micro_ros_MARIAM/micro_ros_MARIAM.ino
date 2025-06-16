@@ -1,6 +1,6 @@
 // Topic defines
-#define NAMESPACE "monica"
-// #define NAMESPACE "ross"
+// #define NAMESPACE "monica"
+#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
@@ -12,6 +12,12 @@
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 #define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 #define JOINT_STATES_TOPIC_NAME NAMESPACE "/joint_states"
+
+#define EXECUTE_EVERY_N_MS(MS, X)  do { \
+  static volatile int64_t init = -1; \
+  if (init == -1) { init = uxr_millis();} \
+  if (uxr_millis() - init > MS) { X; init = uxr_millis();} \
+} while (0)\
 
 // Misc libraries
 #include <micro_ros_arduino.h>
@@ -43,8 +49,7 @@ enum states {
   WAITING_AGENT,
   AGENT_AVAILABLE,
   AGENT_CONNECTED,
-  AGENT_DISCONNECTED,
-  ERROR
+  AGENT_DISCONNECTED
 } state;
 
 // Pin assignments (VNH5019 Motor Driver Carrier)
@@ -146,9 +151,9 @@ void error_loop(){
   delay(100);
   digitalWrite(LED_PIN, !digitalRead(LED_PIN));
   delay(100);
-  asm volatile("ldr pc, =0x00000000"); //resets the program counter to the begining like a hardware reset
+  destroy_entities();
 
-  state = ERROR;
+  asm volatile("ldr pc, =0x00000000"); //resets the program counter to the begining like a hardware reset
 
   while(1){
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
@@ -548,9 +553,9 @@ void destroy_entities() {
   rcl_publisher_fini(&joint_state_publisher,      &node);
 
   // destroy subscribers
-  rcl_subscriber_fini(&subscriber_cmd_vel,      &node);
-  rcl_subscriber_fini(&subscriber_pid,          &node);
-  rcl_subscriber_fini(&subscriber_wheel_analog, &node);
+  rcl_subscription_fini(&subscriber_cmd_vel,      &node);
+  rcl_subscription_fini(&subscriber_pid,          &node);
+  rcl_subscription_fini(&subscriber_wheel_analog, &node);
   
   // destroy timer
   rcl_timer_fini(&timer);
@@ -580,9 +585,11 @@ void setup() {
   set_microros_transports();
   
   pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);  
+  digitalWrite(LED_PIN, LOW);
 
-  create_entities();
+  state = WAITING_AGENT;
+
+  // create_entities();
 }
 
 // Function to be looped continuously
@@ -590,22 +597,17 @@ void setup() {
 void loop() {
   switch (state) {
     case WAITING_AGENT:
-      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT);
       break;
 
     case AGENT_AVAILABLE:
       create_entities();
-
-      // if an error occurred in create_entities
-      // destroy any created entities
-      if (state == ERROR) {
-        destroy_entities();
-      };
+      state = AGENT_CONNECTED;
       break;
     
     case AGENT_CONNECTED:
       // ping the agent to verify it is still up
-      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED);
       if (state == AGENT_CONNECTED) {
           // Spin for in ns
           RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
@@ -625,4 +627,5 @@ void loop() {
     
     default:
       break;
+  }
 }
