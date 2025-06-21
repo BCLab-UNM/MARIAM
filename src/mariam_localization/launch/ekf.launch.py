@@ -6,14 +6,14 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 # Launch with:
-# ros2 launch mariam_navigation hardware_ekf.launch.py namespace:=monica
+# ros2 launch mariam_localization hardware_ekf.launch.py namespace:=monica
 
 def generate_launch_description():
     # Dynamically locate the path to the config file
     config_path = os.path.join(
-        get_package_share_directory('mariam_navigation'),
+        get_package_share_directory('mariam_localization'),
         'config',
-        'ekf_hardware.yaml'
+        'ekf_params.yaml'
     )
     print(f"Looking for config file at: {config_path}")
 

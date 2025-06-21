@@ -72,12 +72,12 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
     
-    hardware_ekf_launch_desc = IncludeLaunchDescription(
+    ekf_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
-                FindPackageShare('mariam_navigation'),
+                FindPackageShare('mariam_localization'),
                 'launch',
-                'hardware_ekf.launch.py'
+                'ekf.launch.py'
             ])
         ]),
         launch_arguments={
@@ -85,16 +85,27 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
 
-    # TODO: add additional nodes for the real robot here
+    slam_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_localization'),
+                'launch',
+                'slam.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        }.items(),
+    )
 
     return [
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_imu_launch_desc,
-        hardware_ekf_launch_desc
+        ekf_launch_desc,
+        slam_launch_desc
     ]
-
 
 def generate_launch_description():
     #--------------------------------------------

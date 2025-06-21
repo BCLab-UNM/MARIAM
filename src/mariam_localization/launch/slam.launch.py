@@ -13,7 +13,7 @@ from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml, ReplaceString
 
 # Launch with:
-# ros2 launch mariam_navigation slam.launch.py namespace:=monica
+# ros2 launch mariam_localization slam.launch.py namespace:=monica
 
 def generate_launch_description():
     # Launch configuration variables
@@ -45,7 +45,7 @@ def generate_launch_description():
     declare_slam_params_file_cmd = DeclareLaunchArgument(
         'slam_params_file',
         default_value=os.path.join(
-            get_package_share_directory('mariam_navigation'), 
+            get_package_share_directory('mariam_localization'), 
             'config', 
             'slam_params.yaml'),
         description='Full path to the slam_toolbox parameters file')
