@@ -28,7 +28,8 @@ sudo apt install python3-serial \
     ros-humble-robot-localization \
     ros-humble-rtabmap ros-humble-rtabmap-ros ros-humble-rtabmap-rviz-plugins \
     ros-humble-imu-filter-madgwick sudo apt install \
-    sudo apt install ros-humble-librealsense2* \
+    ros-humble-librealsense2 \
+    ros-humble-slam-toolbox ros-humble-nav2-bringup \
 
 pip3 install transforms3d modern_robotics glob
 
