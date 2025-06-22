@@ -246,19 +246,10 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
       left_set_point = 0;
       right_set_point = 0;
 
-      // reset the PID controllers by assigning them to new
-      // instances of a PID controller.
-      // left_PID = PID(
-      //   &left_current_speed,
-      //   &left_pid_output,
-      //   &left_set_point, Kp, Ki, Kd, DIRECT);
+      // set the PID output and integral terms back to zero
+      left_PID.SetOutputLimits(-1, 0);
+      right_PID.SetOutputLimits(-1, 0);
 
-      // right_PID = PID(
-      //   &right_current_speed,
-      //   &right_pid_output,
-      //   &right_set_point, Kp, Ki, Kd, DIRECT);
-
-      // signal the emergency stop was triggered?
       estop = true;
     }
 
@@ -374,7 +365,13 @@ void subscription_cmd_vel_callback(const void *msgin) {
   left_set_point = msg->linear.x - angular_sp;
   right_set_point = msg->linear.x + angular_sp;
 
-  estop = false;
+  if (estop) {
+    estop = false;
+    // set the PID output limits since we want the wheels to
+    // move
+    left_PID.SetOutputLimits(-255, 255);
+    right_PID.SetOutputLimits(-255, 255);
+  }
 }
 
 void subscription_pid_callback(const void *msgin) {
@@ -521,8 +518,10 @@ void create_entities() {
   // Set PID parameters
   left_PID.SetMode(AUTOMATIC);
   right_PID.SetMode(AUTOMATIC);
-  left_PID.SetOutputLimits(-255,255);
-  right_PID.SetOutputLimits(-255,255);
+  // clamp the PID output to zero so a sum
+  // doesn't accumulate while the wheels are not moving
+  left_PID.SetOutputLimits(-1, 0);
+  right_PID.SetOutputLimits(-1, 0);
 
   // Set joint state defaults for 4 wheels
   joint_state_msg.name.data = (rosidl_runtime_c__String*)malloc(4 * sizeof(rosidl_runtime_c__String));
