@@ -88,7 +88,7 @@ std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 force_msg;
 double left_set_point, right_set_point, left_pid_output, right_pid_output;
-double Kp=500.0, Ki=2000.0, Kd=0.0;
+double Kp=400.0, Ki=850.0, Kd=0.0;
 
 // PID object takes the parameters PID(Input, Output, Setpoint, Kp, Ki, Kd, DIRECT)
 PID left_PID(&left_current_speed, &left_pid_output, &left_set_point, Kp, Ki, Kd, DIRECT);
@@ -208,118 +208,142 @@ void update_odometry(int left_ticks, int right_ticks, double elapsed_time) {
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
-  // Only run if timer is available
-  if (timer != NULL) {
+  // Only run if timer is available and estop was not triggered
+  if (timer == NULL) return;
 
-    // Get the current time
-    rcl_time_point_value_t current_time;
-    rcutils_system_time_now(&current_time);
+  // Get the current time
+  rcl_time_point_value_t current_time;
+  rcutils_system_time_now(&current_time);
 
-    // Convert elapsed time from nanoseconds to seconds
-    double elapsed_time_sec = last_call_time / 1e9;
+  // Convert elapsed time from nanoseconds to seconds
+  double elapsed_time_sec = last_call_time / 1e9;
 
-    // Saftey e-stop
+  // Read ticks since last callback
+  left_ticks.data = leftEncoder.readAndReset(); 
+  right_ticks.data = -rightEncoder.readAndReset();
+
+  // Calculate the current speed
+  left_current_speed = ticksToMeters(left_ticks.data) / elapsed_time_sec;
+  right_current_speed = ticksToMeters(right_ticks.data) / elapsed_time_sec;
+
+  // Update left_pid_output and right_pid_output values via PID
+  left_PID.Compute();
+  right_PID.Compute();
+
+  // if emergency stop was not triggered
+  if (!estop) {
+    // Saftey e-stop check
     // Check if more than 3 seconds have passed since the last /cmd_vel or /wheel_analog message
-    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000) 
-        & (current_time - last_wheel_analog_time) > RCL_MS_TO_NS(3000)) {
+    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000) &&
+        (current_time - last_wheel_analog_time) > RCL_MS_TO_NS(3000)
+      ) {
+      // stop the motors
+      move.stop();
+      left_current_speed = 0;
+      right_current_speed = 0;
+      
+      // set the reference signals (values for cmd_vel) to 0
       left_set_point = 0;
       right_set_point = 0;
-      move.stop(); 
-      estop = true; 
+
+      // set the PID output and integral terms back to zero
+      left_PID.SetOutputLimits(-1, 0);
+      right_PID.SetOutputLimits(-1, 0);
+
+      estop = true;
     }
 
-    // Read ticks since last callback
-    left_ticks.data = leftEncoder.readAndReset(); 
-    right_ticks.data = -rightEncoder.readAndReset();
-
-    // Calculate the current speed
-    left_current_speed = ticksToMeters(left_ticks.data) / elapsed_time_sec;
-    right_current_speed = ticksToMeters(right_ticks.data) / elapsed_time_sec;
-
-    // Update left_pid_output and right_pid_output values via PID
-    left_PID.Compute();
-    right_PID.Compute();
-
     // Move robot based on PID output values
-    if ((left_pid_output == 0 && right_pid_output == 0)||estop) { move.stop(); }
-    else if (left_pid_output >= 0 && right_pid_output >= 0) { move.forward(left_pid_output, right_pid_output); }
-    else if (left_pid_output <= 0 && right_pid_output <= 0) { move.backward(left_pid_output*-1, right_pid_output*-1); }
-    else if (left_pid_output <= 0 && right_pid_output >= 0) { move.rotateLeft(left_pid_output*-1, right_pid_output); }
-    else { move.rotateRight(left_pid_output, right_pid_output*-1); }  
+    // if the output is zero, stop the motors
+    else if (left_pid_output == 0 && right_pid_output == 0)
+      move.stop();
 
-    // Update odom reading
-    update_odometry(left_ticks.data, right_ticks.data, elapsed_time_sec);
-
-    // Collect force data
-    float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
-
-    // Determine force data using fitted curve
-    float coef_0 = 0.035582; // coef for x^3
-    float coef_1 = -0.055113; // coef for x^2
-    float coef_2 = 0.38334; // coef for x^1
-    float coef_3 = -0.057718; // coef for x^0
-    force_msg.data = coef_0 * pow(raw_force_data, 3) 
-                + coef_1 * pow(raw_force_data, 2) 
-                + coef_2 * raw_force_data
-                + coef_3;
-   
-    force_msg.data = max(force_msg.data, 0.0f); // Ensure force_msg.data is positive
-
-    // Update joint positions (cumulative wheel rotations in radians)
-    double left_rotation = (2.0 * PI * left_ticks.data) / ticks_per_rotation;
-    double right_rotation = (2.0 * PI * right_ticks.data) / ticks_per_rotation;
-
-    // Since you have differential drive with 4 wheels, assuming left/right sides move together
-    left_front_wheel_position += left_rotation;
-    left_back_wheel_position += left_rotation;
-    right_front_wheel_position += right_rotation;
-    right_back_wheel_position += right_rotation;
-
-    // Update joint state message for all 4 wheels
-    joint_state_msg.position.data[0] = left_front_wheel_position;   // left front
-    joint_state_msg.position.data[1] = right_front_wheel_position;  // right front
-    joint_state_msg.position.data[2] = left_back_wheel_position;    // left back
-    joint_state_msg.position.data[3] = right_back_wheel_position;   // right back
-
-    // Convert m/s to rad/s for velocities
-    double wheel_radius = wheel_circumference / (2.0 * PI);
-    joint_state_msg.velocity.data[0] = left_current_speed / wheel_radius;   // left front
-    joint_state_msg.velocity.data[1] = right_current_speed / wheel_radius;  // right front
-    joint_state_msg.velocity.data[2] = left_current_speed / wheel_radius;   // left back
-    joint_state_msg.velocity.data[3] = right_current_speed / wheel_radius;  // right back
-
-    // Get corrected epoch time using micro-ROS time sync
-    int64_t time_ns = rmw_uros_epoch_nanos();
-
-    // Convert to required format and set timestamps
-    builtin_interfaces__msg__Time synchronized_timestamp;
-    synchronized_timestamp.sec = (int32_t)(time_ns / 1000000000);
-    synchronized_timestamp.nanosec = (uint32_t)(time_ns % 1000000000);
-
-    // Apply synchronized timestamp to both messages
-    joint_state_msg.header.stamp = synchronized_timestamp;
-    odom_msg.header.stamp = synchronized_timestamp;
-
-    // Publish joint states
-    RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
-
-    // Publish force and odom values to ROS2 network
-    RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
-    RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+    else if (left_pid_output >= 0 && right_pid_output >= 0)
+      move.forward(left_pid_output, right_pid_output);
     
-    // Publish speeds to ROS2 network
-    std_msgs__msg__Float32 left_pid_output_to_publish; left_pid_output_to_publish.data = left_pid_output;
-    RCSOFTCHECK(rcl_publish(&left_pid_output_publisher, &left_pid_output_to_publish, NULL));
-
-    // std_msgs__msg__Float32 left_set_point_to_publish; left_set_point_to_publish.data = left_set_point;
-    // RCSOFTCHECK(rcl_publish(&left_set_point_publisher, &left_set_point_to_publish, NULL)); 
-
-    std_msgs__msg__Float32 right_pid_output_to_publish; right_pid_output_to_publish.data = right_pid_output;
-    RCSOFTCHECK(rcl_publish(&right_pid_output_publisher, &right_pid_output_to_publish, NULL));   
-
-    // std_msgs__msg__Float32 right_set_point_to_publish; right_set_point_to_publish.data = right_set_point;
-    // RCSOFTCHECK(rcl_publish(&right_set_point_publisher, &right_set_point_to_publish, NULL)); 
+    else if (left_pid_output <= 0 && right_pid_output <= 0)
+      move.backward(left_pid_output*-1, right_pid_output*-1);
+    
+    else if (left_pid_output <= 0 && right_pid_output >= 0)
+      move.rotateLeft(left_pid_output*-1, right_pid_output);
+    
+    else
+      move.rotateRight(left_pid_output, right_pid_output*-1);
   }
+
+  // Update odom reading
+  update_odometry(left_ticks.data, right_ticks.data, elapsed_time_sec);
+
+  // Collect force data
+  float raw_force_data = analogRead(A5) * (5.0 / 1023.0);
+
+  // Determine force data using fitted curve
+  float coef_0 = 0.035582; // coef for x^3
+  float coef_1 = -0.055113; // coef for x^2
+  float coef_2 = 0.38334; // coef for x^1
+  float coef_3 = -0.057718; // coef for x^0
+  force_msg.data = coef_0 * pow(raw_force_data, 3) 
+              + coef_1 * pow(raw_force_data, 2) 
+              + coef_2 * raw_force_data
+              + coef_3;
+  
+  force_msg.data = max(force_msg.data, 0.0f); // Ensure force_msg.data is positive
+
+  // Update joint positions (cumulative wheel rotations in radians)
+  double left_rotation = (2.0 * PI * left_ticks.data) / ticks_per_rotation;
+  double right_rotation = (2.0 * PI * right_ticks.data) / ticks_per_rotation;
+
+  // Since you have differential drive with 4 wheels, assuming left/right sides move together
+  left_front_wheel_position += left_rotation;
+  left_back_wheel_position += left_rotation;
+  right_front_wheel_position += right_rotation;
+  right_back_wheel_position += right_rotation;
+
+  // Update joint state message for all 4 wheels
+  joint_state_msg.position.data[0] = left_front_wheel_position;   // left front
+  joint_state_msg.position.data[1] = right_front_wheel_position;  // right front
+  joint_state_msg.position.data[2] = left_back_wheel_position;    // left back
+  joint_state_msg.position.data[3] = right_back_wheel_position;   // right back
+
+  // Convert m/s to rad/s for velocities
+  double wheel_radius = wheel_circumference / (2.0 * PI);
+  joint_state_msg.velocity.data[0] = left_current_speed / wheel_radius;   // left front
+  joint_state_msg.velocity.data[1] = right_current_speed / wheel_radius;  // right front
+  joint_state_msg.velocity.data[2] = left_current_speed / wheel_radius;   // left back
+  joint_state_msg.velocity.data[3] = right_current_speed / wheel_radius;  // right back
+
+  // Get corrected epoch time using micro-ROS time sync
+  int64_t time_ns = rmw_uros_epoch_nanos();
+
+  // Convert to required format and set timestamps
+  builtin_interfaces__msg__Time synchronized_timestamp;
+  synchronized_timestamp.sec = (int32_t)(time_ns / 1000000000);
+  synchronized_timestamp.nanosec = (uint32_t)(time_ns % 1000000000);
+
+  // Apply synchronized timestamp to both messages
+  joint_state_msg.header.stamp = synchronized_timestamp;
+  odom_msg.header.stamp = synchronized_timestamp;
+
+  // Publish joint states
+  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+
+  // Publish force and odom values to ROS2 network
+  RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
+  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+  
+  // Publish speeds to ROS2 network
+  std_msgs__msg__Float32 left_pid_output_to_publish; left_pid_output_to_publish.data = left_pid_output;
+  RCSOFTCHECK(rcl_publish(&left_pid_output_publisher, &left_pid_output_to_publish, NULL));
+
+  // std_msgs__msg__Float32 left_set_point_to_publish; left_set_point_to_publish.data = left_set_point;
+  // RCSOFTCHECK(rcl_publish(&left_set_point_publisher, &left_set_point_to_publish, NULL)); 
+
+  std_msgs__msg__Float32 right_pid_output_to_publish; right_pid_output_to_publish.data = right_pid_output;
+  RCSOFTCHECK(rcl_publish(&right_pid_output_publisher, &right_pid_output_to_publish, NULL));   
+
+  // std_msgs__msg__Float32 right_set_point_to_publish; right_set_point_to_publish.data = right_set_point;
+  // RCSOFTCHECK(rcl_publish(&right_set_point_publisher, &right_set_point_to_publish, NULL)); 
+  
 }
 
 void subscription_cmd_vel_callback(const void *msgin) {
@@ -336,15 +360,18 @@ void subscription_cmd_vel_callback(const void *msgin) {
   double yaw = msg->angular.z;
   double linear_sp = msg->linear.x;
   double angular_sp = thetaToDiff(msg->angular.z);
+
+  // set the reference signals for the PID controllers
   left_set_point = msg->linear.x - angular_sp;
   right_set_point = msg->linear.x + angular_sp;
 
-  // Activate e-stop if /cmd_vel is 0 overall
-  if((msg->linear.x == 0) && (msg->angular.z == 0)) { 
-    move.stop(); 
-    estop = true; 
+  if (estop) {
+    estop = false;
+    // set the PID output limits since we want the wheels to
+    // move
+    left_PID.SetOutputLimits(-255, 255);
+    right_PID.SetOutputLimits(-255, 255);
   }
-  else { estop = false; }
 }
 
 void subscription_pid_callback(const void *msgin) {
@@ -491,8 +518,10 @@ void create_entities() {
   // Set PID parameters
   left_PID.SetMode(AUTOMATIC);
   right_PID.SetMode(AUTOMATIC);
-  left_PID.SetOutputLimits(-255,255);
-  right_PID.SetOutputLimits(-255,255);
+  // clamp the PID output to zero so a sum
+  // doesn't accumulate while the wheels are not moving
+  left_PID.SetOutputLimits(-1, 0);
+  right_PID.SetOutputLimits(-1, 0);
 
   // Set joint state defaults for 4 wheels
   joint_state_msg.name.data = (rosidl_runtime_c__String*)malloc(4 * sizeof(rosidl_runtime_c__String));
