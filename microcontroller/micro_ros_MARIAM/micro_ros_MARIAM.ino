@@ -88,7 +88,7 @@ std_msgs__msg__Int32 right_ticks;
 double left_current_speed, right_current_speed;
 std_msgs__msg__Float32 force_msg;
 double left_set_point, right_set_point, left_pid_output, right_pid_output;
-double Kp=500.0, Ki=2000.0, Kd=0.0;
+double Kp=400.0, Ki=850.0, Kd=0.0;
 
 // PID object takes the parameters PID(Input, Output, Setpoint, Kp, Ki, Kd, DIRECT)
 PID left_PID(&left_current_speed, &left_pid_output, &left_set_point, Kp, Ki, Kd, DIRECT);
