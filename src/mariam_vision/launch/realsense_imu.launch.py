@@ -64,12 +64,12 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'enable_depth',
-            default_value='false',
+            default_value='true',
             description='enable depth stream'
         ),
         DeclareLaunchArgument(
             'enable_color',
-            default_value='false',
+            default_value='true',
             description='enable color stream'
         ),
         rs_launch_include
