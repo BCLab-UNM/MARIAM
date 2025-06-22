@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Float64
+from std_msgs.msg import Float32
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Point, Twist
 import matplotlib.pyplot as plt
@@ -12,12 +12,11 @@ import os
 import math
 import time
 
-from collections import deque
-
+from threading import Thread
 
 class PIDTuningNode(Node):
-    def __init__(self):
-        super().__init__('pid_tuning_node')
+    def __init__(self, node_name='pid_tuning_node'):
+        super().__init__(node_name)
 
         # Publishers for PID parameters
         self.pid_pub = self.create_publisher(
@@ -27,20 +26,20 @@ class PIDTuningNode(Node):
         )
         
         self.cmd_vel_pub = self.create_publisher(
-            Point,
+            Twist,
             '/ross/cmd_vel',
             10
         )
 
         # Subscribers
         self.left_pid_sub = self.create_subscription(
-            Float64,
+            Float32,
             '/ross/left_pid_output',
             self.left_pid_callback,
             10
         )
         self.right_pid_sub = self.create_subscription(
-            Float64,
+            Float32,
             '/ross/right_pid_output',
             self.right_pid_callback,
             10
@@ -52,40 +51,31 @@ class PIDTuningNode(Node):
             10
         )
 
-        # Data storage for plotting (using deque for efficient append/pop)
-        self.max_data_points = 10_000
-        self.left_pid_data = deque(maxlen=self.max_data_points)
-        self.right_pid_data = deque(maxlen=self.max_data_points)
-        self.left_front_linear_velocity_data = deque(maxlen=self.max_data_points)
-        self.right_front_linear_velocity_data = deque(maxlen=self.max_data_points)
-        self.left_back_linear_velocity_data = deque(maxlen=self.max_data_points)
-        self.right_back_linear_velocity_data = deque(maxlen=self.max_data_points)
-        self.joint_states_time_data = deque(maxlen=self.max_data_points)
+        self.left_pid_data = []
+        self.right_pid_data = []
+        self.left_front_linear_velocity_data = []
+        self.right_front_linear_velocity_data = []
+        self.left_back_linear_velocity_data = []
+        self.right_back_linear_velocity_data = []
+        self.joint_states_time_data = []
 
-        # Robot parameters (adjust these for your robot)
-        self.wheel_radius = 0.033  # meters
-        self.wheel_separation = 0.160  # meters
-        self.left_wheel_joint_name = "left_wheel_joint"  # adjust as needed
-        self.right_wheel_joint_name = "right_wheel_joint"  # adjust as needed
-
-        # Desired velocity
-        self.desired_linear_velocity = 0.1  # m/s
+        # in meters
+        self.wheel_radius = 0.3613 / (2.0 * math.pi)
 
         self.get_logger().info('PID Tuning Node initialized')
 
     def left_pid_callback(self, msg):
-        self.left_data.append(msg.data)
+        self.left_pid_data.append(msg.data)
 
     def right_pid_callback(self, msg):
-        self.right_data.append(msg.data)
+        self.right_pid_data.append(msg.data)
 
-    def joint_states_callback(self, msg: JointState):
-        wheel_radius = 0.3613 / (2.0 * math.pi)            
+    def joint_states_callback(self, msg: JointState):           
         # Calculate linear velocity from wheel velocities
-        left_front_linear_vel = msg.velocity[0] * wheel_radius
-        right_front_linear_vel = msg.velocity[1] * wheel_radius
-        left_back_linear_vel = msg.velocity[2] * wheel_radius
-        right_back_linear_vel = msg.velocity[3] * wheel_radius
+        left_front_linear_vel  = msg.velocity[0] * self.wheel_radius
+        right_front_linear_vel = msg.velocity[1] * self.wheel_radius
+        left_back_linear_vel   = msg.velocity[2] * self.wheel_radius
+        right_back_linear_vel  = msg.velocity[3] * self.wheel_radius
 
         self.left_front_linear_velocity_data.append(left_front_linear_vel)
         self.right_front_linear_velocity_data.append(right_front_linear_vel)
@@ -104,7 +94,11 @@ class PIDTuningNode(Node):
         self.cmd_vel_pub.publish(msg)
 
     def plot_graphs(self, desired_vel):
-        fig, axes = plt.subplots(2, 1)
+        self.get_logger().info(f'Time data length: {len(self.joint_states_time_data)}')
+        self.get_logger().info(f'Left PID data length: {len(self.left_pid_data)}')
+        self.get_logger().info(f'Right PID data length: {len(self.right_pid_data)}')
+        self.get_logger().info(f'Left front linear velocity data length: {len(self.left_front_linear_velocity_data)}')
+        fig, axes = plt.subplots(2, 1, figsize=(16, 8))
 
         axes[0].plot(
             # for now, let's just interpret this as the PID output
@@ -120,6 +114,12 @@ class PIDTuningNode(Node):
             self.right_pid_data,
             label='Right PID output'
         )
+
+        axes[0].set_title('PID output for each wheel')
+        axes[0].set_xlabel('t')
+        axes[0].set_ylabel('PID output (analog)')
+        axes[0].legend()
+        axes[0].grid(True)
 
         axes[1].plot(
             self.joint_states_time_data,
@@ -168,6 +168,12 @@ class PIDTuningNode(Node):
 
 
 def main():
+    rclpy.init()
+    node = PIDTuningNode('pid_tuning_node_publisher')
+
+    spin_thread = Thread(target=rclpy.spin, args=(node,))
+    spin_thread.start()
+
     stop_msg = Twist()
     stop_msg.linear.x = 0.0
     stop_msg.linear.y = 0.0
@@ -177,9 +183,9 @@ def main():
     stop_msg.angular.z = 0.0
 
     cmd_vel_msg = Twist()
-    cmd_vel_msg.linear.x  = 0.15
-    cmd_vel_msg.linear.y  = 0.0
-    cmd_vel_msg.linear.z  = 0.0
+    cmd_vel_msg.linear.x = 0.10
+    cmd_vel_msg.linear.y = 0.0
+    cmd_vel_msg.linear.z = 0.0
     cmd_vel_msg.angular.x = 0.0
     cmd_vel_msg.angular.y = 0.0
     cmd_vel_msg.angular.z = 0.0
@@ -188,14 +194,18 @@ def main():
     Ki = 0.0
     Kd = 0.0
 
-    rclpy.init()
-    node = PIDTuningNode()
+    input("Press Enter to collect data ")
 
-    input('Press enter to set the command velocity')
+    # node.set_pid_params(Kp, Ki, Kd)
+
     node.set_cmd_vel(cmd_vel_msg)
-    time.sleep(1)
+    time.sleep(2.0)
     node.set_cmd_vel(stop_msg)
     node.plot_graphs(cmd_vel_msg.linear.x)
+
+    node.destroy_node()
+    rclpy.shutdown()
+    
 
 if __name__ == '__main__':
     main()

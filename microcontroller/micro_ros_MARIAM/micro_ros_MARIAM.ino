@@ -248,15 +248,15 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
       // reset the PID controllers by assigning them to new
       // instances of a PID controller.
-      left_PID = PID(
-        &left_current_speed,
-        &left_pid_output,
-        &left_set_point, Kp, Ki, Kd, DIRECT);
+      // left_PID = PID(
+      //   &left_current_speed,
+      //   &left_pid_output,
+      //   &left_set_point, Kp, Ki, Kd, DIRECT);
 
-      right_PID = PID(
-        &right_current_speed,
-        &right_pid_output,
-        &right_set_point, Kp, Ki, Kd, DIRECT);
+      // right_PID = PID(
+      //   &right_current_speed,
+      //   &right_pid_output,
+      //   &right_set_point, Kp, Ki, Kd, DIRECT);
 
       // signal the emergency stop was triggered?
       estop = true;
