@@ -202,13 +202,30 @@ void update_odometry(int left_ticks, int right_ticks, double elapsed_time) {
   odom_msg.twist.twist.angular.z = delta_theta / elapsed_time;
 }
 
+void activate_estop() {
+  // stop the motors
+  move.stop();
+  left_current_speed = 0;
+  right_current_speed = 0;
+  
+  // set the reference signals (values for cmd_vel) to 0
+  left_set_point = 0;
+  right_set_point = 0;
+
+  // set the PID output and integral terms back to zero
+  left_PID.SetOutputLimits(-1, 0);
+  right_PID.SetOutputLimits(-1, 0);
+
+  estop = true;
+}
+
 // =============================================================
 // ========================= CALLBACKS =========================
 // =============================================================
 
 void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
 
-  // Only run if timer is available and estop was not triggered
+  // Only run if timer is available
   if (timer == NULL) return;
 
   // Get the current time
@@ -230,46 +247,30 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
   left_PID.Compute();
   right_PID.Compute();
 
-  // if emergency stop was not triggered
-  if (!estop) {
-    // Saftey e-stop check
-    // Check if more than 3 seconds have passed since the last /cmd_vel or /wheel_analog message
-    if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000) &&
-        (current_time - last_wheel_analog_time) > RCL_MS_TO_NS(3000)
-      ) {
-      // stop the motors
-      move.stop();
-      left_current_speed = 0;
-      right_current_speed = 0;
-      
-      // set the reference signals (values for cmd_vel) to 0
-      left_set_point = 0;
-      right_set_point = 0;
-
-      // set the PID output and integral terms back to zero
-      left_PID.SetOutputLimits(-1, 0);
-      right_PID.SetOutputLimits(-1, 0);
-
-      estop = true;
-    }
-
-    // Move robot based on PID output values
-    // if the output is zero, stop the motors
-    else if (left_pid_output == 0 && right_pid_output == 0)
-      move.stop();
-
-    else if (left_pid_output >= 0 && right_pid_output >= 0)
-      move.forward(left_pid_output, right_pid_output);
-    
-    else if (left_pid_output <= 0 && right_pid_output <= 0)
-      move.backward(left_pid_output*-1, right_pid_output*-1);
-    
-    else if (left_pid_output <= 0 && right_pid_output >= 0)
-      move.rotateLeft(left_pid_output*-1, right_pid_output);
-    
-    else
-      move.rotateRight(left_pid_output, right_pid_output*-1);
+  // Saftey e-stop check
+  // Check if more than 3 seconds have passed since the last /cmd_vel or /wheel_analog message
+  if ((current_time - last_cmd_vel_time) > RCL_MS_TO_NS(3000) &&
+      (current_time - last_wheel_analog_time) > RCL_MS_TO_NS(3000)
+    ) {
+    activate_estop();
   }
+
+  // Move robot based on PID output values
+  // if the output is zero, stop the motors
+  else if (left_pid_output == 0 && right_pid_output == 0)
+    move.stop();
+
+  else if (left_pid_output >= 0 && right_pid_output >= 0)
+    move.forward(left_pid_output, right_pid_output);
+  
+  else if (left_pid_output <= 0 && right_pid_output <= 0)
+    move.backward(left_pid_output*-1, right_pid_output*-1);
+  
+  else if (left_pid_output <= 0 && right_pid_output >= 0)
+    move.rotateLeft(left_pid_output*-1, right_pid_output);
+  
+  else
+    move.rotateRight(left_pid_output, right_pid_output*-1);
 
   // Update odom reading
   update_odometry(left_ticks.data, right_ticks.data, elapsed_time_sec);
@@ -365,7 +366,7 @@ void subscription_cmd_vel_callback(const void *msgin) {
   left_set_point = msg->linear.x - angular_sp;
   right_set_point = msg->linear.x + angular_sp;
 
-  if (estop) {
+  if (estop && state == AGENT_CONNECTED) {
     estop = false;
     // set the PID output limits since we want the wheels to
     // move
@@ -603,6 +604,11 @@ void destroy_entities() {
   free(joint_state_msg.name.data);
   free(joint_state_msg.position.data);
   free(joint_state_msg.velocity.data);
+
+  // reset variables for the odometry message
+  previous_x_pos = 0.0;
+  previous_y_pos = 0.0;
+  theta_heading = 0.0;
 }
 
 // =============================================================
@@ -650,6 +656,7 @@ void loop() {
       break;
     
     case AGENT_DISCONNECTED:
+      activate_estop();
       destroy_entities();
       state = WAITING_AGENT;
       break;
