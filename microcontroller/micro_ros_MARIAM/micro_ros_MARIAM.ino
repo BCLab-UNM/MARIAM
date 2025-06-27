@@ -1,6 +1,6 @@
 // Topic defines
-// #define NAMESPACE "monica"
-#define NAMESPACE "ross"
+#define NAMESPACE "monica"
+// #define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
@@ -12,6 +12,8 @@
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 #define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 #define JOINT_STATES_TOPIC_NAME NAMESPACE "/joint_states"
+#define DOMAIN_ID 1 // for MONICA
+// #define DOMAIN_ID 2 // for ROSS
 
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
   static volatile int64_t init = -1; \
@@ -107,6 +109,7 @@ rclc_executor_t executor_sub_wheel_analog;
 
 // Declare misc
 rcl_allocator_t allocator;
+rcl_init_options_t init_options;
 rclc_support_t support;
 rcl_node_t node;
 rcl_timer_t timer;
@@ -424,12 +427,17 @@ void create_entities() {
   // An allocator facilitates dynamic memory management
   allocator = rcl_get_default_allocator();
 
+  // Initialize and modify options (set the domain ID)
+  init_options = rcl_get_zero_initialized_init_options();
+  rcl_init_options_init(&init_options, allocator);
+  rcl_init_options_set_domain_id(&init_options, DOMAIN_ID);
+
   // Set initial time for last command received
   rcutils_system_time_now(&last_cmd_vel_time);
   rcutils_system_time_now(&last_wheel_analog_time);
 
   // Create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
 
   // Create ROS2 node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
@@ -598,6 +606,8 @@ void destroy_entities() {
   
   // destroy the node
   rcl_node_fini(&node);
+  // destroy the init options
+  rcl_init_options_fini(&init_options);
   rclc_support_fini(&support);
 
   // free the memory allocated for the joint_state_msg

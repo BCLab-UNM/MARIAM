@@ -8,14 +8,25 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
-
-
 import os
 
 
 def launch_setup(context, *args, **kwargs):
     robot_name_launch_arg = LaunchConfiguration('robot_name')
-    admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
+    admittance_control_launch_arg = LaunchConfiguration(
+        'use_admittance_control')
+
+    # Get the robot name and set ROS_DOMAIN_ID based on namespace
+    robot_name = robot_name_launch_arg.perform(context)
+    if robot_name.lower() == 'monica':
+        os.environ['ROS_DOMAIN_ID'] = '1'
+    elif robot_name.lower() == 'ross':
+        os.environ['ROS_DOMAIN_ID'] = '2'
+    else:
+        # Optional: set a default domain or raise an error
+        print(
+            f"Warning: Unknown robot name '{robot_name}', using default domain")
+        os.environ['ROS_DOMAIN_ID'] = '0'
 
     px100_controller_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -58,7 +69,7 @@ def launch_setup(context, *args, **kwargs):
             # 'use_sim_time': 'false',
         }.items()
     )
-    
+
     realsense_imu_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -71,7 +82,7 @@ def launch_setup(context, *args, **kwargs):
             'namespace': robot_name_launch_arg,
         }.items()
     )
-    
+
     ekf_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -107,8 +118,9 @@ def launch_setup(context, *args, **kwargs):
         slam_launch_desc
     ]
 
+
 def generate_launch_description():
-    #--------------------------------------------
+    # --------------------------------------------
     # Declaring launch arguments
     # --------------------------------------------
     declared_launch_arguments = [
@@ -124,5 +136,5 @@ def generate_launch_description():
         )
     ]
 
-    return LaunchDescription(declared_launch_arguments + 
-        [OpaqueFunction(function=launch_setup)])
+    return LaunchDescription(declared_launch_arguments +
+                             [OpaqueFunction(function=launch_setup)])
