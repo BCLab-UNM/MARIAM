@@ -5,8 +5,9 @@ import rclpy
 from rclpy.node import Node
 
 from std_msgs.msg import Float64
-# TODO: should probably change it to the stamped versions
-from geometry_msgs.msg import Pose, Twist
+from geometry_msgs.msg import PoseStamped, Twist
+from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 import time
 from threading import Thread
@@ -19,6 +20,13 @@ class ExperimentNode(Node):
         # -------------------------------------------------
         # creating publishers
         # -------------------------------------------------
+        nav2_pose_qos = QoSProfile(
+            durability=QoSDurabilityPolicy.VOLATILE,
+            reliability=QoSReliabilityPolicy.RELIABLE,
+            history=QoSHistoryPolicy.KEEP_LAST,
+            depth=1)
+
+
         self.ross_arm_publisher = self.create_publisher(
             Float64,
             '/ross/px100_virtual_pose_updater',
@@ -28,6 +36,11 @@ class ExperimentNode(Node):
             Twist,
             '/ross/cmd_vel',
             10
+        )
+        self.ross_nav2_pose_publisher = self.create_publisher(
+            PoseStamped,
+            '/ross/goal_pose',
+            nav2_pose_qos
         )
         
         self.monica_arm_publisher = self.create_publisher(
@@ -39,6 +52,11 @@ class ExperimentNode(Node):
             Twist,
             '/monica/cmd_vel',
             10
+        )
+        self.monica_nav2_pose_publisher = self.create_publisher(
+            PoseStamped,
+            '/monica/goal_pose',
+            nav2_pose_qos
         )
 
         # -------------------------------------------------
@@ -130,6 +148,26 @@ class ExperimentNode(Node):
         self.monica_cmd_vel_publisher.publish(monica_twist)
 
 
+    def drive_robots_nav2(self, monica_pose: PoseStamped, ross_pose: PoseStamped):
+        """
+        This method will command the robots to drive to the specified poses
+        using Nav2.
+
+        :param monica_pose: the pose for Monica to drive to
+        :param ross_pose: the pose for Ross to drive to
+        """
+        self.get_logger().info('Publishing desired poses...')
+        monica_pose.header.stamp = self.get_clock().now().to_msg()
+        ross_pose.header.stamp = self.get_clock().now().to_msg()
+
+        # publish the poses to the respective topics
+        self.get_logger().debug(f'Ross Pose: {ross_pose}')
+        self.get_logger().debug(f'Monica Pose: {monica_pose}')
+
+        self.ross_nav2_pose_publisher.publish(ross_pose)
+        self.monica_nav2_pose_publisher.publish(monica_pose)
+
+
     def lift_object(self):
         height = 0.067
         for _ in range(100):
@@ -198,30 +236,34 @@ def main(args=None):
     # when the robots drive away from the object
     drive_away_distance = 1.0  # meters
 
+    # variables for Nav2
+    # NOTE: we will only set the timestamp when we want to publish the pose
+    monica_pose = PoseStamped()
+    monica_pose.header.frame_id = 'map'
+    monica_pose.pose.position.x = -0.5
+    monica_pose.pose.position.y = 0.0
+    monica_pose.pose.position.z = 0.0
+    monica_pose.pose.orientation.w = 0.0
+    monica_pose.pose.orientation.x = 0.0
+    monica_pose.pose.orientation.y = 0.0
+    monica_pose.pose.orientation.z = 1.0
+
+    ross_pose = PoseStamped()
+    ross_pose.header.frame_id = 'map'
+    ross_pose.pose.position.x = 0.5
+    ross_pose.pose.position.y = 0.0
+    ross_pose.pose.position.z = 0.0
+    ross_pose.pose.orientation.w = 0.0
+    ross_pose.pose.orientation.x = 0.0
+    ross_pose.pose.orientation.y = 0.0
+    ross_pose.pose.orientation.z = 1.0
+
     try:        
         while rclpy.ok():
             input("Press Enter to start an experiment\n")
 
-            # drive up to the object
-            experiment_node.drive_robots(
-                speed=robot_speed,
-                distance=drive_up_distance,
-                same_direction=False
-            )
-
-            time.sleep(time_interval)
+            experiment_node.drive_robots_nav2(monica_pose, ross_pose)
             
-            # lift the object
-            experiment_node.lift_object()
-            
-            time.sleep(time_interval)
-            
-            # drive 1 meter away from the object
-            experiment_node.drive_robots(
-                speed=robot_speed,
-                distance=drive_away_distance,
-                same_direction=True
-            )
     
     except KeyboardInterrupt:
         experiment_node.shutdown_robots()
