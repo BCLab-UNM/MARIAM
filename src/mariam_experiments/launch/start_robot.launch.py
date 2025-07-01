@@ -108,6 +108,19 @@ def launch_setup(context, *args, **kwargs):
             'namespace': robot_name_launch_arg,
         }.items(),
     )
+    
+    nav2_bringup_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_navigation'),
+                'launch',
+                'nav2_custom_bringup.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        }.items(),
+    )
 
     return [
         px100_controller_desc,
@@ -115,7 +128,8 @@ def launch_setup(context, *args, **kwargs):
         mariam_description_launch_desc,
         realsense_imu_launch_desc,
         ekf_launch_desc,
-        slam_launch_desc
+        slam_launch_desc,
+        nav2_bringup_launch_desc
     ]
 
 

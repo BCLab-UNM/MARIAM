@@ -22,6 +22,16 @@
   <!-- Position the wheels along the x-axis -->
   <xacro:property name="wheel_xoff" value="0.09"/>
 
+  <!-- Defines the position and orientation of the camera joint -->
+  <!-- if the robot name arg is 'monica', the camera will be flipped by pi radians -->
+  <xacro:macro name="camera_joint" params="robot_name">
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+      <origin xyz="-${base_length/2 + 0.01} 0 0.3" rpy="0 0 ${pi if robot_name == 'monica' else 0}"/>
+    </joint> 
+  </xacro:macro>
+
   <!-- Define intertial property macros  -->
   <xacro:macro name="box_inertia" params="m w h d">
     <inertial>
@@ -176,10 +186,6 @@
     <xacro:box_inertia m="1.0" w="0.029" d="0.124" h="0.027"/> 
   </link>
 
-  <joint name="camera_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="camera_link"/>
-    <origin xyz="-${base_length/2 + 0.01} 0 0.3" rpy="0 0 0"/>
-  </joint>   
+  <xacro:camera_joint robot_name="$(arg robot_name)"/>  
 
 </robot>

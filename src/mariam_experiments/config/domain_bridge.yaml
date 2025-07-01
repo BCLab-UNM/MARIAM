@@ -1,0 +1,39 @@
+# NOTE: the topics in from_domain should correspond to the nodes which are publishing the data,
+# and to_domain should correspond to the nodes which are subscribing to the data.
+
+# Name of the domain bridge, used for node naming and logging
+name: my_bridge
+topics:
+  # Monica topics
+  monica/goal_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 0
+    to_domain: 1
+
+  monica/px100_virtual_pose_updater:
+    type: std_msgs/msg/Float64
+    from_domain: 0
+    to_domain: 1
+
+  monica/force:
+    type: std_msgs/msg/Float32
+    from_domain: 1
+    to_domain: 0
+
+  # Ross topics
+  ross/goal_pose:
+    type: geometry_msgs/msg/PoseStamped
+    from_domain: 0
+    to_domain: 2
+
+  ross/px100_virtual_pose_updater:
+    type: std_msgs/msg/Float64
+    from_domain: 0
+    to_domain: 2
+
+  ross/force:
+    type: std_msgs/msg/Float32
+    from_domain: 2
+    to_domain: 0
+
+  
