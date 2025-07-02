@@ -20,6 +20,11 @@ topics:
     from_domain: 1
     to_domain: 0
 
+  monica/tf:
+    type: tf2_msgs/msg/TFMessage
+    from_domain: 1
+    to_domain: 2
+
   # Ross topics
   ross/goal_pose:
     type: geometry_msgs/msg/PoseStamped
@@ -35,5 +40,10 @@ topics:
     type: std_msgs/msg/Float32
     from_domain: 2
     to_domain: 0
+
+  ross/tf:
+    type: tf2_msgs/msg/TFMessage
+    from_domain: 2
+    to_domain: 1
 
   
