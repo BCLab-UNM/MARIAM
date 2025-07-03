@@ -19,7 +19,7 @@
 class AnalyticalParameterizer : public rclcpp::Node
 {
 public:
-    AnalyticalParameterizer() : Node("analytical_parameterizer")
+    AnalyticalParameterizer() : Node("centralized_parameterizer")
     {
         // Declare and get robot_namespace parameter
         this->declare_parameter<std::vector<std::string>>("robot_namespace", std::vector<std::string>());

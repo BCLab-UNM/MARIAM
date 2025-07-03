@@ -58,7 +58,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/robot_description
+        Value: /ross/robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -272,7 +272,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/odometry/filtered
+        Value: /ross/odometry/filtered
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
@@ -284,7 +284,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/target_pose_rviz_markers
+        Value: /ross/target_pose_rviz_markers
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
@@ -296,7 +296,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/virtual_pose_rviz_markers
+        Value: /ross/virtual_pose_rviz_markers
       Value: true
     - Class: rviz_default_plugins/Image
       Enabled: false
@@ -310,7 +310,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/camera/color/image_raw
+        Value: /ross/camera/color/image_raw
       Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -342,7 +342,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/scan
+        Value: /ross/scan
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -358,13 +358,13 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/map
+        Value: /ross/map
       Update Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/map_updates
+        Value: /ross/map_updates
       Use Timestamp: false
       Value: true
     - Alpha: 1
@@ -393,7 +393,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monica/plan
+        Value: /ross/plan
       Value: true
   Enabled: true
   Global Options:
@@ -441,7 +441,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 4.069598197937012
+      Distance: 8.99658489227295
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -456,10 +456,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7203981876373291
+      Pitch: 0.38039839267730713
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.94039249420166
+      Yaw: 3.9403934478759766
     Saved: ~
 Window Geometry:
   Displays:

@@ -14,11 +14,9 @@ find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
-# Add executable
-add_executable(analytical_parameterizer src/analytical_parameterizer.cpp)
-
-# Specify dependencies
-ament_target_dependencies(analytical_parameterizer
+# Add executable, specify dependencies for centralized_parameterizer
+add_executable(centralized_parameterizer src/centralized_parameterizer.cpp)
+ament_target_dependencies(centralized_parameterizer
   rclcpp
   tf2_ros
   tf2_geometry_msgs
@@ -27,10 +25,39 @@ ament_target_dependencies(analytical_parameterizer
   std_msgs
 )
 
-# Install executable
+# Add executable, specify dependencies for distributed_parameterizer
+add_executable(distributed_parameterizer src/distributed_parameterizer.cpp)
+ament_target_dependencies(distributed_parameterizer
+  rclcpp
+  tf2_ros
+  tf2_geometry_msgs
+  geometry_msgs
+  nav_msgs
+  std_msgs
+)
+
+# Add executable, specify dependencies for agent_displacement_estimator
+add_executable(agent_displacement_estimator src/agent_displacement_estimator.cpp)
+ament_target_dependencies(agent_displacement_estimator
+  rclcpp
+  std_msgs
+  tf2_ros
+  tf2_geometry_msgs
+)
+
+# Install executables
 install(TARGETS
-  analytical_parameterizer
+  centralized_parameterizer
+  distributed_parameterizer
+  agent_displacement_estimator
   DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install launch files
+install(DIRECTORY
+  launch
+  config
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
