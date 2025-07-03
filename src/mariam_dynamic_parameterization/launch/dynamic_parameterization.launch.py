@@ -1,8 +1,9 @@
+import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     # Declare launch argument for namespace
@@ -12,38 +13,38 @@ def generate_launch_description():
         description='Namespace for the nodes'
     )
     
+    # Get config file path
+    config_file = os.path.join(
+        get_package_share_directory('mariam_dynamic_parameterization'),
+        'config/parameterizer.yaml'
+    )
+    
     return LaunchDescription([
         namespace_arg,
-        
         # Launch the distributed parameterizer node
         Node(
-            package='mariam_dynamic_parameterization',  # Replace with your actual package name
+            package='mariam_dynamic_parameterization',
             executable='distributed_parameterizer',
-            name='distributed_parameterizer_node',
+            name='distributed_parameterizer',
             namespace=LaunchConfiguration('namespace'),
             output='screen',
-            parameters=[
-                # Add any parameters here if needed
-            ],
+            parameters=[config_file],
             remappings=[
-                # Add any topic remappings here if needed
-                # ('old_topic', 'new_topic'),
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
             ]
         ),
-        
         # Launch the agent displacement estimator node
         Node(
-            package='mariam_dynamic_parameterization',  # Replace with your actual package name
+            package='mariam_dynamic_parameterization',
             executable='agent_displacement_estimator',
-            name='agent_displacement_estimator_node',
+            name='agent_displacement_estimator',
             namespace=LaunchConfiguration('namespace'),
             output='screen',
-            parameters=[
-                # Add any parameters here if needed
-            ],
+            parameters=[],
             remappings=[
-                # Add any topic remappings here if needed
-                # ('old_topic', 'new_topic'),
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
             ]
         ),
     ])

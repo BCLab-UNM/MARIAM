@@ -41,6 +41,8 @@ add_executable(agent_displacement_estimator src/agent_displacement_estimator.cpp
 ament_target_dependencies(agent_displacement_estimator
   rclcpp
   std_msgs
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 # Install executables
@@ -54,6 +56,7 @@ install(TARGETS
 # Install launch files
 install(DIRECTORY
   launch
+  config
   DESTINATION share/${PROJECT_NAME}/
 )
 
