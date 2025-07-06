@@ -88,8 +88,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 6.28
+      xy_goal_tolerance: 0.1
+      yaw_goal_tolerance: 0.1
     
     # DWB controller for skid steer - using default Nav2 format
     FollowPath:
@@ -102,7 +102,7 @@ controller_server:
       max_vel_theta: 0.4
       min_speed_xy: -0.2
       max_speed_xy: 0.2
-      min_speed_theta: 0.0
+      min_speed_theta: -0.4
       acc_lim_x: 1.0
       acc_lim_y: 0.0
       acc_lim_theta: 1.3
@@ -121,7 +121,7 @@ controller_server:
       short_circuit_trajectory_evaluation: True
       stateful: True
       # Critics using default Nav2 dot notation format
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["RotateToGoal", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
@@ -129,10 +129,9 @@ controller_server:
       GoalAlign.forward_point_distance: 0.1
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 0.0
+      RotateToGoal.scale: 32.0
       RotateToGoal.slowing_factor: 5.0
       RotateToGoal.lookahead_time: -1.0
-      Oscillation.scale: 1.0
 
 local_costmap:
   local_costmap:
