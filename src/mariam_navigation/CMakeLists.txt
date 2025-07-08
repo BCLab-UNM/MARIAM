@@ -17,7 +17,7 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
 
-# Create the executable
+# Create the existing executable
 add_executable(experiment_dual_waypoint_publisher src/experiment_dual_waypoint_publisher.cpp)
 ament_target_dependencies(experiment_dual_waypoint_publisher
   rclcpp
@@ -29,9 +29,19 @@ ament_target_dependencies(experiment_dual_waypoint_publisher
   tf2_msgs 
 )
 
-# Install the executable
+# Create the new robot follower executable
+add_executable(robot_follower src/robot_follower.cpp)
+ament_target_dependencies(robot_follower
+  rclcpp
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
+)
+
+# Install the executables
 install(TARGETS
   experiment_dual_waypoint_publisher
+  robot_follower
   DESTINATION lib/${PROJECT_NAME}
 )
 
