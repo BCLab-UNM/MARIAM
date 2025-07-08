@@ -74,3 +74,11 @@
       minimum_angle_penalty: 0.9
       minimum_distance_penalty: 0.5
       use_response_expansion: true
+
+      # Enable footprint clearing
+      use_footprint_clearing: true
+      
+      # Define your robot footprint (instead of just radius)
+      footprint: "[[0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15]]"
+      # OR if you prefer to keep using radius:
+      robot_radius: 0.12  # adjust to your robot's actual radius
