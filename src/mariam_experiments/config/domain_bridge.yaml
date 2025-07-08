@@ -23,7 +23,7 @@ topics:
   monica/tf:
     type: tf2_msgs/msg/TFMessage
     from_domain: 1
-    to_domain: 2
+    to_domain: 0
 
   # Ross topics
   ross/goal_pose:
@@ -44,6 +44,6 @@ topics:
   ross/tf:
     type: tf2_msgs/msg/TFMessage
     from_domain: 2
-    to_domain: 1
+    to_domain: 0
 
   
