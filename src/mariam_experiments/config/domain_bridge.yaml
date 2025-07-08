@@ -25,6 +25,11 @@ topics:
     from_domain: 1
     to_domain: 0
 
+  monica/pose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    from_domain: 1
+    to_domain: 0
+
   # Ross topics
   ross/goal_pose:
     type: geometry_msgs/msg/PoseStamped
@@ -46,4 +51,8 @@ topics:
     from_domain: 2
     to_domain: 0
 
+  ross/pose:
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    from_domain: 1
+    to_domain: 0
   

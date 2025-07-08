@@ -1,39 +1,36 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_msgs/msg/tf_message.hpp>
-#include <tf2/exceptions.h>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <chrono>
 #include <memory>
 #include <string>
 
 using namespace std::chrono_literals;
 
-class ExperimentDualWaypointPublisher : public rclcpp::Node
+class ExperimentWaypointPublisher : public rclcpp::Node
 {
 public:
-    ExperimentDualWaypointPublisher() : Node("experiment_waypoint_publisher")
+    ExperimentWaypointPublisher() : Node("experiment_waypoint_publisher")
     {
         // Hard-coded values
         ross_namespace_ = "ross";
         monica_namespace_ = "monica";
         goal_delay_ = 10.0;
-        ross_x_offset_ = 1.0;
-        monica_x_offset_ = -1.0;
+        ross_x_offset_ = 2.0;
+        monica_x_offset_ = -2.0;
         
-        // TF2 setup - separate buffers for each robot's namespaced topics
-        ross_tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-        monica_tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+        // Initialize pose validity flags
+        ross_pose_received_ = false;
+        monica_pose_received_ = false;
         
-        // Subscribe to namespaced TF topics
-        ross_tf_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-            "/ross/tf", 10, 
-            std::bind(&ExperimentDualWaypointPublisher::ross_tf_callback, this, std::placeholders::_1));
+        // Subscribe to robot pose topics
+        ross_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+            "/ross/pose", 10, 
+            std::bind(&ExperimentWaypointPublisher::ross_pose_callback, this, std::placeholders::_1));
             
-        monica_tf_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-            "/monica/tf", 10, 
-            std::bind(&ExperimentDualWaypointPublisher::monica_tf_callback, this, std::placeholders::_1));
+        monica_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
+            "/monica/pose", 10, 
+            std::bind(&ExperimentWaypointPublisher::monica_pose_callback, this, std::placeholders::_1));
         
         // Goal pose publishers
         ross_goal_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
@@ -45,7 +42,7 @@ public:
         // Timer to trigger goals after specified delay
         timer_ = this->create_wall_timer(
             std::chrono::duration<double>(goal_delay_),
-            std::bind(&ExperimentDualWaypointPublisher::send_goals, this));
+            std::bind(&ExperimentWaypointPublisher::send_goals, this));
         
         RCLCPP_INFO(this->get_logger(), 
             "Experiment waypoint publisher initialized. Goals will be sent in %.1f seconds...", 
@@ -64,13 +61,15 @@ private:
     double ross_x_offset_;
     double monica_x_offset_;
     
-    // TF2 - separate buffers for each robot
-    std::shared_ptr<tf2_ros::Buffer> ross_tf_buffer_;
-    std::shared_ptr<tf2_ros::Buffer> monica_tf_buffer_;
+    // Current robot poses
+    geometry_msgs::msg::PoseWithCovarianceStamped ross_current_pose_;
+    geometry_msgs::msg::PoseWithCovarianceStamped monica_current_pose_;
+    bool ross_pose_received_;
+    bool monica_pose_received_;
     
-    // TF subscribers for namespaced topics
-    rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr ross_tf_sub_;
-    rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr monica_tf_sub_;
+    // Pose subscribers
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr ross_pose_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr monica_pose_sub_;
     
     // Goal pose publishers
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr ross_goal_pub_;
@@ -79,76 +78,34 @@ private:
     // Timer
     rclcpp::TimerBase::SharedPtr timer_;
     
-    void ross_tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
+    void ross_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
     {
-        for (const auto& transform : msg->transforms) {
-            ross_tf_buffer_->setTransform(transform, "ross_tf");
-        }
+        ross_current_pose_ = *msg;
+        ross_pose_received_ = true;
+        RCLCPP_DEBUG(this->get_logger(), "Received Ross pose: x=%.2f, y=%.2f", 
+            msg->pose.pose.position.x, msg->pose.pose.position.y);
     }
     
-    void monica_tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
+    void monica_pose_callback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
     {
-        for (const auto& transform : msg->transforms) {
-            monica_tf_buffer_->setTransform(transform, "monica_tf");
-        }
-    }
-    
-    geometry_msgs::msg::PoseStamped get_robot_pose(const std::string& robot_namespace)
-    {
-        geometry_msgs::msg::PoseStamped pose;
-        
-        // Select the correct TF buffer based on robot namespace
-        std::shared_ptr<tf2_ros::Buffer> buffer;
-        if (robot_namespace == "ross") {
-            buffer = ross_tf_buffer_;
-        } else if (robot_namespace == "monica") {
-            buffer = monica_tf_buffer_;
-        } else {
-            RCLCPP_ERROR(this->get_logger(), "Unknown robot namespace: %s", robot_namespace.c_str());
-            pose.header.frame_id = ""; // Mark as invalid
-            return pose;
-        }
-        
-        try {
-            // Get transform from map to robot's base_footprint
-            geometry_msgs::msg::TransformStamped transform = buffer->lookupTransform(
-                "map", 
-                "base_footprint",
-                tf2::TimePointZero);
-            
-            // Create a pose at origin in robot's frame
-            geometry_msgs::msg::PoseStamped robot_pose;
-            robot_pose.header.frame_id = "base_footprint";
-            robot_pose.header.stamp = this->get_clock()->now();
-            robot_pose.pose.position.x = 0.0;
-            robot_pose.pose.position.y = 0.0;
-            robot_pose.pose.position.z = 0.0;
-            robot_pose.pose.orientation.w = 1.0;
-            
-            // Transform to map frame
-            tf2::doTransform(robot_pose, pose, transform);
-            
-        } catch (const tf2::TransformException& ex) {
-            RCLCPP_ERROR(this->get_logger(), 
-                "Could not get pose for %s: %s", robot_namespace.c_str(), ex.what());
-            pose.header.frame_id = ""; // Mark as invalid
-        }
-        
-        return pose;
+        monica_current_pose_ = *msg;
+        monica_pose_received_ = true;
+        RCLCPP_DEBUG(this->get_logger(), "Received Monica pose: x=%.2f, y=%.2f", 
+            msg->pose.pose.position.x, msg->pose.pose.position.y);
     }
     
     geometry_msgs::msg::PoseStamped create_goal_pose(
-        const geometry_msgs::msg::PoseStamped& current_pose, 
+        const geometry_msgs::msg::PoseWithCovarianceStamped& current_pose, 
         double x_offset)
     {
         geometry_msgs::msg::PoseStamped goal_pose;
-        goal_pose.header.frame_id = "map";
+        goal_pose.header.frame_id = current_pose.header.frame_id; // Should be "map"
         goal_pose.header.stamp = this->get_clock()->now();
         
         // Position: add offset to current position
-        goal_pose.pose.position.x = current_pose.pose.position.x + x_offset;
-        goal_pose.pose.position.y = current_pose.pose.position.y;
-        goal_pose.pose.position.z = current_pose.pose.position.z;
+        goal_pose.pose.position.x = current_pose.pose.pose.position.x + x_offset;
+        goal_pose.pose.position.y = current_pose.pose.pose.position.y;
+        goal_pose.pose.position.z = current_pose.pose.pose.position.z;
         
         // Orientation: facing +x direction (yaw = 0)
         goal_pose.pose.orientation.x = 0.0;
@@ -161,31 +118,33 @@ private:
     
     void send_goals()
     {
-        RCLCPP_INFO(this->get_logger(), "Sending navigation goals to robots...");
+        RCLCPP_INFO(this->get_logger(), "Attempting to send navigation goals to robots...");
         
-        // Get current poses
-        auto ross_pose = get_robot_pose(ross_namespace_);
-        auto monica_pose = get_robot_pose(monica_namespace_);
-        
-        if (ross_pose.header.frame_id.empty() || monica_pose.header.frame_id.empty()) {
-            RCLCPP_ERROR(this->get_logger(), 
-                "Failed to get robot poses. Retrying in 5 seconds...");
+        // Check if we have received poses from both robots
+        if (!ross_pose_received_ || !monica_pose_received_) {
+            RCLCPP_WARN(this->get_logger(), 
+                "Haven't received poses from all robots yet (Ross: %s, Monica: %s). Retrying in 5 seconds...",
+                ross_pose_received_ ? "✓" : "✗", monica_pose_received_ ? "✓" : "✗");
             timer_ = this->create_wall_timer(
-                5s, std::bind(&ExperimentDualWaypointPublisher::send_goals, this));
+                5s, std::bind(&ExperimentWaypointPublisher::send_goals, this));
             return;
         }
         
         // Create goal poses
-        auto ross_goal = create_goal_pose(ross_pose, ross_x_offset_);
-        auto monica_goal = create_goal_pose(monica_pose, monica_x_offset_);
+        auto ross_goal = create_goal_pose(ross_current_pose_, ross_x_offset_);
+        auto monica_goal = create_goal_pose(monica_current_pose_, monica_x_offset_);
         
         // Publish goals
         RCLCPP_INFO(this->get_logger(), 
-            "Publishing %s goal to: x=%.2f, y=%.2f", 
-            ross_namespace_.c_str(), ross_goal.pose.position.x, ross_goal.pose.position.y);
+            "Publishing %s goal to: x=%.2f, y=%.2f (from current x=%.2f, y=%.2f)", 
+            ross_namespace_.c_str(), 
+            ross_goal.pose.position.x, ross_goal.pose.position.y,
+            ross_current_pose_.pose.pose.position.x, ross_current_pose_.pose.pose.position.y);
         RCLCPP_INFO(this->get_logger(), 
-            "Publishing %s goal to: x=%.2f, y=%.2f", 
-            monica_namespace_.c_str(), monica_goal.pose.position.x, monica_goal.pose.position.y);
+            "Publishing %s goal to: x=%.2f, y=%.2f (from current x=%.2f, y=%.2f)", 
+            monica_namespace_.c_str(), 
+            monica_goal.pose.position.x, monica_goal.pose.position.y,
+            monica_current_pose_.pose.pose.position.x, monica_current_pose_.pose.pose.position.y);
         
         ross_goal_pub_->publish(ross_goal);
         monica_goal_pub_->publish(monica_goal);
@@ -200,7 +159,7 @@ private:
 int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<ExperimentDualWaypointPublisher>();
+    auto node = std::make_shared<ExperimentWaypointPublisher>();
     
     rclcpp::spin(node);
     rclcpp::shutdown();
