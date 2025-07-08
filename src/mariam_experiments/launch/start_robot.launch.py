@@ -8,6 +8,7 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.actions import Node
 import os
 
 
@@ -122,6 +123,20 @@ def launch_setup(context, *args, **kwargs):
         }.items(),
     )
 
+    robot_follower_node = Node(
+        package='mariam_navigation',
+        executable='robot_follower',
+        name='robot_follower',
+        namespace=robot_name_launch_arg,
+        output='screen',
+        parameters=[{
+            'robot_name': robot_name_launch_arg,
+        }],
+        condition=IfCondition(PythonExpression([
+            "'", robot_name_launch_arg, "' == 'ross'"
+        ]))
+    )
+
     return [
         px100_controller_desc,
         micro_ros_desc,
@@ -130,6 +145,7 @@ def launch_setup(context, *args, **kwargs):
         ekf_launch_desc,
         slam_launch_desc,
         nav2_bringup_launch_desc
+        # robot_follower_node
     ]
 
 
