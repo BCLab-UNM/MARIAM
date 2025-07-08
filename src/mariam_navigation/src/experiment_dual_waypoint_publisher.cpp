@@ -167,7 +167,7 @@ private:
         auto ross_pose = get_robot_pose(ross_namespace_);
         auto monica_pose = get_robot_pose(monica_namespace_);
         
-        if (ross_pose.header.frame_id.empty() ) { //|| monica_pose.header.frame_id.empty()) {
+        if (monica_pose.header.frame_id.empty() ) { //|| monica_pose.header.frame_id.empty()) {
             RCLCPP_ERROR(this->get_logger(), 
                 "Failed to get robot poses. Retrying in 5 seconds...");
             timer_ = this->create_wall_timer(
