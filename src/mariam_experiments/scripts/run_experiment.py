@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from fabric import SerialGroup, Connection
+from fabric import Connection
 import rclpy
 from rclpy.node import Node
 
@@ -11,6 +11,8 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 import time
 from threading import Thread
+
+import math
 
 class ExperimentNode(Node):
 
@@ -147,6 +149,24 @@ class ExperimentNode(Node):
         self.ross_cmd_vel_publisher.publish(ross_twist)
         self.monica_cmd_vel_publisher.publish(monica_twist)
 
+    def drive_robot_nav2(self, robot_name: str, pose: PoseStamped):
+        """
+        This method will command the robot to drive to the specified pose
+        using Nav2.
+
+        :param robot_name: the name of the robot ('monica' or 'ross')
+        :param pose: the pose for the robot to drive to
+        """
+        pose.header.stamp = self.get_clock().now().to_msg()
+        if robot_name == 'monica':
+            self.get_logger().info('Publishing desired pose for Monica')
+            self.monica_nav2_pose_publisher.publish(pose)
+        elif robot_name == 'ross':
+            self.get_logger().info('Publishing desired pose for Ross')
+            self.ross_nav2_pose_publisher.publish(pose)
+        else:
+            self.get_logger().error(f'Unknown robot name: {robot_name}')
+
 
     def drive_robots_nav2(self, monica_pose: PoseStamped, ross_pose: PoseStamped):
         """
@@ -240,29 +260,57 @@ def main(args=None):
     # NOTE: we will only set the timestamp when we want to publish the pose
     monica_pose = PoseStamped()
     monica_pose.header.frame_id = 'map'
-    monica_pose.pose.position.x = -0.5
+    monica_pose.pose.position.x = 0.0
     monica_pose.pose.position.y = 0.0
     monica_pose.pose.position.z = 0.0
-    monica_pose.pose.orientation.w = 0.0
+    monica_pose.pose.orientation.w = math.cos(math.pi / 2)
     monica_pose.pose.orientation.x = 0.0
     monica_pose.pose.orientation.y = 0.0
-    monica_pose.pose.orientation.z = 1.0
+    monica_pose.pose.orientation.z = math.sin(math.pi / 2)
+    
+    monica_pose2 = PoseStamped()
+    monica_pose2.header.frame_id = 'map'
+    monica_pose2.pose.position.x = 0.0
+    monica_pose2.pose.position.y = 0.0
+    monica_pose2.pose.position.z = 0.0
+    monica_pose2.pose.orientation.w = math.cos(0)
+    monica_pose2.pose.orientation.x = 0.0
+    monica_pose2.pose.orientation.y = 0.0
+    monica_pose2.pose.orientation.z = math.sin(0)
+    
+    monica_pose3 = PoseStamped()
+    monica_pose3.header.frame_id = 'map'
+    monica_pose3.pose.position.x = -0.5
+    monica_pose3.pose.position.y = 0.0
+    monica_pose3.pose.position.z = 0.0
+    monica_pose3.pose.orientation.w = math.cos(0)
+    monica_pose3.pose.orientation.x = 0.0
+    monica_pose3.pose.orientation.y = 0.0
+    monica_pose3.pose.orientation.z = math.sin(0)
 
     ross_pose = PoseStamped()
     ross_pose.header.frame_id = 'map'
     ross_pose.pose.position.x = 0.5
-    ross_pose.pose.position.y = 0.0
+    ross_pose.pose.position.y = 0.5
     ross_pose.pose.position.z = 0.0
-    ross_pose.pose.orientation.w = 0.0
+    ross_pose.pose.orientation.w = math.cos(0)
     ross_pose.pose.orientation.x = 0.0
     ross_pose.pose.orientation.y = 0.0
-    ross_pose.pose.orientation.z = 1.0
+    ross_pose.pose.orientation.z = math.sin(0)
 
     try:        
         while rclpy.ok():
+            input("Press Enter to get monica to learn the environment\n")
+
+            experiment_node.drive_robot_nav2('monica', monica_pose)
+
+            input("Press Enter to turn monica back around\n")
+            
+            experiment_node.drive_robot_nav2('monica', monica_pose2)
+
             input("Press Enter to start an experiment\n")
 
-            experiment_node.drive_robots_nav2(monica_pose, ross_pose)
+            experiment_node.drive_robots_nav2(monica_pose3, ross_pose)
             
     
     except KeyboardInterrupt:
