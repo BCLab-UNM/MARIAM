@@ -19,8 +19,8 @@ public:
         ross_namespace_ = "ross";
         monica_namespace_ = "monica";
         goal_delay_ = 5.0;
-        ross_x_offset_ = 1.0;
-        monica_x_offset_ = -1.0;
+        ross_x_offset_ = 2.0;
+        monica_x_offset_ = -2.0;
         
         // TF2 setup - separate buffers for each robot's namespaced topics
         ross_tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());

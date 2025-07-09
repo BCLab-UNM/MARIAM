@@ -39,10 +39,21 @@ ament_target_dependencies(robot_follower
   tf2_msgs 
 )
 
+# Create the new dual_cmd_vel_distance executable
+add_executable(dual_cmd_vel_distance src/dual_cmd_vel_distance.cpp)
+ament_target_dependencies(dual_cmd_vel_distance
+  rclcpp
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs 
+)
+
 # Install the executables
 install(TARGETS
   experiment_dual_waypoint_publisher
   robot_follower
+  dual_cmd_vel_distance
   DESTINATION lib/${PROJECT_NAME}
 )
 
