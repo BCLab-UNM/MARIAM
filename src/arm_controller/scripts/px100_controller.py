@@ -44,6 +44,8 @@ class ArmController(InterbotixManipulatorXS):
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
+    pitch_offset = np.array(R.from_euler('y', 15, degrees=True).as_matrix())
+
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
             self,
@@ -99,21 +101,21 @@ class ArmController(InterbotixManipulatorXS):
             robot_shutdown()
 
     def move_end_effector(self) -> None:
-        """
-        """
         cartesian_pos_tolerance = 1e-3
 
         with self.lock:
             desired_pose = self.desired_pose
 
         # create a rotation matrix from the desired pose's quaternion
-        desired_rotation_matrix = np.eye(4)
-        desired_rotation_matrix[:3, :3] = R.from_quat([
+        desired_rotation_matrix = np.array(R.from_quat([
             desired_pose.orientation.x,
             desired_pose.orientation.y,
             desired_pose.orientation.z,
             desired_pose.orientation.w,
-        ]).as_matrix()
+        ]).as_matrix())
+
+        # apply a small offset to the orientation
+        desired_rotation_matrix = desired_rotation_matrix @ self.pitch_offset
 
         # create a homogeneous transformation matrix from the
         # desired pose and the rotation matrix
