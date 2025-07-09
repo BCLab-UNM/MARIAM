@@ -26,10 +26,10 @@ class VirtualPosePublisher : public rclcpp::Node {
       this->declare_parameter("z_pos", 0.098);
       
       // quaternion parameters
-      this->declare_parameter("w", 0.707);
       this->declare_parameter("x", 0.0);
       this->declare_parameter("y", 0.0);
       this->declare_parameter("z", 0.707);
+      this->declare_parameter("w", 0.707);
 
       this->declare_parameter("frequency", 1.0);
 
@@ -38,11 +38,11 @@ class VirtualPosePublisher : public rclcpp::Node {
       this->get_parameter("y_pos", y_pos);
       this->get_parameter("z_pos", z_pos);
       
-      this->get_parameter("w", w);
       this->get_parameter("x", x);
       this->get_parameter("y", y);
       this->get_parameter("z", z);
-      
+      this->get_parameter("w", w);
+
       this->get_parameter("frequency", frequency);
 
       timer = this->create_wall_timer(
