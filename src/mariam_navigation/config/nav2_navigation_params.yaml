@@ -88,8 +88,8 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.05
+      yaw_goal_tolerance: 0.1
     
     # DWB controller for skid steer - using default Nav2 format
     FollowPath:
@@ -115,13 +115,13 @@ controller_server:
       sim_time: 2.5
       linear_granularity: 0.05
       angular_granularity: 0.025
-      transform_tolerance: 0.2
-      xy_goal_tolerance: 0.25
+      transform_tolerance: 0.2 # Hallucination ?
+      xy_goal_tolerance: 0.05
       trans_stopped_velocity: 0.1
       short_circuit_trajectory_evaluation: True
       stateful: True
       # Critics using default Nav2 dot notation format
-      critics: ["RotateToGoal", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      critics: ["BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
@@ -129,9 +129,9 @@ controller_server:
       GoalAlign.forward_point_distance: 0.1
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
+      # RotateToGoal.scale: 32.0
+      # RotateToGoal.slowing_factor: 5.0
+      # RotateToGoal.lookahead_time: -1.0
 
 local_costmap:
   local_costmap:
@@ -178,7 +178,7 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      transform_tolerance: 0.2
+      transform_tolerance: 0.05
       rolling_window: true  # Keep this false for global costmap
       width: 10
       height: 10
@@ -228,7 +228,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
+      tolerance: 0.05
       use_astar: false
       allow_unknown: True
 
@@ -258,7 +258,7 @@ behavior_server:
       plugin: "nav2_behaviors/Wait"
     global_frame: odom
     robot_base_frame: base_footprint
-    transform_tolerance: 0.1
+    transform_tolerance: 0.05
     use_sim_time: false
     simulate_ahead_time: 2.0
     max_rotational_vel: 0.4
