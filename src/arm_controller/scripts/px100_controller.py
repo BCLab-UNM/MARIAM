@@ -44,7 +44,7 @@ class ArmController(InterbotixManipulatorXS):
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
-    pitch_offset = np.array(R.from_euler('y', -8, degrees=True).as_matrix())
+    pitch_offset = np.array(R.from_euler('y', -15, degrees=True).as_matrix())
 
     def __init__(self, pargs, args=None):
         InterbotixManipulatorXS.__init__(
