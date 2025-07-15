@@ -8,6 +8,24 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+
+# Create executable
+add_executable(displacement_publisher src/displacement_publisher.cpp)
+ament_target_dependencies(displacement_publisher 
+  rclcpp 
+  nav_msgs 
+  std_msgs 
+  geometry_msgs
+)
+
+# Install executable
+install(TARGETS
+  displacement_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

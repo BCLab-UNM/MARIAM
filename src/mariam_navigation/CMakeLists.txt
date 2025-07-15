@@ -18,8 +18,8 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_msgs REQUIRED)
 
 # Create the existing executable
-add_executable(experiment_dual_waypoint_publisher src/experiment_dual_waypoint_publisher.cpp)
-ament_target_dependencies(experiment_dual_waypoint_publisher
+add_executable(dual_waypoint_publisher src/dual_waypoint_publisher.cpp)
+ament_target_dependencies(dual_waypoint_publisher
   rclcpp
   rclcpp_action
   geometry_msgs
@@ -39,21 +39,46 @@ ament_target_dependencies(robot_follower
   tf2_msgs 
 )
 
-# Create the new dual_cmd_vel_distance executable
-add_executable(dual_cmd_vel_distance src/dual_cmd_vel_distance.cpp)
-ament_target_dependencies(dual_cmd_vel_distance
+# Create the dual_linear_constant_velocity_open_loop executable
+add_executable(dual_linear_constant_velocity_open_loop src/dual_linear_constant_velocity_open_loop.cpp)
+ament_target_dependencies(dual_linear_constant_velocity_open_loop
   rclcpp
   geometry_msgs
-  tf2_ros
-  tf2_geometry_msgs
-  tf2_msgs 
+  nav_msgs
+)
+
+# Create the dual_linear_constant_velocity_closed_loop executable
+add_executable(dual_linear_constant_velocity_closed_loop src/dual_linear_constant_velocity_closed_loop.cpp)
+ament_target_dependencies(dual_linear_constant_velocity_closed_loop
+  rclcpp
+  geometry_msgs
+  nav_msgs
+)
+
+# Create the dual_linear_sinusoidal_velocity_open_loop executable
+add_executable(dual_linear_sinusoidal_velocity_open_loop src/dual_linear_sinusoidal_velocity_open_loop.cpp)
+ament_target_dependencies(dual_linear_sinusoidal_velocity_open_loop
+  rclcpp
+  geometry_msgs
+  nav_msgs
+)
+
+# Create the dual_linear_sinusoidal_acceleration_open_loop executable
+add_executable(dual_linear_sinusoidal_acceleration_open_loop src/dual_linear_sinusoidal_acceleration_open_loop.cpp)
+ament_target_dependencies(dual_linear_sinusoidal_acceleration_open_loop
+  rclcpp
+  geometry_msgs
+  nav_msgs
 )
 
 # Install the executables
 install(TARGETS
-  experiment_dual_waypoint_publisher
+  dual_waypoint_publisher
   robot_follower
-  dual_cmd_vel_distance
+  dual_linear_constant_velocity_open_loop
+  dual_linear_constant_velocity_closed_loop
+  dual_linear_sinusoidal_velocity_open_loop
+  dual_linear_sinusoidal_acceleration_open_loop
   DESTINATION lib/${PROJECT_NAME}
 )
 
