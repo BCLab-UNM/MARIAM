@@ -1,12 +1,12 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <chrono>
-#include <thread>
+#include <nav_msgs/msg/odometry.hpp>
+#include <cmath>
 
-class DualLinearConstantVelocityOpenLoop : public rclcpp::Node
+class DualLinearConstantVelocityDistanceBased : public rclcpp::Node
 {
 public:
-    DualLinearConstantVelocityOpenLoop() : Node("dual_linear_constant_velocity_open_loop")
+    DualLinearConstantVelocityDistanceBased() : Node("dual_linear_constant_velocity_distance_based")
     {
         // Declare parameters with defaults
         this->declare_parameter("distance", 2.0);
@@ -16,95 +16,184 @@ public:
         distance_ = this->get_parameter("distance").as_double();
         speed_ = this->get_parameter("speed").as_double();
         
-        // Create publishers for both robots
+        // Initialize state variables
+        monica_start_x_ = 0.0;
+        monica_start_y_ = 0.0;
+        monica_current_x_ = 0.0;
+        monica_current_y_ = 0.0;
+        monica_distance_traveled_ = 0.0;
+        monica_odom_initialized_ = false;
+        
+        ross_start_x_ = 0.0;
+        ross_start_y_ = 0.0;
+        ross_current_x_ = 0.0;
+        ross_current_y_ = 0.0;
+        ross_distance_traveled_ = 0.0;
+        ross_odom_initialized_ = false;
+        
+        // Create publishers
         monica_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("monica/cmd_vel", 10);
         ross_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("ross/cmd_vel", 10);
-
-        RCLCPP_INFO(this->get_logger(), "Starting dual robot drive - Distance: %.2f m, Speed: %.2f m/s",
+        
+        // Create subscribers
+        monica_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            "monica/wheel/odom", 10,
+            std::bind(&DualLinearConstantVelocityDistanceBased::monica_odom_callback, this, std::placeholders::_1));
+        
+        ross_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            "ross/wheel/odom", 10,
+            std::bind(&DualLinearConstantVelocityDistanceBased::ross_odom_callback, this, std::placeholders::_1));
+        
+        // Create timer for control loop
+        control_timer_ = this->create_wall_timer(
+            std::chrono::milliseconds(20), // 50 Hz control loop
+            std::bind(&DualLinearConstantVelocityDistanceBased::control_loop, this));
+        
+        RCLCPP_INFO(this->get_logger(), "Starting dual robot distance-based drive - Distance: %.2f m, Speed: %.2f m/s",
                    distance_, speed_);
-
-        // Use a timer to start driving after the node is fully initialized
-        start_timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(100),
-            [this]() {
-                start_timer_->cancel();
-                drive_robots();
-            });
     }
 
 private:
-    void drive_robots()
+    void monica_odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
-        // Calculate time needed to travel the distance
-        double drive_time = distance_ / speed_;
-        RCLCPP_INFO(this->get_logger(), "Driving for %.2f seconds", drive_time);
-
-        // Create velocity messages
+        if (!monica_odom_initialized_) {
+            monica_start_x_ = msg->pose.pose.position.x;
+            monica_start_y_ = msg->pose.pose.position.y;
+            monica_odom_initialized_ = true;
+            RCLCPP_INFO(this->get_logger(), "Monica odometry initialized at (%.3f, %.3f)", 
+                       monica_start_x_, monica_start_y_);
+        }
+        
+        monica_current_x_ = msg->pose.pose.position.x;
+        monica_current_y_ = msg->pose.pose.position.y;
+        
+        // Calculate distance traveled in x direction only
+        double dx = monica_current_x_ - monica_start_x_;
+        monica_distance_traveled_ = std::abs(dx); // Use absolute value for distance
+    }
+    
+    void ross_odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+        if (!ross_odom_initialized_) {
+            ross_start_x_ = msg->pose.pose.position.x;
+            ross_start_y_ = msg->pose.pose.position.y;
+            ross_odom_initialized_ = true;
+            RCLCPP_INFO(this->get_logger(), "Ross odometry initialized at (%.3f, %.3f)", 
+                       ross_start_x_, ross_start_y_);
+        }
+        
+        ross_current_x_ = msg->pose.pose.position.x;
+        ross_current_y_ = msg->pose.pose.position.y;
+        
+        // Calculate distance traveled in x direction only
+        double dx = ross_current_x_ - ross_start_x_;
+        ross_distance_traveled_ = std::abs(dx); // Use absolute value for distance
+    }
+    
+    void control_loop()
+    {
+        // Check if both robots have initialized odometry
+        if (!monica_odom_initialized_ || !ross_odom_initialized_) {
+            return;
+        }
+        
+        // Check if either robot has reached the target distance
+        bool monica_done = monica_distance_traveled_ >= distance_;
+        bool ross_done = ross_distance_traveled_ >= distance_;
+        
+        if (monica_done || ross_done) {
+            // Stop both robots
+            geometry_msgs::msg::Twist stop_cmd;
+            stop_cmd.linear.x = 0.0;
+            stop_cmd.linear.y = 0.0;
+            stop_cmd.linear.z = 0.0;
+            stop_cmd.angular.x = 0.0;
+            stop_cmd.angular.y = 0.0;
+            stop_cmd.angular.z = 0.0;
+            
+            // Send stop commands multiple times to ensure they're received
+            for (int i = 0; i < 10; ++i) {
+                monica_pub_->publish(stop_cmd);
+                ross_pub_->publish(stop_cmd);
+            }
+            
+            RCLCPP_INFO(this->get_logger(), "Target distance reached! Monica: %.3f m, Ross: %.3f m - robots stopped",
+                       monica_distance_traveled_, ross_distance_traveled_);
+            
+            // Shutdown the node
+            rclcpp::shutdown();
+            return;
+        }
+        
+        // Create velocity commands
         geometry_msgs::msg::Twist monica_cmd;
         geometry_msgs::msg::Twist ross_cmd;
-
-        // Monica drives in negative x direction (backwards)
-        monica_cmd.linear.x = -speed_;
-        monica_cmd.linear.y = 0.0;
-        monica_cmd.linear.z = 0.0;
-        monica_cmd.angular.x = 0.0;
-        monica_cmd.angular.y = 0.0;
-        monica_cmd.angular.z = 0.0;
-
-        // Ross drives in positive x direction (forwards)
-        ross_cmd.linear.x = speed_;
-        ross_cmd.linear.y = 0.0;
-        ross_cmd.linear.z = 0.0;
-        ross_cmd.angular.x = 0.0;
-        ross_cmd.angular.y = 0.0;
-        ross_cmd.angular.z = 0.0;
-
-        // Start driving
-        auto start_time = std::chrono::steady_clock::now();
-        auto end_time = start_time + std::chrono::duration<double>(drive_time);
-        rclcpp::Rate rate(50); // 50 Hz publishing rate
-
-        while (rclcpp::ok() && std::chrono::steady_clock::now() < end_time)
-        {
-            monica_pub_->publish(monica_cmd);
-            ross_pub_->publish(ross_cmd);
-            rate.sleep();
+        
+        // Monica drives in negative x direction (backwards) - only if not done
+        if (!monica_done) {
+            monica_cmd.linear.x = -speed_;
+            monica_cmd.linear.y = 0.0;
+            monica_cmd.linear.z = 0.0;
+            monica_cmd.angular.x = 0.0;
+            monica_cmd.angular.y = 0.0;
+            monica_cmd.angular.z = 0.0;
         }
-
-        // Stop both robots
-        geometry_msgs::msg::Twist stop_cmd;
-        stop_cmd.linear.x = 0.0;
-        stop_cmd.linear.y = 0.0;
-        stop_cmd.linear.z = 0.0;
-        stop_cmd.angular.x = 0.0;
-        stop_cmd.angular.y = 0.0;
-        stop_cmd.angular.z = 0.0;
-
-        // Send stop commands multiple times to ensure they're received
-        for (int i = 0; i < 10; ++i)
-        {
-            monica_pub_->publish(stop_cmd);
-            ross_pub_->publish(stop_cmd);
-            rate.sleep();
+        
+        // Ross drives in positive x direction (forwards) - only if not done
+        if (!ross_done) {
+            ross_cmd.linear.x = speed_;
+            ross_cmd.linear.y = 0.0;
+            ross_cmd.linear.z = 0.0;
+            ross_cmd.angular.x = 0.0;
+            ross_cmd.angular.y = 0.0;
+            ross_cmd.angular.z = 0.0;
         }
-
-        RCLCPP_INFO(this->get_logger(), "Drive complete - robots stopped");
-
-        // Shutdown the node
-        rclcpp::shutdown();
+        
+        // Publish commands
+        monica_pub_->publish(monica_cmd);
+        ross_pub_->publish(ross_cmd);
+        
+        // Log progress occasionally
+        static int counter = 0;
+        if (counter % 50 == 0) { // Log every second (50 Hz / 50 = 1 Hz)
+            RCLCPP_INFO(this->get_logger(), "Progress - Monica: %.3f/%.3f m, Ross: %.3f/%.3f m",
+                       monica_distance_traveled_, distance_, ross_distance_traveled_, distance_);
+        }
+        counter++;
     }
-
+    
+    // Publishers
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr monica_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr ross_pub_;
-    rclcpp::TimerBase::SharedPtr start_timer_;
+    
+    // Subscribers
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr monica_odom_sub_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr ross_odom_sub_;
+    
+    // Timer
+    rclcpp::TimerBase::SharedPtr control_timer_;
+    
+    // Parameters
     double distance_;
     double speed_;
+    
+    // Monica state
+    double monica_start_x_, monica_start_y_;
+    double monica_current_x_, monica_current_y_;
+    double monica_distance_traveled_;
+    bool monica_odom_initialized_;
+    
+    // Ross state
+    double ross_start_x_, ross_start_y_;
+    double ross_current_x_, ross_current_y_;
+    double ross_distance_traveled_;
+    bool ross_odom_initialized_;
 };
 
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<DualLinearConstantVelocityOpenLoop>();
+    auto node = std::make_shared<DualLinearConstantVelocityDistanceBased>();
     
     // Keep the node alive until it shuts itself down
     rclcpp::spin(node);

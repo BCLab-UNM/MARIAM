@@ -43,9 +43,6 @@ public:
         ross_prev_y_error_ = 0.0;
         ross_y_error_integral_ = 0.0;
         
-        // Distance tolerance
-        distance_tolerance_ = 0.01;
-        
         // Create publishers
         monica_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("monica/cmd_vel", 10);
         ross_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("ross/cmd_vel", 10);
@@ -109,10 +106,10 @@ private:
         }
         
         // Check if both robots have reached their target distance
-        bool monica_done = monica_distance_traveled_ >= (distance_ - distance_tolerance_);
-        bool ross_done = ross_distance_traveled_ >= (distance_ - distance_tolerance_);
+        bool monica_done = monica_distance_traveled_ >= (distance_);
+        bool ross_done = ross_distance_traveled_ >= (distance_);
         
-        if (monica_done && ross_done) {
+        if (monica_done || ross_done) {
             // Stop both robots
             geometry_msgs::msg::Twist stop_cmd;
             monica_pub_->publish(stop_cmd);
@@ -224,7 +221,6 @@ private:
     // Parameters
     double distance_;
     double speed_;
-    double distance_tolerance_;
     double kp_angular_;
     double ki_angular_;
     double kd_angular_;

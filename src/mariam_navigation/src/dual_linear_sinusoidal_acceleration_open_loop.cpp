@@ -4,22 +4,26 @@
 #include <chrono>
 #include <cmath>
 
-class DualLinearSinusoidalVelocityOpenLoop : public rclcpp::Node
+class DualLinearSinusoidalAccelerationOpenLoop : public rclcpp::Node
 {
 public:
-    DualLinearSinusoidalVelocityOpenLoop() : Node("dual_linear_sinusoidal_velocity_open_loop")
+    DualLinearSinusoidalAccelerationOpenLoop() : Node("dual_linear_sinusoidal_acceleration_open_loop")
     {
         // Declare parameters with defaults
         this->declare_parameter("distance", 2.0);
-        this->declare_parameter("max_speed", 0.3);
-        this->declare_parameter("min_speed", 0.05);
+        this->declare_parameter("max_acceleration", 0.5);
+        this->declare_parameter("min_acceleration", 0.1);
         this->declare_parameter("wavelength", 4.0);
+        this->declare_parameter("initial_velocity", 0.1);
+        this->declare_parameter("max_velocity", 5.0);
         
         // Get parameters
         distance_ = this->get_parameter("distance").as_double();
-        max_speed_ = this->get_parameter("max_speed").as_double();
-        min_speed_ = this->get_parameter("min_speed").as_double();
+        max_acceleration_ = this->get_parameter("max_acceleration").as_double();
+        min_acceleration_ = this->get_parameter("min_acceleration").as_double();
         wavelength_ = this->get_parameter("wavelength").as_double();
+        initial_velocity_ = this->get_parameter("initial_velocity").as_double();
+        max_velocity_ = this->get_parameter("max_velocity").as_double();
         
         // Initialize odometry tracking variables
         monica_odom_initialized_ = false;
@@ -27,6 +31,10 @@ public:
         monica_distance_traveled_ = 0.0;
         ross_distance_traveled_ = 0.0;
         driving_started_ = false;
+        
+        // Initialize velocity tracking
+        monica_velocity_ = initial_velocity_;
+        ross_velocity_ = initial_velocity_;
 
         // Create publishers for both robots
         monica_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("monica/cmd_vel", 10);
@@ -35,14 +43,14 @@ public:
         // Create subscribers for odometry
         monica_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "monica/wheel/odom", 10,
-            std::bind(&DualLinearSinusoidalVelocityOpenLoop::monica_odom_callback, this, std::placeholders::_1));
+            std::bind(&DualLinearSinusoidalAccelerationOpenLoop::monica_odom_callback, this, std::placeholders::_1));
         
         ross_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "ross/wheel/odom", 10,
-            std::bind(&DualLinearSinusoidalVelocityOpenLoop::ross_odom_callback, this, std::placeholders::_1));
+            std::bind(&DualLinearSinusoidalAccelerationOpenLoop::ross_odom_callback, this, std::placeholders::_1));
         
-        RCLCPP_INFO(this->get_logger(), "Starting dual robot sinusoidal drive - Distance: %.2f m, Max Speed: %.2f m/s, Min Speed: %.2f m/s, Wavelength: %.2f s",
-                    distance_, max_speed_, min_speed_, wavelength_);
+        RCLCPP_INFO(this->get_logger(), "Starting dual robot sinusoidal acceleration drive - Distance: %.2f m, Max Accel: %.2f m/s², Min Accel: %.2f m/s², Wavelength: %.2f s, Initial Vel: %.2f m/s",
+                    distance_, max_acceleration_, min_acceleration_, wavelength_, initial_velocity_);
         
         // Use a timer to start driving after the node is fully initialized
         start_timer_ = this->create_wall_timer(
@@ -99,16 +107,17 @@ private:
             return;
         }
         
-        RCLCPP_INFO(this->get_logger(), "Odometry initialized. Starting sinusoidal drive...");
+        RCLCPP_INFO(this->get_logger(), "Odometry initialized. Starting sinusoidal acceleration drive...");
         
         // Record start time
         start_time_ = std::chrono::steady_clock::now();
+        last_time_ = start_time_;
         driving_started_ = true;
         
         // Start control timer at 50 Hz
         control_timer_ = this->create_wall_timer(
             std::chrono::milliseconds(20), // 50 Hz
-            std::bind(&DualLinearSinusoidalVelocityOpenLoop::control_callback, this));
+            std::bind(&DualLinearSinusoidalAccelerationOpenLoop::control_callback, this));
     }
     
     void control_callback()
@@ -118,9 +127,9 @@ private:
         bool ross_done = ross_distance_traveled_ >= distance_;
         
         // Add info message to monitor progress
-        RCLCPP_INFO(this->get_logger(), "Monica: %.3f m (done: %s) | Ross: %.3f m (done: %s)", 
-                    monica_distance_traveled_, monica_done ? "true" : "false",
-                    ross_distance_traveled_, ross_done ? "true" : "false");
+        RCLCPP_INFO(this->get_logger(), "Monica: %.3f m (done: %s, vel: %.3f) | Ross: %.3f m (done: %s, vel: %.3f)", 
+                    monica_distance_traveled_, monica_done ? "true" : "false", monica_velocity_,
+                    ross_distance_traveled_, ross_done ? "true" : "false", ross_velocity_);
         
         if (monica_done || ross_done) {
             control_timer_->cancel();
@@ -128,21 +137,35 @@ private:
             return;
         }
         
-        // Calculate elapsed time and sinusoidal velocity
+        // Calculate elapsed time and time delta
         auto current_time = std::chrono::steady_clock::now();
         double elapsed_time = std::chrono::duration<double>(current_time - start_time_).count();
+        double dt = std::chrono::duration<double>(current_time - last_time_).count();
+        last_time_ = current_time;
         
-        // Calculate sinusoidal velocity
+        // Calculate sinusoidal acceleration
         double frequency = 1.0 / wavelength_;  // Convert wavelength to frequency
         double sin_value = std::sin(2.0 * M_PI * frequency * elapsed_time);
-        double speed = min_speed_ + (max_speed_ - min_speed_) * (sin_value + 1.0) / 2.0;
+        double acceleration = min_acceleration_ + (max_acceleration_ - min_acceleration_) * (sin_value + 1.0) / 2.0;
+        
+        // Update velocities using acceleration and time delta
+        monica_velocity_ += acceleration * dt;
+        ross_velocity_ += acceleration * dt;
+        
+        // Clamp velocities to maximum limit to prevent runaway
+        monica_velocity_ = std::min(monica_velocity_, max_velocity_);
+        ross_velocity_ = std::min(ross_velocity_, max_velocity_);
+        
+        // Also prevent negative velocities for safety
+        monica_velocity_ = std::max(monica_velocity_, 0.0);
+        ross_velocity_ = std::max(ross_velocity_, 0.0);
         
         // Create velocity messages
         geometry_msgs::msg::Twist monica_cmd;
         geometry_msgs::msg::Twist ross_cmd;
         
         // Monica drives in negative x direction (backwards)
-        monica_cmd.linear.x = -speed;
+        monica_cmd.linear.x = -monica_velocity_;
         monica_cmd.linear.y = 0.0;
         monica_cmd.linear.z = 0.0;
         monica_cmd.angular.x = 0.0;
@@ -150,7 +173,7 @@ private:
         monica_cmd.angular.z = 0.0;
         
         // Ross drives in positive x direction (forwards)
-        ross_cmd.linear.x = speed;
+        ross_cmd.linear.x = ross_velocity_;
         ross_cmd.linear.y = 0.0;
         ross_cmd.linear.z = 0.0;
         ross_cmd.angular.x = 0.0;
@@ -180,8 +203,8 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         
-        RCLCPP_INFO(this->get_logger(), "Drive complete - Monica traveled: %.2f m, Ross traveled: %.2f m",
-                    monica_distance_traveled_, ross_distance_traveled_);
+        RCLCPP_INFO(this->get_logger(), "Drive complete - Monica traveled: %.2f m (final vel: %.2f m/s), Ross traveled: %.2f m (final vel: %.2f m/s)",
+                    monica_distance_traveled_, monica_velocity_, ross_distance_traveled_, ross_velocity_);
         
         // Shutdown the node
         rclcpp::shutdown();
@@ -201,15 +224,20 @@ private:
     
     // Timing
     std::chrono::steady_clock::time_point start_time_;
+    std::chrono::steady_clock::time_point last_time_;
     
     // Parameters
     double distance_;
-    double max_speed_;
-    double min_speed_;
+    double max_acceleration_;
+    double min_acceleration_;
     double wavelength_;
+    double initial_velocity_;
+    double max_velocity_;
     
     // State
     bool driving_started_;
+    double monica_velocity_;
+    double ross_velocity_;
     
     // Odometry tracking
     bool monica_odom_initialized_;
@@ -225,7 +253,7 @@ private:
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<DualLinearSinusoidalVelocityOpenLoop>();
+    auto node = std::make_shared<DualLinearSinusoidalAccelerationOpenLoop>();
     
     // Keep the node alive until it shuts itself down
     rclcpp::spin(node);

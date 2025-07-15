@@ -15,6 +15,11 @@ topics:
     from_domain: 1
     to_domain: 0
 
+  monica/tf:
+    type: tf2_msgs/msg/TFMessage
+    from_domain: 1
+    to_domain: 0
+
   # Ross topics output
   ross/force:
     type: std_msgs/msg/Float32
@@ -23,6 +28,11 @@ topics:
 
   ross/wheel/odom:
     type: nav_msgs/msg/Odometry
+    from_domain: 2
+    to_domain: 0
+
+  ross/tf:
+    type: tf2_msgs/msg/TFMessage
     from_domain: 2
     to_domain: 0
 

@@ -44,6 +44,7 @@ add_executable(dual_linear_constant_velocity_open_loop src/dual_linear_constant_
 ament_target_dependencies(dual_linear_constant_velocity_open_loop
   rclcpp
   geometry_msgs
+  nav_msgs
 )
 
 # Create the dual_linear_constant_velocity_closed_loop executable
@@ -62,6 +63,14 @@ ament_target_dependencies(dual_linear_sinusoidal_velocity_open_loop
   nav_msgs
 )
 
+# Create the dual_linear_sinusoidal_acceleration_open_loop executable
+add_executable(dual_linear_sinusoidal_acceleration_open_loop src/dual_linear_sinusoidal_acceleration_open_loop.cpp)
+ament_target_dependencies(dual_linear_sinusoidal_acceleration_open_loop
+  rclcpp
+  geometry_msgs
+  nav_msgs
+)
+
 # Install the executables
 install(TARGETS
   dual_waypoint_publisher
@@ -69,6 +78,7 @@ install(TARGETS
   dual_linear_constant_velocity_open_loop
   dual_linear_constant_velocity_closed_loop
   dual_linear_sinusoidal_velocity_open_loop
+  dual_linear_sinusoidal_acceleration_open_loop
   DESTINATION lib/${PROJECT_NAME}
 )
 
