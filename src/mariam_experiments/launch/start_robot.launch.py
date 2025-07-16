@@ -72,17 +72,25 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
 
-    realsense_imu_launch_desc = IncludeLaunchDescription(
+    realsense_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare('mariam_vision'),
                 'launch',
-                'realsense_imu.launch.py'
+                'rs_launch_modified.launch.py'
             ])
         ]),
         launch_arguments={
-            'namespace': robot_name_launch_arg,
-            'unite_imu_method': '2' # use linear interpolation
+            'camera_namespace': robot_name_launch_arg,
+            'tf_prefix': robot_name_launch_arg,
+            'unite_imu_method': '2', # use linear interpolation
+            'enable_gyro': 'true',
+            'enable_accel': 'true',
+            'align_depth.enable': 'true',
+            'enable_depth': 'true',
+            'enable_color': 'true',
+            'enable_sync': 'true',
+            'rgb_camera.profile': '640x360x30'
         }.items()
     )
 
@@ -126,12 +134,25 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
 
-    slam_launch_desc = IncludeLaunchDescription(
+    # slam_launch_desc = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('mariam_localization'),
+    #             'launch',
+    #             'slam.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'namespace': robot_name_launch_arg,
+    #     }.items(),
+    # )
+
+    rtab_slam_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare('mariam_localization'),
                 'launch',
-                'slam.launch.py'
+                'rtab_slam.launch.py'
             ])
         ]),
         launch_arguments={
@@ -167,14 +188,15 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        px100_controller_desc,
+        # px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
-        realsense_imu_launch_desc,
+        realsense_launch_desc,
         ekf_launch_desc,
         imu_filter_madgwick_node,
-        slam_launch_desc,
-        nav2_bringup_launch_desc
+        rtab_slam_launch_desc,
+        # slam_launch_desc,
+        # nav2_bringup_launch_desc
         # robot_follower_node
     ]
 
