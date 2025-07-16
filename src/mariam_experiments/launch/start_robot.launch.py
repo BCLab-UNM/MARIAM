@@ -134,18 +134,21 @@ def launch_setup(context, *args, **kwargs):
         }.items()
     )
 
-    # slam_launch_desc = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource([
-    #         PathJoinSubstitution([
-    #             FindPackageShare('mariam_localization'),
-    #             'launch',
-    #             'slam.launch.py'
-    #         ])
-    #     ]),
-    #     launch_arguments={
-    #         'namespace': robot_name_launch_arg,
-    #     }.items(),
-    # )
+    slam_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_localization'),
+                'launch',
+                'slam.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        }.items(),
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('use_rtab'), "' == 'false'"
+        ]))
+    )
 
     rtab_slam_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -158,6 +161,9 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             'namespace': robot_name_launch_arg,
         }.items(),
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('use_rtab'), "' == 'true'"
+        ]))
     )
     
     nav2_bringup_launch_desc = IncludeLaunchDescription(
@@ -171,6 +177,9 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             'namespace': robot_name_launch_arg,
         }.items(),
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('use_rtab'), "' == 'false'"
+        ]))
     )
 
     robot_follower_node = Node(
@@ -188,15 +197,15 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        # px100_controller_desc,
+        px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_launch_desc,
         ekf_launch_desc,
         imu_filter_madgwick_node,
         rtab_slam_launch_desc,
-        # slam_launch_desc,
-        # nav2_bringup_launch_desc
+        slam_launch_desc,
+        nav2_bringup_launch_desc
         # robot_follower_node
     ]
 
@@ -215,6 +224,12 @@ def generate_launch_description():
             default_value='true',
             choices=('true', 'false'),
             description='Whether to use admittance control'
+        ),
+        DeclareLaunchArgument(
+            'use_rtab',
+            default_value='false',
+            choices=('true', 'false'),
+            description='Whether to use RTAB-SLAM for localization'
         )
     ]
 
