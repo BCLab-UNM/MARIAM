@@ -95,17 +95,16 @@ def launch_setup(context, *args, **kwargs):
         parameters=[
             {'stateless': False},
             {'use_mag': False},
-            {'publish_tf': False},
+            {'publish_tf': True},
             {'reverse_tf': False},
-            {'fixed_frame': "odom"},
+            {'fixed_frame': "base_footprint"},
             {'constant_dt': 0.0},
             {'publish_debug_topics': False},
-            {'world_frame': "odom"},
+            # NOTE: this paprameter sets the orientation 
+            # of the axes for the robot
+            {'world_frame': "ENU"},
             {'gain': 0.1},
             {'zeta': 0.0},
-            {'mag_bias_x': 0.0},
-            {'mag_bias_y': 0.0},
-            {'mag_bias_z': 0.0},
             {'orientation_stddev': 0.0}
         ],
         remappings=[
