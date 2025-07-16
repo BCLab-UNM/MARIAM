@@ -100,23 +100,24 @@ def launch_setup(context, *args, **kwargs):
         name='imu_filter',
         namespace=robot_name_launch_arg,
         output='screen',
-        parameters=[
-            {'stateless': False},
-            {'use_mag': False},
-            {'publish_tf': True},
-            {'reverse_tf': False},
-            {'fixed_frame': "base_footprint"},
-            {'constant_dt': 0.0},
-            {'publish_debug_topics': False},
+        parameters=[{
+            'stateless': False,
+            'use_mag': False,
+            'publish_tf': False,
+            'reverse_tf': False,
+            'fixed_frame': "base_footprint",
+            'constant_dt': 0.0,
+            'publish_debug_topics': False,
             # NOTE: this paprameter sets the orientation 
             # of the axes for the robot
-            {'world_frame': "ENU"},
-            {'gain': 0.1},
-            {'zeta': 0.0},
-            {'orientation_stddev': 0.0}
-        ],
+            'world_frame': 'enu',
+            'gain': 0.1,
+            'zeta': 0.0,
+            'orientation_stddev': 0.0
+        }],
         remappings=[
-            ('imu/data_raw', 'camera/imu')
+            ('imu/data_raw', 'camera/imu'),
+            ('/tf', 'tf')
         ],
     )
             

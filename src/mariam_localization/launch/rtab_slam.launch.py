@@ -42,10 +42,11 @@ def generate_launch_description():
         description='log level')
 
     parameters=[{
-        'frame_id':'base_footprint',
+        'frame_id':'base_link',
         'subscribe_depth': True,
         'subscribe_odom_info': True,
-        'approx_sync':False,
+        'approx_sync': True,
+        'approx_sync_max_interval': 0.01,
         'wait_imu_to_init': True
     }]
 
@@ -55,9 +56,9 @@ def generate_launch_description():
         ('/map', 'map'),
         ('/map_metadata', 'map_metadata'),
         ('imu', 'imu/data'),
-        ('rgb/image', 'camera/color/image_raw/image_topics'),
+        ('rgb/image', 'camera/color/image_raw'),
         ('rgb/camera_info', 'camera/color/camera_info'),
-        ('depth/image', 'camera/aligned_depth_to_color/image_raw/image_topics')
+        ('depth/image', 'camera/aligned_depth_to_color/image_raw')
     ]
 
     ### Nodes ###
