@@ -10,6 +10,7 @@ from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoin
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 import os
+from ament_index_python.packages import get_package_share_directory
 
 
 def launch_setup(context, *args, **kwargs):
@@ -81,8 +82,37 @@ def launch_setup(context, *args, **kwargs):
         ]),
         launch_arguments={
             'namespace': robot_name_launch_arg,
+            'unite_imu_method': '2' # use linear interpolation
         }.items()
     )
+
+    imu_filter_madgwick_node = Node(
+        package='imu_filter_madgwick',
+        executable='imu_filter_madgwick_node',
+        name='imu_filter',
+        namespace=robot_name_launch_arg,
+        output='screen',
+        parameters=[
+            {'stateless': False},
+            {'use_mag': False},
+            {'publish_tf': False},
+            {'reverse_tf': False},
+            {'fixed_frame': "odom"},
+            {'constant_dt': 0.0},
+            {'publish_debug_topics': False},
+            {'world_frame': "odom"},
+            {'gain': 0.1},
+            {'zeta': 0.0},
+            {'mag_bias_x': 0.0},
+            {'mag_bias_y': 0.0},
+            {'mag_bias_z': 0.0},
+            {'orientation_stddev': 0.0}
+        ],
+        remappings=[
+            ('imu/data_raw', 'camera/imu')
+        ],
+    )
+            
 
     ekf_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -143,6 +173,7 @@ def launch_setup(context, *args, **kwargs):
         mariam_description_launch_desc,
         realsense_imu_launch_desc,
         ekf_launch_desc,
+        imu_filter_madgwick_node,
         slam_launch_desc,
         nav2_bringup_launch_desc
         # robot_follower_node
