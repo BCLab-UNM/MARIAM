@@ -17,6 +17,7 @@ def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     use_sim_time = LaunchConfiguration('use_sim_time')
     log_level = LaunchConfiguration('log_level')
+    slam_params_file = LaunchConfiguration('slam_params_file')
 
     # Declare launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -29,55 +30,50 @@ def generate_launch_description():
         default_value='false',
         description='Use simulation (Gazebo) clock if true')
 
+    declare_log_level_cmd = DeclareLaunchArgument(
+        'log_level', default_value='info',
+        description='log level')
+
     declare_slam_params_file_cmd = DeclareLaunchArgument(
         'slam_params_file',
         default_value=os.path.join(
             get_package_share_directory('mariam_localization'), 
             'config', 
             'rtab_slam_params.yaml'),
-        description='Full path to the slam_toolbox parameters file')
-
-    declare_log_level_cmd = DeclareLaunchArgument(
-        'log_level', default_value='info',
-        description='log level')
-
-    parameters=[{
-        'frame_id':'base_link',
-        'subscribe_depth': True,
-        'subscribe_odom_info': True,
-        'approx_sync': True,
-        'approx_sync_max_interval': 0.01,
-        'wait_imu_to_init': True
-    }]
+        description='Full path to the RTAB SLAM parameters file')
 
     remappings = [
         ('/tf', 'tf'),
         ('/tf_static', 'tf_static'),
         ('/map', 'map'),
         ('/map_metadata', 'map_metadata'),
-        ('imu', 'imu/data'),
+        # ('imu', 'imu/data'),
+        # ('imu', 'camera/imu'),
         ('rgb/image', 'camera/color/image_raw'),
         ('rgb/camera_info', 'camera/color/camera_info'),
-        ('depth/image', 'camera/aligned_depth_to_color/image_raw')
+        ('depth/image', 'camera/aligned_depth_to_color/image_raw'),
+        ('odom', 'odometry/filtered'),
+        # ('odom', 'wheel/odom'),
+
     ]
 
     ### Nodes ###
 
-    rtab_odom_node = Node(
-        namespace=namespace,
-        package='rtabmap_odom',
-        executable='rgbd_odometry',
-        output='screen',
-        parameters=parameters,
-        remappings=remappings
-    )
+    # rtab_odom_node = Node(
+    #     namespace=namespace,
+    #     package='rtabmap_odom',
+    #     executable='rgbd_odometry',
+    #     output='screen',
+    #     parameters=parameters,
+    #     remappings=remappings
+    # )
 
     rtab_slam_node = Node(
         namespace=namespace,
         package='rtabmap_slam',
         executable='rtabmap',
         output='screen',
-        parameters=parameters,
+        parameters=[slam_params_file],
         remappings=remappings,
         arguments=['-d']
     )
@@ -94,7 +90,7 @@ def generate_launch_description():
     ld.add_action(declare_log_level_cmd)
 
     # Add nodes
-    ld.add_action(rtab_odom_node)
+    # ld.add_action(rtab_odom_node)
     ld.add_action(rtab_slam_node)
 
     return ld
