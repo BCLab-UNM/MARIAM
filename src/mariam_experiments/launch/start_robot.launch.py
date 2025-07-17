@@ -84,7 +84,7 @@ def launch_setup(context, *args, **kwargs):
             'camera_namespace': robot_name_launch_arg,
             'tf_prefix': robot_name_launch_arg,
             'unite_imu_method': '2', # use linear interpolation
-            'enable_gyro': 'true',
+            # 'enable_gyro': 'true',
             'enable_accel': 'true',
             'align_depth.enable': 'true',
             'enable_depth': 'true',
@@ -198,15 +198,15 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        px100_controller_desc,
+        # px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_launch_desc,
         ekf_launch_desc,
-        imu_filter_madgwick_node,
+        # imu_filter_madgwick_node,
         rtab_slam_launch_desc,
-        slam_launch_desc,
-        nav2_bringup_launch_desc
+        # slam_launch_desc,
+        # nav2_bringup_launch_desc
         # robot_follower_node
     ]
 
