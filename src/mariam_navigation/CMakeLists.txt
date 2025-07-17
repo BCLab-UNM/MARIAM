@@ -7,92 +7,42 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(rclcpp_action REQUIRED)
+find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(nav2_msgs REQUIRED)
-find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
-find_package(tf2_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
-# Create the existing executable
-add_executable(dual_waypoint_publisher src/dual_waypoint_publisher.cpp)
-ament_target_dependencies(dual_waypoint_publisher
-  rclcpp
-  rclcpp_action
-  geometry_msgs
-  nav2_msgs
-  tf2_ros
-  tf2_geometry_msgs
-  tf2_msgs 
+# Generate custom messages
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/TrajectoryPoint.msg"
+  "msg/Trajectory.msg"
+  DEPENDENCIES builtin_interfaces std_msgs geometry_msgs
 )
 
-# Create the new robot follower executable
-add_executable(robot_follower src/robot_follower.cpp)
-ament_target_dependencies(robot_follower
-  rclcpp
-  geometry_msgs
-  tf2_ros
-  tf2_geometry_msgs
-  tf2_msgs 
-)
-
-# Create the dual_linear_constant_velocity_open_loop executable
-add_executable(dual_linear_constant_velocity_open_loop src/dual_linear_constant_velocity_open_loop.cpp)
-ament_target_dependencies(dual_linear_constant_velocity_open_loop
-  rclcpp
-  geometry_msgs
-  nav_msgs
-)
-
-# Create the dual_linear_constant_velocity_closed_loop executable
-add_executable(dual_linear_constant_velocity_closed_loop src/dual_linear_constant_velocity_closed_loop.cpp)
-ament_target_dependencies(dual_linear_constant_velocity_closed_loop
-  rclcpp
-  geometry_msgs
-  nav_msgs
-)
-
-# Create the dual_linear_sinusoidal_velocity_open_loop executable
-add_executable(dual_linear_sinusoidal_velocity_open_loop src/dual_linear_sinusoidal_velocity_open_loop.cpp)
-ament_target_dependencies(dual_linear_sinusoidal_velocity_open_loop
-  rclcpp
-  geometry_msgs
-  nav_msgs
-)
-
-# Create the dual_linear_sinusoidal_acceleration_open_loop executable
-add_executable(dual_linear_sinusoidal_acceleration_open_loop src/dual_linear_sinusoidal_acceleration_open_loop.cpp)
-ament_target_dependencies(dual_linear_sinusoidal_acceleration_open_loop
-  rclcpp
-  geometry_msgs
-  nav_msgs
-)
-
-# Install the executables
-install(TARGETS
-  dual_waypoint_publisher
-  robot_follower
-  dual_linear_constant_velocity_open_loop
-  dual_linear_constant_velocity_closed_loop
-  dual_linear_sinusoidal_velocity_open_loop
-  dual_linear_sinusoidal_acceleration_open_loop
+# Install Python executables
+install(PROGRAMS
+  scripts/trajectory_generator.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install folders
-install(
-  DIRECTORY config maps launch
-  DESTINATION share/${PROJECT_NAME}
+# Install launch files
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+# Install config files
+install(DIRECTORY
+  config
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
-  set(ament_cmake_copyright_FOUND TRUE)
-  set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+ament_export_dependencies(rosidl_default_runtime)
 ament_package()

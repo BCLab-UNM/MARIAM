@@ -1,0 +1,14 @@
+# config/trajectory_params.yaml
+trajectory_generator:
+  ros__parameters:
+    # Velocity constraints
+    max_linear_velocity: 0.5      # m/s
+    max_angular_velocity: 0.4     # rad/s
+    
+    # Acceleration constraints
+    max_linear_acceleration: 0.4  # m/s²
+    max_angular_acceleration: 0.4 # rad/s²
+    
+    # Trajectory generation parameters
+    trajectory_time_step: 0.1     # seconds between trajectory points
+    goal_tolerance: 0.05          # meters - distance to consider goal reached
