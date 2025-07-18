@@ -10,7 +10,6 @@ from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoin
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 import os
-from ament_index_python.packages import get_package_share_directory
 
 
 def launch_setup(context, *args, **kwargs):
@@ -84,6 +83,7 @@ def launch_setup(context, *args, **kwargs):
             'camera_namespace': robot_name_launch_arg,
             'tf_prefix': robot_name_launch_arg,
             'unite_imu_method': '2', # use linear interpolation
+            # enable this to use the IMU
             # 'enable_gyro': 'true',
             'enable_accel': 'true',
             'align_depth.enable': 'true',
@@ -145,10 +145,7 @@ def launch_setup(context, *args, **kwargs):
         ]),
         launch_arguments={
             'namespace': robot_name_launch_arg,
-        }.items(),
-        condition=IfCondition(PythonExpression([
-            "'", LaunchConfiguration('use_rtab'), "' == 'false'"
-        ]))
+        }.items()
     )
 
     rtab_slam_launch_desc = IncludeLaunchDescription(
@@ -161,10 +158,7 @@ def launch_setup(context, *args, **kwargs):
         ]),
         launch_arguments={
             'namespace': robot_name_launch_arg,
-        }.items(),
-        condition=IfCondition(PythonExpression([
-            "'", LaunchConfiguration('use_rtab'), "' == 'true'"
-        ]))
+        }.items()
     )
     
     nav2_bringup_launch_desc = IncludeLaunchDescription(
@@ -177,10 +171,7 @@ def launch_setup(context, *args, **kwargs):
         ]),
         launch_arguments={
             'namespace': robot_name_launch_arg,
-        }.items(),
-        condition=IfCondition(PythonExpression([
-            "'", LaunchConfiguration('use_rtab'), "' == 'false'"
-        ]))
+        }.items()
     )
 
     robot_follower_node = Node(
@@ -191,20 +182,19 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
         parameters=[{
             'robot_name': robot_name_launch_arg,
-        }],
-        condition=IfCondition(PythonExpression([
-            "'", robot_name_launch_arg, "' == 'ross'"
-        ]))
+        }]
     )
 
     return [
-        # px100_controller_desc,
+        px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_launch_desc,
         ekf_launch_desc,
-        # imu_filter_madgwick_node,
         rtab_slam_launch_desc,
+
+        # unused nodes / launch descriptions
+        # imu_filter_madgwick_node,
         # slam_launch_desc,
         # nav2_bringup_launch_desc
         # robot_follower_node
@@ -225,12 +215,6 @@ def generate_launch_description():
             default_value='true',
             choices=('true', 'false'),
             description='Whether to use admittance control'
-        ),
-        DeclareLaunchArgument(
-            'use_rtab',
-            default_value='false',
-            choices=('true', 'false'),
-            description='Whether to use RTAB-SLAM for localization'
         )
     ]
 
