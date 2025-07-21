@@ -85,12 +85,22 @@ def launch_setup(context, *args, **kwargs):
             'unite_imu_method': '2', # use linear interpolation
             # enable this to use the IMU
             # 'enable_gyro': 'true',
-            'enable_accel': 'true',
+            # 'enable_accel': 'true',
             'align_depth.enable': 'true',
+            
+            # depth settings
             'enable_depth': 'true',
+            'depth_module.depth_profile': '424,240,30',
+            'depth_module.enable_auto_exposure': 'false',
+
+            # color settings
             'enable_color': 'true',
+            'rgb_camera.color_profile': '424,240,30',
+            'rgb_camera.enable_auto_exposure': 'false',
+
             'enable_sync': 'true',
-            'rgb_camera.profile': '640x360x30'
+
+            'initial_reset': 'true',
         }.items()
     )
 
@@ -111,9 +121,9 @@ def launch_setup(context, *args, **kwargs):
             # NOTE: this paprameter sets the orientation 
             # of the axes for the robot
             'world_frame': 'enu',
-            'gain': 0.1,
-            'zeta': 0.0,
-            'orientation_stddev': 0.0
+            'gain': 0.03,
+            'zeta': 0.001,
+            'orientation_stddev': 0.05
         }],
         remappings=[
             ('imu/data_raw', 'camera/imu'),

@@ -42,7 +42,7 @@ def generate_launch_description():
         ('/tf_static', 'tf_static'),
         ('/map', 'map'),
         ('/map_metadata', 'map_metadata'),
-        # ('imu', 'imu/data'),
+        # ('imu', 'imu/data/null'),
         # ('imu', 'camera/imu'),
         ('rgb/image', 'camera/color/image_raw'),
         ('rgb/camera_info', 'camera/color/camera_info'),
