@@ -43,7 +43,7 @@ def generate_launch_description():
         ('/map', 'map'),
         ('/map_metadata', 'map_metadata'),
         # ('imu', 'imu/data/null'),
-        # ('imu', 'camera/imu'),
+        ('imu', 'imu/data'),
         ('rgb/image', 'camera/color/image_raw'),
         ('rgb/camera_info', 'camera/color/camera_info'),
         ('depth/image', 'camera/aligned_depth_to_color/image_raw'),

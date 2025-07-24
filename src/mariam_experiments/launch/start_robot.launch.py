@@ -83,15 +83,15 @@ def launch_setup(context, *args, **kwargs):
             'camera_namespace': robot_name_launch_arg,
             'tf_prefix': robot_name_launch_arg,
             'unite_imu_method': '2', # use linear interpolation
-            # enable this to use the IMU
-            # 'enable_gyro': 'true',
-            # 'enable_accel': 'true',
-            'align_depth.enable': 'true',
+            # enable these to use the IMU
+            'enable_gyro': 'true',
+            'enable_accel': 'true',
             
             # depth settings
             'enable_depth': 'true',
             'depth_module.depth_profile': '424,240,30',
             'depth_module.enable_auto_exposure': 'false',
+            'align_depth.enable': 'true',
 
             # color settings
             'enable_color': 'true',
@@ -196,7 +196,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        px100_controller_desc,
+        # px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_launch_desc,
@@ -204,7 +204,7 @@ def launch_setup(context, *args, **kwargs):
         rtab_slam_launch_desc,
 
         # unused nodes / launch descriptions
-        # imu_filter_madgwick_node,
+        imu_filter_madgwick_node,
         # slam_launch_desc,
         # nav2_bringup_launch_desc
         # robot_follower_node

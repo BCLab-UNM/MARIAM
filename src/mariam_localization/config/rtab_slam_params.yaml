@@ -20,8 +20,18 @@
       Rtabmap/DetectionRate: 30.0
       
       Kp/MaxDepth: 4
-      Kp/MaxFeatures: 200
+      Kp/MaxFeatures: 500
+
+      Vis/MaxFeatures: 600
 
       # Force RTAB to only map out (x, y, theta)
       Reg/Force3DoF: true
+      RGBD/ForceOdom3DoF: true
       Grid/3D: false # only create a 2D map
+
+      Vis/CorType: 1
+
+      # IMU Madgwick parameters
+      ImuFilter/MadgwickGain: 0.03
+      ImuFilter/MadgwickZeta: 0.001
+

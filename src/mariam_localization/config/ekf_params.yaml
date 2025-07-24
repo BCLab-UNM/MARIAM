@@ -18,25 +18,24 @@
     # Wheel Odometry Configuration
     odom0: wheel/odom
     odom0_config: [true, true, false, # X, Y, Z
-                  false, false, true,  # roll, pitch, yaw
+                  false, false, false,  # roll, pitch, yaw
                   true, false, false, # X vel, Y vel, Z vel
-                  false, false, true, # roll vel, pitch vel, yaw vel
+                  false, false, false, # roll vel, pitch vel, yaw vel
                   false, false, false] # X accel, Y accel, Z accel
     odom0_queue_size: 10
     odom0_nodelay: false
 
     # IMU Configuration
-    # imu0: camera/imu
-    # imu0: imu/data
-    # imu0_config: [false, false, false, # X, Y, Z
-    #               false, false, true,  # roll, pitch, yaw
-    #               false, false, false, # X vel, Y vel, Z vel
-    #               false, false, true, # roll vel, pitch vel, yaw vel
-    #               false, false, false] # X accel, Y accel, Z accel
-    # imu0_differential: false
-    # imu0_relative: true
-    # imu0_queue_size: 10
-    # imu0_nodelay: false
+    imu0: imu/data
+    imu0_config: [false, false, false, # X, Y, Z
+                  false, false, true,  # roll, pitch, yaw
+                  false, false, false, # X vel, Y vel, Z vel
+                  false, false, true, # roll vel, pitch vel, yaw vel
+                  true, true, true] # X accel, Y accel, Z accel
+    imu0_differential: false
+    imu0_relative: true
+    imu0_queue_size: 10
+    imu0_nodelay: false
 
     # Process noise covariance (Q matrix) - compact format
     process_noise_covariance: [
