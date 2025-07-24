@@ -115,7 +115,7 @@ def launch_setup(context, *args, **kwargs):
             'use_mag': False,
             'publish_tf': False,
             'reverse_tf': False,
-            'fixed_frame': "base_footprint",
+            'fixed_frame': "odom",
             'constant_dt': 0.0,
             'publish_debug_topics': False,
             # NOTE: this paprameter sets the orientation 
@@ -196,7 +196,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
-        # px100_controller_desc,
+        px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         realsense_launch_desc,
