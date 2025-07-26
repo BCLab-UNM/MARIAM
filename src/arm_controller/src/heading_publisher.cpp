@@ -45,7 +45,7 @@ private:
 
     try {
       t = tf_buffer_->lookupTransform(
-        baseLinkFrame, referenceFrame,
+        referenceFrame, baseLinkFrame,
         tf2::TimePointZero);
 
     } catch (const tf2::TransformException & ex) {
