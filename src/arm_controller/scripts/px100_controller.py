@@ -38,13 +38,13 @@ class ArmController(InterbotixManipulatorXS):
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
-    monica_base_link_pose = np.zeros((4, 4))
-    ross_base_link_pose = np.zeros((4, 4))
+    monica_base_link_pose = np.identity(4)
+    ross_base_link_pose = np.identity(4)
 
     # transformation matrix between the odom frame and the other odom frame
     T_oi = np.array([
-        [1, 0, 0, 0.25],
-        [0, 1, 0, 0.0],
+        [-1, 0, 0, 0.25],
+        [0, -1, 0, 0.0],
         [0, 0, 1, 0.0],
         [0, 0, 0, 1]
     ])
@@ -65,6 +65,8 @@ class ArmController(InterbotixManipulatorXS):
         self.rate = self.core.get_node().create_rate(self.loop_rate)
         # set the robot name
         self.robot_name = pargs.robot_name
+        self.track_other_robot = (
+            True if pargs.track_other_robot == 'true' else False)
 
         self.joint_group_pub = self.core.get_node().create_publisher(
             JointGroupCommand,
@@ -78,22 +80,23 @@ class ArmController(InterbotixManipulatorXS):
             self.update_desired_pose_cb,
             10
         )
-        
-        # subscribe to the base link pose publisher for both robots
-        # This could help make calculations a bit easier 
-        self.core.get_node().create_subscription(
-            Pose,
-            '/monica/px100_base_link_pose',
-            self.update_monica_base_link_pose_cb,
-            10
-        )
-        
-        self.core.get_node().create_subscription(
-            Pose,
-            '/ross/px100_base_link_pose',
-            self.update_ross_base_link_pose_cb,
-            10
-        )
+
+        if self.track_other_robot:
+            # subscribe to the base link pose publisher for both robots
+            # This could help make calculations a bit easier
+            self.core.get_node().create_subscription(
+                Pose,
+                '/monica/px100_base_link_pose',
+                self.update_monica_base_link_pose_cb,
+                10
+            )
+
+            self.core.get_node().create_subscription(
+                Pose,
+                '/ross/px100_base_link_pose',
+                self.update_ross_base_link_pose_cb,
+                10
+            )
 
         self.core.get_node().loginfo(f'Robot name: {self.robot_name}')
 
@@ -142,7 +145,8 @@ class ArmController(InterbotixManipulatorXS):
         desired_trans_matrix[1, 3] = desired_pose.position.y
         desired_trans_matrix[2, 3] = desired_pose.position.z
 
-        self.adjust_heading(desired_trans_matrix)
+        if self.track_other_robot:
+            self.adjust_heading(desired_trans_matrix)
 
         trans_matrix = self.arm.get_ee_pose_command()
 
@@ -176,36 +180,47 @@ class ArmController(InterbotixManipulatorXS):
             # compute the pose of ross' base in monica's odom frame
             T_ross_in_monica_odom = self.T_oi @ self.ross_base_link_pose
             # compute the pose of ross' base relative to monica's base link
-            T_ross_in_monica_base = np.linalg.inv(self.monica_base_link_pose) \
-                @ T_ross_in_monica_odom
+            T_ross_in_monica_base = np.linalg.inv(
+                self.monica_base_link_pose) @ T_ross_in_monica_odom
 
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_ross_in_monica_base[1, 0],
-                               T_ross_in_monica_base[0, 0])
+            theta = np.pi - np.arctan2(T_ross_in_monica_base[1, 0],
+                                       T_ross_in_monica_base[0, 0])
+
+            yaw = np.arctan2(T_sd[1, 0], T_sd[0, 0])
+
+            theta = theta - yaw
 
             # adjust the desired transformation matrix
             theta_offset = np.array(
                 R.from_euler('z', theta, degrees=False).as_matrix())
 
+            self.log_info(f'Adjusting heading by {theta} radians')
+
             T_sd[:3, :3] = T_sd[:3, :3] @ theta_offset
-        
+
         elif self.robot_name == 'ross':
             # compute the pose of monica's base in ross' odom frame
             T_monica_in_ross_odom = self.T_oi @ self.monica_base_link_pose
             # compute the pose of monica's base relative to ross' base link
-            T_monica_in_ross_base = np.linalg.inv(self.ross_base_link_pose) \
-                @ T_monica_in_ross_odom
+            T_monica_in_ross_base = np.linalg.inv(
+                self.ross_base_link_pose) @ T_monica_in_ross_odom
 
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_monica_in_ross_base[1, 0],
-                               T_monica_in_ross_base[0, 0])
+            theta = np.pi - np.arctan2(T_monica_in_ross_base[1, 0],
+                                       T_monica_in_ross_base[0, 0])
+
+            yaw = np.arctan2(T_sd[1, 0], T_sd[0, 0])
+
+            theta = theta - yaw
+
+            self.log_info(f'Adjusting heading by {theta} radians')
 
             # adjust the desired transformation matrix
             theta_offset = np.array(
                 R.from_euler('z', theta, degrees=False).as_matrix())
 
             T_sd[:3, :3] = T_sd[:3, :3] @ theta_offset
-
 
     def update_desired_pose_cb(self, msg: Pose):
         """
@@ -232,8 +247,6 @@ class ArmController(InterbotixManipulatorXS):
         self.monica_base_link_pose[1, 3] = msg.position.y
         self.monica_base_link_pose[2, 3] = msg.position.z
 
-        
-    
     def update_ross_base_link_pose_cb(self, msg: Pose):
         self.ross_base_link_pose[:3, :3] = R.from_quat([
             msg.orientation.x,
@@ -259,10 +272,12 @@ class ArmController(InterbotixManipulatorXS):
         )
         self.arm.core.get_node().wait_until_future_complete(future)
 
+
 def main(args=None):
     p = argparse.ArgumentParser()
     p.add_argument('--robot_model')
     p.add_argument('--robot_name', default=None)
+    p.add_argument('--track_other_robot', default='false')
     p.add_argument('args', nargs=argparse.REMAINDER)
 
     command_line_args = remove_ros_args(args=sys.argv)[1:]

@@ -19,84 +19,89 @@ from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 from launch.conditions import IfCondition
 
+
 def launch_setup(context, *args, **kwargs):
     robot_model_launch_arg = LaunchConfiguration('robot_model')
     robot_name_launch_arg = LaunchConfiguration('robot_name')
-    
+    track_other_robot_launch_arg = LaunchConfiguration('track_other_robot')
+
     base_link_frame_launch_arg = LaunchConfiguration('base_link_frame')
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
     mode_configs_launch_arg = LaunchConfiguration('mode_configs')
     launch_driver_launch_arg = LaunchConfiguration('launch_driver')
     use_sim_launch_arg = LaunchConfiguration('use_sim')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
-    xs_driver_logging_level_launch_arg = LaunchConfiguration('xs_driver_logging_level')
+    xs_driver_logging_level_launch_arg = LaunchConfiguration(
+        'xs_driver_logging_level')
     use_rsp_launch_arg = LaunchConfiguration('use_rsp')
     use_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
 
-    admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
+    admittance_control_launch_arg = LaunchConfiguration(
+        'use_admittance_control')
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
 
-    #### Nodes and launch descriptions
+    # Nodes and launch descriptions
     px100_controller_node = Node(
         name='px100_controller_node',
         package='arm_controller',
         executable='px100_controller.py',
         namespace=robot_name_launch_arg,
-        output='screen', # change to 'screen' for messages
+        output='screen',  # change to 'screen' for messages
         parameters=[{
             'robot_model': robot_model_launch_arg,
         }],
         arguments=[
             '--robot_model', robot_model_launch_arg.perform(context),
             '--robot_name', robot_name_launch_arg.perform(context),
+            '--track_other_robot', track_other_robot_launch_arg.perform(
+                context),
         ]
     )
 
-    ## Control node launch description
+    # Control node launch description
     xsarm_control_launch = IncludeLaunchDescription(
-                PythonLaunchDescriptionSource([
-                    PathJoinSubstitution([
-                        FindPackageShare('interbotix_xsarm_control'),
-                        'launch',
-                        'xsarm_control.launch.py'
-                    ])
-                ]),
-                launch_arguments={
-                    'robot_model': robot_model_launch_arg,
-                    'robot_name': robot_name_launch_arg,
-                    'base_link_frame': base_link_frame_launch_arg,
-                    'use_rviz': use_rviz_launch_arg,
-                    'mode_configs': mode_configs_launch_arg,
-                    'use_sim': use_sim_launch_arg,
-                    'robot_description': robot_description_launch_arg,
-                    'xs_driver_logging_level': xs_driver_logging_level_launch_arg,
-                    'use_rsp': use_rsp_launch_arg,
-                }.items(),
-                condition=IfCondition(launch_driver_launch_arg)
-            )
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('interbotix_xsarm_control'),
+                'launch',
+                'xsarm_control.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_model': robot_model_launch_arg,
+            'robot_name': robot_name_launch_arg,
+            'base_link_frame': base_link_frame_launch_arg,
+            'use_rviz': use_rviz_launch_arg,
+            'mode_configs': mode_configs_launch_arg,
+            'use_sim': use_sim_launch_arg,
+            'robot_description': robot_description_launch_arg,
+            'xs_driver_logging_level': xs_driver_logging_level_launch_arg,
+            'use_rsp': use_rsp_launch_arg,
+        }.items(),
+        condition=IfCondition(launch_driver_launch_arg)
+    )
 
-    
-    ## Admittance Controller launch description
+    # Admittance Controller launch description
     admittance_control_launch = IncludeLaunchDescription(
-                PythonLaunchDescriptionSource([
-                    PathJoinSubstitution([
-                        FindPackageShare('arm_controller'),
-                        'launch',
-                        'admittance_controller.launch.py'
-                    ])
-                ]),
-                launch_arguments={
-                    'robot_name': robot_name_launch_arg,
-                    'use_fake_force': force_node_launch_arg,
-                    'use_rviz_markers': use_rviz_markers_launch_arg
-                }.items(),
-                condition=IfCondition(
-                    PythonExpression([
-                        "'", admittance_control_launch_arg,
-                        "' == 'true'"
-                    ])
-                )
-            )
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('arm_controller'),
+                'launch',
+                'admittance_controller.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'robot_name': robot_name_launch_arg,
+            'use_fake_force': force_node_launch_arg,
+            'use_rviz_markers': use_rviz_markers_launch_arg
+        }.items(),
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
 
     return [
         px100_controller_node,
@@ -113,6 +118,13 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_name',
             default_value=LaunchConfiguration('robot_model')
+        ),
+        DeclareLaunchArgument(
+            'track_other_robot',
+            default_value='true',
+            choices=('true', 'false'),
+            description=(
+                "if `true`, the PX100 controller will track the other robot's base link pose")
         ),
         DeclareLaunchArgument(
             'use_sim',
@@ -186,5 +198,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-                declared_arguments + [OpaqueFunction(function=launch_setup)]
-            )
+        declared_arguments + [OpaqueFunction(function=launch_setup)]
+    )
