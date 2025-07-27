@@ -48,8 +48,8 @@ class ArmController(Node):
 
     # transformation matrix between the odom frame and the other odom frame
     odom_frame_trans_matrix = np.array([
-        [1, 0, 0, 1.657],
-        [0, 1, 0, 0.0],
+        [-1, 0, 0, 1.657],
+        [0, -1, 0, 0.0],
         [0,  0, 1, 0.0],
         [0,  0, 0, 1.0]
     ])
@@ -217,6 +217,7 @@ class ArmController(Node):
             # compute the pose of monica's base in ross' odom frame
             T_monica_base_in_ross_odom = self.odom_frame_trans_matrix \
                 @ self.monica_base_in_odom_trans_matrix
+                
             # compute the pose of monica's base relative to ross' base link
             T_monica_base_in_ross_base = np.linalg.inv(self.ross_base_in_odom_trans_matrix) \
                 @ T_monica_base_in_ross_odom
