@@ -39,13 +39,13 @@ class ArmController(InterbotixManipulatorXS):
     )
 
     # position of the base link for each arm in their respective odom frames
-    monica_base_trans_matrix = np.array(
-        [[ 0,  1, 0, 0.160],
+    monica_base_in_odom_trans_matrix = np.array(
+        [[0,  1, 0, 0.160],
          [-1,  0, 0, 0.0],
-         [ 0,  0, 1, 0.095],
-         [ 0,  0, 0, 1]]
+         [0,  0, 1, 0.095],
+         [0,  0, 0, 1]]
     )
-    ross_base_trans_matrix = np.array(
+    ross_base_in_odom_trans_matrix = np.array(
         [[0,  1, 0, 0.160],
          [-1,  0, 0, 0.0],
          [0,  0, 1, 0.095],
@@ -54,8 +54,8 @@ class ArmController(InterbotixManipulatorXS):
 
     # transformation matrix between the odom frame and the other odom frame
     odom_frame_trans_matrix = np.array([
-        [-1, 0, 0, 0.0],
-        [0, -1, 0, 0.25],
+        [-1, 0, 0, 1.657],
+        [0, -1, 0, 0.0],
         [0,  0, 1, 0.0],
         [0,  0, 0, 1.0]
     ])
@@ -157,7 +157,7 @@ class ArmController(InterbotixManipulatorXS):
         desired_trans_matrix[2, 3] = desired_pose.position.z
 
         if self.track_other_robot:
-            self.adjust_heading(desired_trans_matrix)
+            desired_trans_matrix = self.adjust_heading(desired_trans_matrix)
 
         trans_matrix = self.arm.get_ee_pose_command()
 
@@ -184,69 +184,55 @@ class ArmController(InterbotixManipulatorXS):
         """
         Update the waist angle to account for the other robot's heading.
 
-        @param T_sd: The desired transformation matrix for the end effector.
-        This will be adjusted directly in this function.
+        @param T_sd: The desired transformation matrix which needs to be
+        adjusted.
         """
+        # compute the desired position of the end effector
+        # within a virtual frame that removes the yaw angle
+        yaw_angle = np.arctan2(T_sd[1, 3], T_sd[0, 3])
+
+        T_sy = np.eye(4)
+
+        T_sy[:3, :3] = np.array(
+            R.from_euler('z', yaw_angle, degrees=False).as_matrix())
+
+        T_yd = np.linalg.inv(T_sy) @ T_sd
+
         if self.robot_name == 'monica':
             # compute the pose of ross' base in monica's odom frame
-            T_ross_in_monica_odom = self.odom_frame_trans_matrix \
-                                    @ self.ross_base_trans_matrix
+            T_ross_base_in_monica_odom = self.odom_frame_trans_matrix \
+                @ self.ross_base_in_odom_trans_matrix
+
             # compute the pose of ross' base relative to monica's base link
-            # T_ross_in_monica_base = np.linalg.inv(
-            #     self.monica_base_trans_matrix) @ T_ross_in_monica_odom
+            T_ross_base_in_monica_base = np.linalg.inv(
+                self.monica_base_in_odom_trans_matrix) \
+                @ T_ross_base_in_monica_odom
 
             # extract the angle from the transformation matrix
-            # theta = np.arctan2(T_ross_in_monica_base[1, 3],
-            #                    T_ross_in_monica_base[0, 3])
-            
-            new_heading_vec = T_ross_in_monica_odom[:2, 3] \
-                             - self.monica_base_trans_matrix[:2, 3]
-            # normalize the direction vector
-            new_heading_vec /= np.linalg.norm(new_heading_vec)
-
-            # compute the direction of the new heading
-            theta = np.arctan2(new_heading_vec[1], new_heading_vec[0])
+            theta = np.arctan2(T_ross_base_in_monica_base[1, 3],
+                               T_ross_base_in_monica_base[0, 3])
 
         elif self.robot_name == 'ross':
             # compute the pose of monica's base in ross' odom frame
-            T_monica_in_ross_odom = self.odom_frame_trans_matrix \
-                                    @ self.monica_base_trans_matrix
+            T_monica_base_in_ross_odom = self.odom_frame_trans_matrix \
+                @ self.monica_base_in_odom_trans_matrix
+
             # compute the pose of monica's base relative to ross' base link
-            # T_monica_in_ross_base = np.linalg.inv(
-                # self.ross_base_trans_matrix) @ T_monica_in_ross_odom
+            T_monica_base_in_ross_base = np.linalg.inv(self.ross_base_in_odom_trans_matrix) \
+                @ T_monica_base_in_ross_odom
 
             # extract the angle from the transformation matrix
-            # theta = np.arctan2(T_monica_in_ross_base[1, 3],
-            #                    T_monica_in_ross_base[0, 3])
-            
-            new_heading_vec = T_monica_in_ross_odom[:2, 3] \
-                                - self.ross_base_trans_matrix[:2, 3]
-            # normalize the direction vector
-            new_heading_vec /= np.linalg.norm(new_heading_vec)
-
-            # compute the direction of the new heading
-            theta = np.arctan2(new_heading_vec[1], new_heading_vec[0])
+            theta = np.arctan2(T_monica_base_in_ross_base[1, 3],
+                               T_monica_base_in_ross_base[0, 3])
 
         else:
-            return
-
-        # compute to move the waist by
-        yaw_angle = np.arctan2(T_sd[1, 3], T_sd[0, 3])
-        theta_diff = theta - yaw_angle
-
-        self.log_debug(f'Adjusting heading by {theta_diff} radians')
+            return T_sd
 
         # adjust the desired transformation matrix
-        theta_offset = np.array(
-            R.from_euler('z', theta_diff, degrees=False).as_matrix())
+        T_sy[:3, :3] = np.array(
+            R.from_euler('z', theta, degrees=False).as_matrix())
 
-        # adjust the waste to point towards the other robot
-        T_sd[:3, :3] = T_sd[:3, :3] @ theta_offset
-
-        # update the x and y position of the end effector
-        distance = np.linalg.norm(T_sd[:2, 3])
-        T_sd[0, 3] = distance * np.cos(theta)
-        T_sd[1, 3] = distance * np.sin(theta)
+        return T_sy @ T_yd
 
     def update_desired_pose_cb(self, msg: Pose):
         """
