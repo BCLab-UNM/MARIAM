@@ -37,10 +37,12 @@ from launch.conditions import IfCondition
 
 def launch_setup(context, *args, **kwargs):
     robot_name_launch_arg = LaunchConfiguration('robot_name')
-    admittance_control_launch_arg = LaunchConfiguration(
-        'use_admittance_control')
+    admittance_control_launch_arg = LaunchConfiguration('use_admittance_control')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    use_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
+    spawn_location_launch_arg = LaunchConfiguration('spawn_location')
 
+    spawn_location = spawn_location_launch_arg.perform(context).split()
 
     spawn_node = Node(
         package='gazebo_ros',
@@ -50,9 +52,12 @@ def launch_setup(context, *args, **kwargs):
             '-entity', robot_name_launch_arg.perform(context),
             # topic to read the robot description from
             '-topic', f'/{robot_name_launch_arg.perform(context)}/robot_description',
-            '-x', '0.0',
-            '-y', '0.0',
-            '-z', '0.1',
+            '-x', spawn_location[0],
+            '-y', spawn_location[1],
+            '-z', spawn_location[2],
+            '-R', spawn_location[3],
+            '-P', spawn_location[4],
+            '-Y', spawn_location[5],
             '-robot_namespace', robot_name_launch_arg.perform(context),
             # '--ros-args', '--log-level', 'DEBUG'
         ],
@@ -105,22 +110,37 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    px100_controller_desc = IncludeLaunchDescription(
+
+    px100_controller_node = Node(
+        package='mariam_gazebo',
+        executable='px100_controller_gazebo.py',
+        name='px100_controller',
+        namespace=robot_name_launch_arg,
+        output='screen',
+        arguments=[
+                # '--ros-args', '--log-level', 'DEBUG'
+        ]
+    )
+
+    admittance_control_description = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
                 FindPackageShare('arm_controller'),
                 'launch',
-                'px100_controller.launch.py'
+                'admittance_controller.launch.py'
             ])
         ]),
         launch_arguments={
             'robot_name': robot_name_launch_arg,
-            'use_admittance_control': admittance_control_launch_arg,
             'use_fake_force': 'false',
-            'use_sim': use_sim_time,
-            'use_rsp': 'false',
-            'use_rviz': 'false',
-        }.items()
+            'use_rviz_markers': use_rviz_markers_launch_arg
+        }.items(),
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_control_launch_arg,
+                "' == 'true'"
+            ])
+        )
     )
 
     mariam_description_launch_desc = IncludeLaunchDescription(
@@ -135,6 +155,17 @@ def launch_setup(context, *args, **kwargs):
             'namespace': robot_name_launch_arg,
             'use_sim_time': use_sim_time,
         }.items()
+    )
+
+    joint_state_publisher_node = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        namespace=robot_name_launch_arg,
+        parameters=[{
+            'use_sim_time': use_sim_time,
+        }],
+        # arguments=['--ros-args', '--log-level', 'DEBUG'],
+        output='screen',
     )
 
     # realsense_imu_launch_desc = IncludeLaunchDescription(
@@ -193,15 +224,16 @@ def launch_setup(context, *args, **kwargs):
 
     return [
         spawn_node,
-        px100_controller_desc,
-        mariam_description_launch_desc,
-        # ekf_launch_desc,
+        px100_controller_node,
+        admittance_control_description,
+        joint_state_publisher_node,
+        ekf_launch_desc,
         # slam_launch_desc,
         # nav2_bringup_launch_desc,
         load_joint_state_broadcaster_event,
         load_arm_controller_event,
-        spawn_joint_state_broadcaster_node,
-        spawn_arm_controller_node
+        mariam_description_launch_desc,
+
     ]
 
 
@@ -228,6 +260,16 @@ def generate_launch_description():
                 'tells ROS nodes asking for time to get the Gazebo-published simulation time, '
                 'published over the ROS topic /clock.'
             )
+        ),
+        DeclareLaunchArgument(
+            'use_rviz_markers',
+            default_value='false',
+            choices=('true', 'false')
+        ),
+        DeclareLaunchArgument(
+            'spawn_location',
+            default_value='0.0 0.0 0.1 0.0 0.0 0.0',
+            description='The spawn location of the robot in the Gazebo world, in x y z roll pitch yaw format.'
         )
     ]
 

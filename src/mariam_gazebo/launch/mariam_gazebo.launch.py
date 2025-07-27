@@ -6,7 +6,8 @@ from launch.actions import (
     IncludeLaunchDescription,
     OpaqueFunction,
     SetEnvironmentVariable,
-    RegisterEventHandler
+    RegisterEventHandler,
+    TimerAction
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
@@ -121,6 +122,7 @@ def launch_setup(context, *args, **kwargs):
         ]),
         launch_arguments={
             'robot_name': 'ross',
+            'spawn_location': '0.0 0.0 0.1 0.0 0.0 0.0',
             'use_sim_time': use_sim_time
         }.items()
     )
@@ -129,15 +131,31 @@ def launch_setup(context, *args, **kwargs):
     #######################################
     # SPAWNING MONICA
     #######################################
-    
+    spawn_monica_launch_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_gazebo'),
+                'launch',
+                'spawn_robot.launch.py'
+            ]),
+        ]),
+        launch_arguments={
+            'robot_name': 'monica',
+            'spawn_location': '1.5 0.0 0.1 0.0 0.0 3.14159',
+            'use_sim_time': use_sim_time
+        }.items()
+    )
+
 
     return [
         gz_resource_path_env_var,
         gz_model_uri_env_var,
         gazebo_launch_include,
-
-        # nodes for ross
         spawn_ross_launch_include,
+        TimerAction(
+            period=5.0,
+            actions=[spawn_monica_launch_include]
+        )
     ]
 
 
