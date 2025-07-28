@@ -249,26 +249,26 @@ class ArmController(InterbotixManipulatorXS):
             self.desired_pose = copy.deepcopy(msg)
 
     def update_monica_base_link_pose_cb(self, msg: Pose):
-        self.monica_base_trans_matrix[:3, :3] = R.from_quat([
+        self.monica_base_in_odom_trans_matrix[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.monica_base_trans_matrix[0, 3] = msg.position.x
-        self.monica_base_trans_matrix[1, 3] = msg.position.y
-        self.monica_base_trans_matrix[2, 3] = msg.position.z
+        self.monica_base_in_odom_trans_matrix[0, 3] = msg.position.x
+        self.monica_base_in_odom_trans_matrix[1, 3] = msg.position.y
+        self.monica_base_in_odom_trans_matrix[2, 3] = msg.position.z
 
     def update_ross_base_link_pose_cb(self, msg: Pose):
-        self.ross_base_trans_matrix[:3, :3] = R.from_quat([
+        self.ross_base_in_odom_trans_matrix[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.ross_base_trans_matrix[0, 3] = msg.position.x
-        self.ross_base_trans_matrix[1, 3] = msg.position.y
-        self.ross_base_trans_matrix[2, 3] = msg.position.z
+        self.ross_base_in_odom_trans_matrix[0, 3] = msg.position.x
+        self.ross_base_in_odom_trans_matrix[1, 3] = msg.position.y
+        self.ross_base_in_odom_trans_matrix[2, 3] = msg.position.z
 
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
