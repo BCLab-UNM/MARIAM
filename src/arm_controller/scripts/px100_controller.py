@@ -133,6 +133,7 @@ class ArmController(InterbotixManipulatorXS):
 
     def move_end_effector(self) -> None:
         cartesian_pos_tolerance = 1e-3
+        orientation_tolerance = 1e-3
 
         with self.lock:
             desired_pose = self.desired_pose
@@ -165,7 +166,13 @@ class ArmController(InterbotixManipulatorXS):
         position_error = np.abs(
             desired_trans_matrix[:3, 3] - trans_matrix[:3, 3])
 
-        if (np.any(position_error) > cartesian_pos_tolerance):
+        # Orientation error (compute using quaternions or matrices)
+        desired_rot = R.from_matrix(desired_trans_matrix[:3, :3])
+        current_rot = R.from_matrix(trans_matrix[:3, :3])
+        rot_error = desired_rot.inv() * current_rot
+        angle_error = rot_error.magnitude()  # radians
+
+        if (np.any(position_error) > cartesian_pos_tolerance) or (angle_error > orientation_tolerance):
             joint_cmds, success = self.arm.set_ee_pose_matrix(
                 T_sd=desired_trans_matrix,
                 custom_guess=self.arm.get_joint_commands(),
