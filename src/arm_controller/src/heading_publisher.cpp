@@ -29,7 +29,7 @@ public:
       );
 
     timer_ = this->create_wall_timer(
-      500ms,
+      10ms,
       std::bind(&ArmHeadingPublisher::on_timer, this));
   }
 
