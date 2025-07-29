@@ -54,7 +54,7 @@ class ArmController(InterbotixManipulatorXS):
 
     # transformation matrix between the odom frame and the other odom frame
     odom_frame_trans_matrix = np.array([
-        [-1, 0, 0, 1.657],
+        [-1, 0, 0, 0.88],
         [0, -1, 0, 0.0],
         [0,  0, 1, 0.0],
         [0,  0, 0, 1.0]
@@ -174,6 +174,14 @@ class ArmController(InterbotixManipulatorXS):
             )
 
             if success:
+                # print the first value of the joint commands
+                self.log_debug(f'Waist joint commands: {joint_cmds[0]}')
+
+                # Safety check to make sure waist in operating range (0,pi)
+                if joint_cmds[0] < 0 or joint_cmds[0] > np.pi:
+                    self.log_info('Waist joint command out of bounds, skipping')
+                    return
+
                 msg = JointGroupCommand(name="arm", cmd=joint_cmds)
                 self.joint_group_pub.publish(msg)
 
@@ -187,6 +195,7 @@ class ArmController(InterbotixManipulatorXS):
         @param T_sd: The desired transformation matrix which needs to be
         adjusted.
         """
+        self.log_debug(f'Adjusting heading for {self.robot_name}')
         # compute the desired position of the end effector
         # within a virtual frame that removes the yaw angle
         yaw_angle = np.arctan2(T_sd[1, 3], T_sd[0, 3])

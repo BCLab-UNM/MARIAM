@@ -58,6 +58,17 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
+    heading_publisher_cmd = Node(
+        condition=IfCondition(track_other_robot_launch_arg),
+        package='arm_controller',
+        executable='heading_publisher',
+        namespace=robot_name_launch_arg,
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+        ],
+    )
+
     # Control node launch description
     xsarm_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
@@ -106,7 +117,8 @@ def launch_setup(context, *args, **kwargs):
     return [
         px100_controller_node,
         xsarm_control_launch,
-        admittance_control_launch
+        admittance_control_launch,
+        heading_publisher_cmd
     ]
 
 

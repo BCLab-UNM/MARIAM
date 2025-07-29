@@ -143,8 +143,8 @@ def launch_setup(context, *args, **kwargs):
         mariam_description_launch_desc,
         realsense_imu_launch_desc,
         ekf_launch_desc,
-        slam_launch_desc,
-        nav2_bringup_launch_desc
+        # slam_launch_desc,
+        # nav2_bringup_launch_desc
         # robot_follower_node
     ]
 
