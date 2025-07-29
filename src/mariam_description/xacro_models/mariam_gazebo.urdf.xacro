@@ -63,7 +63,7 @@
 
       <ros>
         <namespace>/$(arg robot_name)</namespace>
-        <remapping>odom:=wheel/odometry</remapping>
+        <remapping>odom:=wheel/odom</remapping>
       </ros>
     </plugin>
   </gazebo>

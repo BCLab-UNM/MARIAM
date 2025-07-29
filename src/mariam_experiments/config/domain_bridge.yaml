@@ -66,3 +66,13 @@ topics:
     type: geometry_msgs/msg/PoseStamped
     from_domain: 0
     to_domain: 2
+  
+  monica/px100_base_link_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 1
+    to_domain: 2
+
+  ross/px100_base_link_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 2
+    to_domain: 1

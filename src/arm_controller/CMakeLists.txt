@@ -5,7 +5,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+#-----------------------------------------------
+#            find dependencies
+#-----------------------------------------------
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
@@ -21,7 +23,11 @@ find_package(geometry_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-# For executable pose_listener_moveit
+
+
+#-----------------------------------------------
+# F   or executable pose_listener_moveit
+#-----------------------------------------------
 add_executable(pose_listener_moveit src/pose_listener_moveit.cpp)
 target_include_directories(pose_listener_moveit PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -37,7 +43,10 @@ install(TARGETS pose_listener_moveit
   DESTINATION lib/${PROJECT_NAME}
 ) 
 
-# For executable joy_moveit.cpp
+
+#-----------------------------------------------
+#     For executable joy_moveit.cpp
+#-----------------------------------------------
 add_executable(joy_moveit src/joy_moveit.cpp)
 target_include_directories(joy_moveit PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -53,7 +62,10 @@ install(TARGETS joy_moveit
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
+#-----------------------------------------------
 # For executable joy_moveit_constrained.cpp
+#-----------------------------------------------
 add_executable(joy_moveit_constrained src/joy_moveit_constrained.cpp)
 target_include_directories(joy_moveit_constrained PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -69,7 +81,10 @@ install(TARGETS joy_moveit_constrained
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable joy_input_handler.cpp
+
+#-----------------------------------------------
+#   For executable joy_input_handler.cpp 
+#-----------------------------------------------
 add_executable(joy_input_handler src/joy_input_handler.cpp)
 target_include_directories(joy_input_handler PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -86,7 +101,10 @@ install(TARGETS joy_input_handler
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# For executable admittance_controller.cpp
+
+#-----------------------------------------------
+#   For executable admittance_controller.cpp
+#-----------------------------------------------
 add_executable(admittance_controller src/admittance_controller.cpp)
 target_include_directories(admittance_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -101,7 +119,10 @@ install(TARGETS admittance_controller
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
+#-----------------------------------------------
 # For executable admittance_rviz_markers.cpp
+#-----------------------------------------------
 add_executable(admittance_rviz_markers src/admittance_rviz_markers.cpp)
 target_include_directories(admittance_rviz_markers PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -118,7 +139,10 @@ install(TARGETS admittance_rviz_markers
   DESTINATION lib/${PROJECT_NAME}
 )
 
+
+#-----------------------------------------------
 # For executable virtual_pose_publisher.cpp
+#-----------------------------------------------
 add_executable(virtual_pose_publisher src/virtual_pose_publisher.cpp)
 target_include_directories(virtual_pose_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -134,7 +158,10 @@ install(TARGETS virtual_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable ellipse_publisher.cpp #####
+
+#-----------------------------------------------
+#    For executable ellipse_publisher.cpp
+#-----------------------------------------------
 add_executable(ellipse_publisher src/ellipse_publisher.cpp)
 target_include_directories(ellipse_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -149,7 +176,9 @@ install(TARGETS ellipse_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable force_publisher.cpp #####
+#-----------------------------------------------
+#     For executable force_publisher.cpp
+#-----------------------------------------------
 add_executable(force_publisher src/force_publisher.cpp)
 target_include_directories(force_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -164,7 +193,10 @@ install(TARGETS force_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable pose_publisher.cpp #####
+
+#-----------------------------------------------
+#      For executable pose_publisher.cpp
+#-----------------------------------------------
 add_executable(pose_publisher src/pose_publisher.cpp)
 target_include_directories(pose_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -179,7 +211,10 @@ install(TARGETS pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable sine_wave_publisher.cpp #####
+
+#-----------------------------------------------
+#   For executable sine_wave_publisher.cpp
+#-----------------------------------------------
 add_executable(sine_wave_publisher src/sine_wave_publisher.cpp)
 target_include_directories(sine_wave_publisher PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -194,7 +229,10 @@ install(TARGETS sine_wave_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable joint_delay_tracker.cpp #####
+
+#-----------------------------------------------
+#    For executable joint_delay_tracker.cpp
+#-----------------------------------------------
 add_executable(joint_delay_tracker src/joint_delay_tracker.cpp)
 target_include_directories(joint_delay_tracker PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -210,7 +248,10 @@ install(TARGETS joint_delay_tracker
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable lifting_node.cpp #####
+
+#-----------------------------------------------
+#       For executable lifting_node.cpp
+#-----------------------------------------------
 add_executable(lifting_node src/lifting_node.cpp)
 target_include_directories(lifting_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -225,7 +266,10 @@ install(TARGETS lifting_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### For executable pose_updater.cpp #####
+
+#-----------------------------------------------
+# For executable pose_updater.cpp
+#-----------------------------------------------
 add_executable(pose_updater src/pose_updater.cpp)
 target_include_directories(pose_updater PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -240,15 +284,39 @@ install(TARGETS pose_updater
   DESTINATION lib/${PROJECT_NAME}
 )
 
-##### Add launch file to share folder #####
+
+#-----------------------------------------------
+# For executable heading_publisher.cpp
+#-----------------------------------------------
+add_executable(heading_publisher src/heading_publisher.cpp)
+target_include_directories(heading_publisher PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(heading_publisher PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  heading_publisher
+  "rclcpp"
+  "geometry_msgs"
+  tf2
+  tf2_ros
+)
+install(TARGETS heading_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+#===============================================
+#       Add launch file to share folder
+#===============================================
 install(
   DIRECTORY
     launch
   DESTINATION
     share/${PROJECT_NAME}/
 )
-
-##### Add config files to share folder #####
+#===============================================
+#       Add config files to share folder
+#===============================================
 install(
   DIRECTORY
     config
@@ -256,7 +324,9 @@ install(
     share/${PROJECT_NAME}/
 )
 
-##### adding script to lib folder #####
+#===============================================
+#       adding script to lib folder
+#===============================================
 install(
   PROGRAMS
     scripts/px100_controller.py
@@ -264,7 +334,9 @@ install(
     lib/${PROJECT_NAME}
 )
 
-##### adding custom messages #####
+#===============================================
+#            adding custom messages
+#===============================================
 set(msg_files
   "msg/ConstrainedPose.msg"
   "msg/PathAndExecutionTiming.msg"
