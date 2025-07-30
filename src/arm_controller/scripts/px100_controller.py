@@ -54,7 +54,7 @@ class ArmController(InterbotixManipulatorXS):
 
     # transformation matrix between the odom frame and the other odom frame
     odom_frame_trans_matrix = np.array([
-        [-1, 0, 0, 0.88],
+        [-1, 0, 0, 0.86],
         [0, -1, 0, 0.0],
         [0,  0, 1, 0.0],
         [0,  0, 0, 1.0]
