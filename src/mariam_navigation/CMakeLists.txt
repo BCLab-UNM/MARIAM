@@ -71,6 +71,14 @@ ament_target_dependencies(dual_linear_sinusoidal_acceleration_open_loop
   nav_msgs
 )
 
+# Create the dual_curved_constant_velocity executable
+add_executable(dual_curved_constant_velocity src/dual_curved_constant_velocity.cpp)
+ament_target_dependencies(dual_curved_constant_velocity
+  rclcpp
+  geometry_msgs
+  nav_msgs
+)
+
 # Install the executables
 install(TARGETS
   dual_waypoint_publisher
@@ -79,6 +87,7 @@ install(TARGETS
   dual_linear_constant_velocity_closed_loop
   dual_linear_sinusoidal_velocity_open_loop
   dual_linear_sinusoidal_acceleration_open_loop
+  dual_curved_constant_velocity
   DESTINATION lib/${PROJECT_NAME}
 )
 
