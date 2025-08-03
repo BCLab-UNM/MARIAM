@@ -32,7 +32,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.event_handlers import OnProcessExit
 from launch.conditions import IfCondition
-
+from ament_index_python.packages import get_package_share_directory
 
 
 def launch_setup(context, *args, **kwargs):
@@ -187,7 +187,12 @@ def launch_setup(context, *args, **kwargs):
             ])
         ]),
         launch_arguments={
-            'namespace': robot_name_launch_arg
+            'namespace': robot_name_launch_arg,
+            'config_file': os.path.join(
+                get_package_share_directory('mariam_localization'),
+                'config',
+                'ekf_params_gazebo.yaml'
+            ),
         }.items()
     )
 

@@ -9,23 +9,27 @@ import os
 # ros2 launch mariam_localization hardware_ekf.launch.py namespace:=monica
 
 def generate_launch_description():
-    # Dynamically locate the path to the config file
-    config_path = os.path.join(
-        get_package_share_directory('mariam_localization'),
-        'config',
-        'ekf_params.yaml'
-    )
-    print(f"Looking for config file at: {config_path}")
-
     # Declare the launch argument for the namespace.
     namespace_arg = DeclareLaunchArgument(
         'namespace',
         default_value='',
         description='Namespace for the ekf node'
     )
+    config_file_arg = DeclareLaunchArgument(
+        'config_file',
+        default_value=os.path.join(
+            get_package_share_directory('mariam_localization'),
+            'config',
+            'ekf_params.yaml'
+        ),
+        description='Path to the EKF configuration file'
+    )
 
     # Use the value of the namespace launch argument.
     namespace = LaunchConfiguration('namespace')
+
+    config_file = LaunchConfiguration('config_file')
+
 
     # Define the EKF node, applying the namespace.
     ekf_node = Node(
@@ -34,7 +38,7 @@ def generate_launch_description():
         name='ekf_filter_node',
         namespace=namespace,
         output='screen',
-        parameters=[config_path],
+        parameters=[config_file],
         remappings=[
             # TF remappings
             ('/tf', 'tf'),
