@@ -1,6 +1,28 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+  <xacro:property name="wheel_mu" value="0.6"/>
+  <xacro:property name="wheel_mu2" value="0.6"/>
+  <xacro:property name="wheel_kp" value="10000000" />
+  <xacro:property name="wheel_kd" value="1" />
+
+  <xacro:macro name="wheel_properties" params="ref">
+    <gazebo reference="${ref}_link">
+      <mu>${wheel_mu}</mu>
+      <mu2>${wheel_mu2}</mu2>
+      
+      <minDepth>0.001</minDepth>
+      
+      <kp>${wheel_kp}</kp>
+      <kd>${wheel_kd}</kd>
+
+      <fdir1>1 0 0</fdir1>
+      <slip1>0.0</slip1>
+      <slip2>0.0</slip2>
+    
+    </gazebo>
+  </xacro:macro>
+
   <!-- *********************** GAZEBO COLOR ***************************    -->
   <gazebo reference="base_link">
     <material>Gazebo/Red</material>
@@ -11,28 +33,16 @@
   </gazebo>
 
   <!-- *********************** WHEEL FRICTION ***************************    -->
-  <gazebo reference="drivewheel_left_front_link">
-    <mu>1.2</mu>
-    <mu2>1.2</mu2>
-  </gazebo>
-  <gazebo reference="drivewheel_left_back_link">
-    <mu>1.2</mu>
-    <mu2>1.2</mu2>
-  </gazebo>
-  <gazebo reference="drivewheel_right_front_link">
-    <mu>1.2</mu>
-    <mu2>1.2</mu2>
-  </gazebo>
-  <gazebo reference="drivewheel_right_back_link">
-    <mu>1.2</mu>
-    <mu2>1.2</mu2>
-  </gazebo>
+  <xacro:wheel_properties ref="drivewheel_left_front" />
+  <xacro:wheel_properties ref="drivewheel_left_back" />
+  <xacro:wheel_properties ref="drivewheel_right_front"/>
+  <xacro:wheel_properties ref="drivewheel_right_back" />
+
 
   <!-- *********************** DRIVE CONTROLLER ***************************    -->
   <gazebo>
     <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
       <updateRate>30.0</updateRate>
-      <robotNamespace>/</robotNamespace>
 
       <!-- Wheels -->
       <num_wheel_pairs>2</num_wheel_pairs>
@@ -64,6 +74,7 @@
       <ros>
         <namespace>/$(arg robot_name)</namespace>
         <remapping>odom:=wheel/odom</remapping>
+        <remapping>/tf:=tf</remapping>
       </ros>
     </plugin>
   </gazebo>
@@ -85,6 +96,8 @@
 
   <!-- *********************** CAMERA PLUGIN *********************   -->
   <gazebo reference="camera_link">
+    <gravity>true</gravity>
+
     <sensor name="camera" type="depth">
       <pose>0 0 0.0 0 0 0</pose>
       <update_rate>30</update_rate>
@@ -115,8 +128,9 @@
 
     <sensor name="mariam_imu" type="imu">
       <always_on>true</always_on>
-      <update_rate>100</update_rate>
+      <update_rate>60</update_rate>
       <visualize>true</visualize>
+
       <imu>
         <orientation>
           <x>
@@ -179,13 +193,17 @@
           </z>
         </linear_acceleration>
       </imu>
+
       <plugin name="mariam_imu" filename="libgazebo_ros_imu_sensor.so">
         <initial_orientation_as_reference>false</initial_orientation_as_reference>
+
         <frame_name>camera_link</frame_name>
+        
         <ros>
-          <namespace>/$(arg robot_name)/imu</namespace>
-          <remapping>~/out:=data</remapping>
+          <namespace>/$(arg robot_name)</namespace>
+          <remapping>~/out:=imu/data</remapping>
         </ros>
+      
       </plugin>
     </sensor>
   </gazebo>

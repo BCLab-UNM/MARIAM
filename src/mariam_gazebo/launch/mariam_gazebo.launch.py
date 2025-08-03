@@ -153,7 +153,7 @@ def launch_setup(context, *args, **kwargs):
         gazebo_launch_include,
         spawn_ross_launch_include,
         TimerAction(
-            period=5.0,
+            period=10.0,
             actions=[spawn_monica_launch_include]
         )
     ]

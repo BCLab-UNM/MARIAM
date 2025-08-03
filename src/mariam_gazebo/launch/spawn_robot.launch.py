@@ -122,6 +122,16 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
+    heading_publisher_cmd = Node(
+        package='arm_controller',
+        executable='heading_publisher',
+        namespace=robot_name_launch_arg,
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+        ],
+    )
+
     admittance_control_description = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -168,19 +178,6 @@ def launch_setup(context, *args, **kwargs):
         output='screen',
     )
 
-    # realsense_imu_launch_desc = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource([
-    #         PathJoinSubstitution([
-    #             FindPackageShare('mariam_vision'),
-    #             'launch',
-    #             'realsense_imu.launch.py'
-    #         ])
-    #     ]),
-    #     launch_arguments={
-    #         'namespace': robot_name_launch_arg,
-    #     }.items()
-    # )
-
     ekf_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -225,10 +222,11 @@ def launch_setup(context, *args, **kwargs):
     return [
         spawn_node,
         px100_controller_node,
+        heading_publisher_cmd,
         admittance_control_description,
         joint_state_publisher_node,
         ekf_launch_desc,
-        slam_launch_desc,
+        # slam_launch_desc,
         # nav2_bringup_launch_desc,
         load_joint_state_broadcaster_event,
         load_arm_controller_event,
