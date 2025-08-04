@@ -1,0 +1,16 @@
+/**/:
+  rgbd_odometry:
+    ros__parameters:
+      use_sim_time: true
+      frame_id: base_footprint
+      odom_frame_id: odom
+      # doesn't exist for rtabmap odom nodes
+      # map_frame_id: map
+
+      publish_tf: true
+      
+      approx_sync: true
+      approx_sync_max_interval: 0.01
+
+
+      # rgbd_cameras: 1

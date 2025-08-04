@@ -201,37 +201,51 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution([
                 FindPackageShare('mariam_localization'),
                 'launch',
-                'slam.launch.py'
+                'rtab.launch.py'
             ])
         ]),
         launch_arguments={
             'namespace': robot_name_launch_arg,
-            'use_sim_time': use_sim_time,
-        }.items(),
+            'use_sim_time': use_sim_time
+        }.items()
     )
 
-    nav2_bringup_launch_desc = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([
-                FindPackageShare('mariam_navigation'),
-                'launch',
-                'nav2_custom_bringup.launch.py'
-            ])
-        ]),
-        launch_arguments={
-            'namespace': robot_name_launch_arg,
-            'use_sim_time': use_sim_time,
-        }.items(),
-    )
+    # slam_launch_desc = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('mariam_localization'),
+    #             'launch',
+    #             'slam.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'namespace': robot_name_launch_arg,
+    #         'use_sim_time': use_sim_time,
+    #     }.items(),
+    # )
+
+    # nav2_bringup_launch_desc = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([
+    #         PathJoinSubstitution([
+    #             FindPackageShare('mariam_navigation'),
+    #             'launch',
+    #             'nav2_custom_bringup.launch.py'
+    #         ])
+    #     ]),
+    #     launch_arguments={
+    #         'namespace': robot_name_launch_arg,
+    #         'use_sim_time': use_sim_time,
+    #     }.items(),
+    # )
 
     return [
         spawn_node,
         px100_controller_node,
-        heading_publisher_cmd,
+        # heading_publisher_cmd,
         admittance_control_description,
         joint_state_publisher_node,
-        ekf_launch_desc,
-        # slam_launch_desc,
+        # ekf_launch_desc,
+        slam_launch_desc,
         # nav2_bringup_launch_desc,
         load_joint_state_broadcaster_event,
         load_arm_controller_event,

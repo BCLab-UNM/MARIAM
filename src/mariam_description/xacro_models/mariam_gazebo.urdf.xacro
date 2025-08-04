@@ -96,11 +96,11 @@
 
   <!-- *********************** CAMERA PLUGIN *********************   -->
   <gazebo reference="camera_link">
-    <gravity>true</gravity>
-
     <sensor name="camera" type="depth">
+      <always_on>true</always_on>
+      <update_rate>10.0</update_rate>
       <pose>0 0 0.0 0 0 0</pose>
-      <update_rate>30</update_rate>
+      
       <camera>
         <horizontal_fov>1.047</horizontal_fov> 
         <image>
@@ -113,16 +113,25 @@
           <far>100.0</far> 
         </clip>
       </camera>
+
       <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
         <ros>
           <namespace>/$(arg robot_name)</namespace>
+          <remapping>camera/camera_info:=camera/color/camera_info</remapping>
+          <remapping>camera/image_raw:=camera/color/image_raw</remapping>
+          <remapping>camera/depth/image_raw:=camera/aligned_depth_to_color/image_raw</remapping>
+          <remapping>camera/depth/camera_info:=camera/aligned_depth_to_color/camera_info</remapping>
         </ros>
-        <always_on>true</always_on>
-        <update_rate>30.0</update_rate>
-        <camera_name>camera</camera_name>
-        <image_topic_name>/camera/depth/image_raw</image_topic_name>
-        <camera_info_topic_name>/camera/depth/camera_info</camera_info_topic_name>
-        <frame_name>camera_link</frame_name>
+        <cameraName>camera</cameraName>
+        
+        <!-- These do not change the actual topic name -->
+        <!-- This is likely another bug in Gazebo -->
+        <imageTopicName>color/image_raw</imageTopicName>
+        <cameraInfoTopicName>color/camera_info</cameraInfoTopicName>
+        <depthImageTopicName>aligned_depth_to_color/image_raw</depthImageTopicName>
+        <depthImageInfoTopicName>aligned_depth_to_color/camera_info</depthImageInfoTopicName>
+        
+        <frameName>camera_link</frameName>
       </plugin>
     </sensor>
 
