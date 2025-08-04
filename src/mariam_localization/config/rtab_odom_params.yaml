@@ -337,7 +337,7 @@
     min_update_rate: 0.0
     odom_frame_id: odom
     publish_null_when_lost: true
-    publish_tf: true
+    publish_tf: false
     qos: 0
     qos_camera_info: 0
     qos_overrides:

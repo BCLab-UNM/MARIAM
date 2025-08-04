@@ -244,7 +244,7 @@ def launch_setup(context, *args, **kwargs):
         # heading_publisher_cmd,
         admittance_control_description,
         joint_state_publisher_node,
-        # ekf_launch_desc,
+        ekf_launch_desc,
         slam_launch_desc,
         # nav2_bringup_launch_desc,
         load_joint_state_broadcaster_event,

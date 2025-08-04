@@ -46,21 +46,6 @@ def generate_launch_description():
             'rtab_odom_params.yaml'),
         description='Full path to the RTAB Odom parameters file')
 
-    remappings = [
-        ('/tf', 'tf'),
-        ('/tf_static', 'tf_static'),
-        ('/map', 'map'),
-        ('/map_metadata', 'map_metadata'),
-        # ('imu', 'imu/data/null'),
-        ('imu', 'imu/data'),
-        ('rgb/image', 'camera/color/image_raw'),
-        ('rgb/camera_info', 'camera/color/camera_info'),
-        ('depth/image', 'camera/aligned_depth_to_color/image_raw'),
-        ('odom', 'odometry/filtered'),
-        # ('odom', 'wheel/odom'),
-
-    ]
-
     ### Nodes ###
 
     rtab_odom_node = Node(
@@ -69,7 +54,15 @@ def generate_launch_description():
         executable='rgbd_odometry',
         output='screen',
         parameters=[odom_params_file],
-        remappings=remappings
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+            ('/map_metadata', 'map_metadata'),
+            ('rgb/image', 'camera/color/image_raw'),
+            ('rgb/camera_info', 'camera/color/camera_info'),
+            ('depth/image', 'camera/aligned_depth_to_color/image_raw'),
+            ('odom', 'visual/odom')
+        ]
     )
 
     rtab_slam_node = Node(
@@ -78,7 +71,19 @@ def generate_launch_description():
         executable='rtabmap',
         output='screen',
         parameters=[slam_params_file],
-        remappings=remappings,
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+            ('/map', 'map'),
+            ('/map_metadata', 'map_metadata'),
+            # ('imu', 'imu/data/null'),
+            ('imu', 'imu/data'),
+            ('rgb/image', 'camera/color/image_raw'),
+            ('rgb/camera_info', 'camera/color/camera_info'),
+            ('depth/image', 'camera/aligned_depth_to_color/image_raw'),
+            ('odom', 'odometry/filtered'),
+            # ('odom', 'wheel/odom'),
+        ],
         arguments=['-d']
     )
 

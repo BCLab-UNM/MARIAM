@@ -151,9 +151,10 @@ def launch_setup(context, *args, **kwargs):
         gz_resource_path_env_var,
         gz_model_uri_env_var,
         gazebo_launch_include,
-        spawn_ross_launch_include,
+        # spawn_ross_launch_include,
+        spawn_monica_launch_include,
         # TimerAction(
-        #     period=10.0,
+        #     period=1.0,
         #     actions=[spawn_monica_launch_include]
         # )
     ]
