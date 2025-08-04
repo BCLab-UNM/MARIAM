@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <xacro:property name="wheel_mu" value="0.6"/>
-  <xacro:property name="wheel_mu2" value="0.6"/>
+  <xacro:property name="wheel_mu" value="1.2"/>
+  <xacro:property name="wheel_mu2" value="1.2"/>
   <xacro:property name="wheel_kp" value="10000000" />
-  <xacro:property name="wheel_kd" value="1" />
+  <xacro:property name="wheel_kd" value="50" />
 
   <xacro:macro name="wheel_properties" params="ref">
     <gazebo reference="${ref}_link">
@@ -17,8 +17,8 @@
       <kd>${wheel_kd}</kd>
 
       <fdir1>1 0 0</fdir1>
-      <slip1>0.0</slip1>
-      <slip2>0.0</slip2>
+      <slip1>0</slip1>
+      <slip2>0</slip2>
     
     </gazebo>
   </xacro:macro>
