@@ -77,6 +77,9 @@ ament_target_dependencies(dual_curved_constant_velocity
   rclcpp
   geometry_msgs
   nav_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs 
 )
 
 # Install the executables
