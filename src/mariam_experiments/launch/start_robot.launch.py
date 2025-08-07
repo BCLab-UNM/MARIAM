@@ -141,8 +141,8 @@ def launch_setup(context, *args, **kwargs):
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
-        realsense_imu_launch_desc,
-        ekf_launch_desc,
+        # realsense_imu_launch_desc,
+        # ekf_launch_desc,
         # slam_launch_desc,
         # nav2_bringup_launch_desc
         # robot_follower_node
