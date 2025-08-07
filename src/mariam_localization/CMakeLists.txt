@@ -11,8 +11,10 @@ find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
-# Create executable
+# Create displacement_publisher executable
 add_executable(displacement_publisher src/displacement_publisher.cpp)
 ament_target_dependencies(displacement_publisher 
   rclcpp 
@@ -21,9 +23,21 @@ ament_target_dependencies(displacement_publisher
   geometry_msgs
 )
 
+# Create vicom_pose_publisher executable
+add_executable(vicom_pose_publisher src/vicom_pose_publisher.cpp)
+ament_target_dependencies(vicom_pose_publisher 
+  rclcpp 
+  nav_msgs 
+  std_msgs 
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
+)
+
 # Install executable
 install(TARGETS
   displacement_publisher
+  vicom_pose_publisher
   DESTINATION lib/${PROJECT_NAME}
 )
 

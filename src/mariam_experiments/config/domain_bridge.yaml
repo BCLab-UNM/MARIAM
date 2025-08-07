@@ -76,3 +76,23 @@ topics:
     type: geometry_msgs/msg/Pose
     from_domain: 2
     to_domain: 1
+
+  world_monica_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 1
+
+  world_monica_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 2
+
+  world_ross_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 1
+
+  world_ross_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 2
