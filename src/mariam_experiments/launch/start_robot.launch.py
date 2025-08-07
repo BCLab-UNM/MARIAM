@@ -43,6 +43,8 @@ def launch_setup(context, *args, **kwargs):
             'use_fake_force': 'false',
             'use_sim': 'false',
             'use_rsp': 'false',
+            'track_other_robot': 'false'
+
         }.items()
     )
 
@@ -136,11 +138,24 @@ def launch_setup(context, *args, **kwargs):
             "'", robot_name_launch_arg, "' == 'ross'"
         ]))
     )
+    
+    vicon_tf2_updater_node = Node(
+        package='mariam_localization',
+        executable='vicon_tf2_updater',
+        name='vicon_tf2_udpater',
+        namespace=robot_name_launch_arg,
+        output='screen',
+        remappings=[
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
+            ]
+    )
 
     return [
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
+        vicon_tf2_updater_node
         # realsense_imu_launch_desc,
         # ekf_launch_desc,
         # slam_launch_desc,

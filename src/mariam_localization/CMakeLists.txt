@@ -34,10 +34,21 @@ ament_target_dependencies(vicom_pose_publisher
   tf2_geometry_msgs
 )
 
+# Create vicon_tf2_updater executable
+add_executable(vicon_tf2_updater src/vicon_tf2_updater.cpp)
+ament_target_dependencies(vicon_tf2_updater
+  rclcpp 
+  std_msgs 
+  geometry_msgs
+  tf2_ros
+  tf2_geometry_msgs
+)
+
 # Install executable
 install(TARGETS
   displacement_publisher
   vicom_pose_publisher
+  vicon_tf2_updater
   DESTINATION lib/${PROJECT_NAME}
 )
 
