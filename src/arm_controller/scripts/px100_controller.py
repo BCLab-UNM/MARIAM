@@ -195,49 +195,49 @@ class ArmController(InterbotixManipulatorXS):
             else:
                 self.log_info('Failed to solve for target pose')
 
-def adjust_heading(self, T_sd):
-    """
-    Update the waist angle to account for the other robot's heading.
-    @param T_sd: The desired transformation matrix which needs to be
-    adjusted.
-    """
-    self.log_debug(f'Adjusting heading for {self.robot_name}')
-    # compute the desired position of the end effector
-    # within a virtual frame that removes the yaw angle
-    yaw_angle = np.arctan2(T_sd[1, 3], T_sd[0, 3])
-    T_sy = np.eye(4)
-    T_sy[:3, :3] = np.array(
-        R.from_euler('z', yaw_angle, degrees=False).as_matrix())
-    T_yd = np.linalg.inv(T_sy) @ T_sd
+    def adjust_heading(self, T_sd):
+        """
+        Update the waist angle to account for the other robot's heading.
+        @param T_sd: The desired transformation matrix which needs to be
+        adjusted.
+        """
+        self.log_debug(f'Adjusting heading for {self.robot_name}')
+        # compute the desired position of the end effector
+        # within a virtual frame that removes the yaw angle
+        yaw_angle = np.arctan2(T_sd[1, 3], T_sd[0, 3])
+        T_sy = np.eye(4)
+        T_sy[:3, :3] = np.array(
+            R.from_euler('z', yaw_angle, degrees=False).as_matrix())
+        T_yd = np.linalg.inv(T_sy) @ T_sd
 
-    if self.robot_name == 'monica':
-        # compute the pose of ross' manipulator relative to monica's manipulator
-        T_ross_manipulator_in_monica_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
-            @ np.linalg.inv(self.monica_vicon_in_world_trans_matrix) \
-            @ self.ross_vicon_in_world_trans_matrix \
-            @ self.manipulator_in_vicon_trans_matrix
-        
-        # extract the angle from the transformation matrix
-        theta = np.arctan2(T_ross_manipulator_in_monica_manipulator[1, 3],
-                          T_ross_manipulator_in_monica_manipulator[0, 3])
-        
-    elif self.robot_name == 'ross':
-        # compute the pose of monica's manipulator relative to ross' manipulator
-        T_monica_manipulator_in_ross_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
-            @ np.linalg.inv(self.ross_vicon_in_world_trans_matrix) \
-            @ self.monica_vicon_in_world_trans_matrix \
-            @ self.manipulator_in_vicon_trans_matrix
-        
-        # extract the angle from the transformation matrix
-        theta = np.arctan2(T_monica_manipulator_in_ross_manipulator[1, 3],
-                          T_monica_manipulator_in_ross_manipulator[0, 3])
-    else:
-        return T_sd
+        if self.robot_name == 'monica':
+            # compute the pose of ross' manipulator relative to monica's manipulator
+            T_ross_manipulator_in_monica_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
+                @ np.linalg.inv(self.monica_vicon_in_world_trans_matrix) \
+                @ self.ross_vicon_in_world_trans_matrix \
+                @ self.manipulator_in_vicon_trans_matrix
+            
+            # extract the angle from the transformation matrix
+            theta = np.arctan2(T_ross_manipulator_in_monica_manipulator[1, 3],
+                            T_ross_manipulator_in_monica_manipulator[0, 3])
+            
+        elif self.robot_name == 'ross':
+            # compute the pose of monica's manipulator relative to ross' manipulator
+            T_monica_manipulator_in_ross_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
+                @ np.linalg.inv(self.ross_vicon_in_world_trans_matrix) \
+                @ self.monica_vicon_in_world_trans_matrix \
+                @ self.manipulator_in_vicon_trans_matrix
+            
+            # extract the angle from the transformation matrix
+            theta = np.arctan2(T_monica_manipulator_in_ross_manipulator[1, 3],
+                            T_monica_manipulator_in_ross_manipulator[0, 3])
+        else:
+            return T_sd
 
-    # adjust the desired transformation matrix
-    T_sy[:3, :3] = np.array(
-        R.from_euler('z', theta, degrees=False).as_matrix())
-    return T_sy @ T_yd
+        # adjust the desired transformation matrix
+        T_sy[:3, :3] = np.array(
+            R.from_euler('z', theta, degrees=False).as_matrix())
+        return T_sy @ T_yd
 
     def update_desired_pose_cb(self, msg: Pose):
         """
