@@ -56,6 +56,15 @@
     </inertial>
   </xacro:macro>
 
+  <!-- ****************** VICON FRAME ***************************  -->
+  <link name="vicon_link"></link>
+
+  <joint name="vicon_joint" type="fixed">
+    <parent link="vicon_link"/>
+    <child link="base_link" />
+    <origin xyz="0.1 -0.1 -0.09" rpy="0 0 0"/>
+  </joint>
+
   <!-- ****************** ROBOT BASE FOOTPRINT ***************************  -->
   <!-- Define the center of the main robot chassis projected on the ground -->	
   <link name="base_footprint">
