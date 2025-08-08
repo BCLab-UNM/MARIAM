@@ -43,7 +43,7 @@ def launch_setup(context, *args, **kwargs):
             'use_fake_force': 'false',
             'use_sim': 'false',
             'use_rsp': 'false',
-            'track_other_robot': 'false'
+            'track_other_robot': 'true'
 
         }.items()
     )

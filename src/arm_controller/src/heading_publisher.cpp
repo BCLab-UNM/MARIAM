@@ -37,7 +37,7 @@ private:
   void on_timer()
   {
     // TODO: change this to the correct frame
-    std::string referenceFrame = "odom";
+    std::string referenceFrame = "world";
     std::string baseLinkFrame = "px100/px100_base_link";
 
     // get the transform of the target frame in the reference frame

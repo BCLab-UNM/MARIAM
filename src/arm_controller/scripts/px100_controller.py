@@ -38,27 +38,13 @@ class ArmController(InterbotixManipulatorXS):
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
-    # position of the vicon link for each arm in the world frame
-    monica_vicon_in_world_trans_matrix = np.array(
-        [[0,  1, 0, 0.160],
-         [-1,  0, 0, 0.0],
-         [0,  0, 1, 0.095],
-         [0,  0, 0, 1]]
-    )
-    ross_vicon_in_world_trans_matrix = np.array(
-        [[0,  1, 0, 0.160],
-         [-1,  0, 0, 0.0],
-         [0,  0, 1, 0.095],
-         [0,  0, 0, 1]]
-    )
-
-    # transformation matrix between the odom frame and the other odom frame
-    manipulator_in_vicon_trans_matrix = np.array([
-        [ 0, 1, 0, 0.0],
-        [-1, 1, 0, 0.0],
-        [ 0, 0, 1, 0.0],
-        [ 0, 0, 0, 1.0]
-    ])
+    # NOTE: it's hard to determine these poses before hand
+    # so we will not adjust the heading until they are updated
+    # by the callbacks
+    # pose of monica's base relative to world frame
+    T_mb_in_world = np.eye(4)
+    # pose of ross' base relative to world frame
+    T_rb_in_world = np.eye(4)
 
     # offset to apply so the end effector is pitched up by theta degrees
     pitch_offset = np.array(R.from_euler('y', -15, degrees=True).as_matrix())
@@ -78,6 +64,8 @@ class ArmController(InterbotixManipulatorXS):
         self.robot_name = pargs.robot_name
         self.track_other_robot = (
             True if pargs.track_other_robot == 'true' else False)
+        self.updated_ross_pose = False
+        self.updated_monica_pose = False
 
         self.joint_group_pub = self.core.get_node().create_publisher(
             JointGroupCommand,
@@ -97,14 +85,14 @@ class ArmController(InterbotixManipulatorXS):
             # This could help make calculations a bit easier
             self.core.get_node().create_subscription(
                 Pose,
-                '/world_monica_pose',
+                '/monica/px100_base_link_pose',
                 self.update_monica_vicon_pose_cb,
                 10
             )
 
             self.core.get_node().create_subscription(
                 Pose,
-                '/world_ross_pose',
+                '/ross/px100_base_link_pose',
                 self.update_ross_vicon_pose_cb,
                 10
             )
@@ -157,7 +145,7 @@ class ArmController(InterbotixManipulatorXS):
         desired_trans_matrix[1, 3] = desired_pose.position.y
         desired_trans_matrix[2, 3] = desired_pose.position.z
 
-        if self.track_other_robot:
+        if self.track_other_robot and self.updated_monica_pose and self.updated_ross_pose:
             desired_trans_matrix = self.adjust_heading(desired_trans_matrix)
 
         trans_matrix = self.arm.get_ee_pose_command()
@@ -186,7 +174,8 @@ class ArmController(InterbotixManipulatorXS):
 
                 # Safety check to make sure waist in operating range (0,pi)
                 if joint_cmds[0] < 0 or joint_cmds[0] > np.pi:
-                    self.log_info('Waist joint command out of bounds, skipping')
+                    self.log_info(
+                        'Waist joint command out of bounds, skipping')
                     return
 
                 msg = JointGroupCommand(name="arm", cmd=joint_cmds)
@@ -211,26 +200,17 @@ class ArmController(InterbotixManipulatorXS):
         T_yd = np.linalg.inv(T_sy) @ T_sd
 
         if self.robot_name == 'monica':
-            # compute the pose of ross' manipulator relative to monica's manipulator
-            T_ross_manipulator_in_monica_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
-                @ np.linalg.inv(self.monica_vicon_in_world_trans_matrix) \
-                @ self.ross_vicon_in_world_trans_matrix \
-                @ self.manipulator_in_vicon_trans_matrix
-            
+            # compute ross' base relative to monica's base
+            T_rb_in_mb = np.linalg.inv(self.T_mb_in_world) @ self.T_rb_in_world
+
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_ross_manipulator_in_monica_manipulator[1, 3],
-                            T_ross_manipulator_in_monica_manipulator[0, 3])
-            
+            theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
+
         elif self.robot_name == 'ross':
-            # compute the pose of monica's manipulator relative to ross' manipulator
-            T_monica_manipulator_in_ross_manipulator = np.linalg.inv(self.manipulator_in_vicon_trans_matrix) \
-                @ np.linalg.inv(self.ross_vicon_in_world_trans_matrix) \
-                @ self.monica_vicon_in_world_trans_matrix \
-                @ self.manipulator_in_vicon_trans_matrix
-            
+            T_rb_in_mb = np.linalg.inv(self.T_rb_in_world) @ self.T_mb_in_world
+
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_monica_manipulator_in_ross_manipulator[1, 3],
-                            T_monica_manipulator_in_ross_manipulator[0, 3])
+            theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
         else:
             return T_sd
 
@@ -254,26 +234,28 @@ class ArmController(InterbotixManipulatorXS):
             self.desired_pose = copy.deepcopy(msg)
 
     def update_monica_vicon_pose_cb(self, msg: Pose):
-        self.monica_vicon_in_world_trans_matrix[:3, :3] = R.from_quat([
+        self.T_mb_in_world[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.monica_vicon_in_world_trans_matrix[0, 3] = msg.position.x
-        self.monica_vicon_in_world_trans_matrix[1, 3] = msg.position.y
-        self.monica_vicon_in_world_trans_matrix[2, 3] = msg.position.z
+        self.T_mb_in_world[0, 3] = msg.position.x
+        self.T_mb_in_world[1, 3] = msg.position.y
+        self.T_mb_in_world[2, 3] = msg.position.z
+        self.updated_monica_pose = True
 
     def update_ross_vicon_pose_cb(self, msg: Pose):
-        self.ross_vicon_in_world_trans_matrix[:3, :3] = R.from_quat([
+        self.T_rb_in_world[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.ross_vicon_in_world_trans_matrix[0, 3] = msg.position.x
-        self.ross_vicon_in_world_trans_matrix[1, 3] = msg.position.y
-        self.ross_vicon_in_world_trans_matrix[2, 3] = msg.position.z
+        self.T_rb_in_world[0, 3] = msg.position.x
+        self.T_rb_in_world[1, 3] = msg.position.y
+        self.T_rb_in_world[2, 3] = msg.position.z
+        self.updated_ross_pose = True
 
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
