@@ -4,6 +4,8 @@
 #include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+// #include <cstring>
+#include <string>
 
 class ViconTF2Updater : public rclcpp::Node
 {
@@ -14,14 +16,15 @@ public:
         tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
         std::string topic_name;
+        std::string robot_name = this->get_namespace();
 
-        if (this->get_namespace() == "/ross") {
+        if (robot_name == "/ross") {
           topic_name = "/world_ross_pose";
         }
         else {
           topic_name = "/world_monica_pose";
         }
-        
+                
         world_to_robot_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
             topic_name,
             10,
