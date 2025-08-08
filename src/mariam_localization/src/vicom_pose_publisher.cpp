@@ -24,7 +24,7 @@ public:
         tf2::Matrix3x3 rotation( 0, 1, 0,
                                 -1, 0, 0,
                                  0, 0, 1);
-        tf2::Vector3 translation(0.26, -0.1, -0.06);
+        tf2::Vector3 translation(0.23, -0.07, -0.06);
         T_vm_.setBasis(rotation);
         T_vm_.setOrigin(translation);
 
@@ -85,7 +85,7 @@ private:
         tf2::fromMsg(input_pose, pose_tf);
         
         // Apply transformation
-        tf2::Transform result_tf = transform * pose_tf;
+        tf2::Transform result_tf = pose_tf * transform;
         
         // Convert back to geometry_msgs::Pose
         geometry_msgs::msg::Pose output_pose;

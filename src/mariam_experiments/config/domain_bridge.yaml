@@ -96,3 +96,24 @@ topics:
     type: geometry_msgs/msg/Pose
     from_domain: 0
     to_domain: 2
+
+  world_monica_manipulator_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 1
+  
+  world_monica_manipulator_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 2
+
+  world_ross_manipulator_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 1
+
+  world_ross_manipulator_pose:
+    type: geometry_msgs/msg/Pose
+    from_domain: 0
+    to_domain: 2
+    

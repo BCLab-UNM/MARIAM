@@ -118,7 +118,7 @@ def launch_setup(context, *args, **kwargs):
         px100_controller_node,
         xsarm_control_launch,
         admittance_control_launch,
-        heading_publisher_cmd
+        # heading_publisher_cmd
     ]
 
 
