@@ -10,15 +10,15 @@ topics:
     from_domain: 1
     to_domain: 0
 
-  monica/wheel/odom:
-    type: nav_msgs/msg/Odometry
-    from_domain: 1
-    to_domain: 0
+  # monica/wheel/odom:
+  #   type: nav_msgs/msg/Odometry
+  #   from_domain: 1
+  #   to_domain: 0
 
-  monica/tf:
-    type: tf2_msgs/msg/TFMessage
-    from_domain: 1
-    to_domain: 0
+  # monica/tf:
+  #   type: tf2_msgs/msg/TFMessage
+  #   from_domain: 1
+  #   to_domain: 0
 
   # Ross topics output
   ross/force:
@@ -26,15 +26,15 @@ topics:
     from_domain: 2
     to_domain: 0
 
-  ross/wheel/odom:
-    type: nav_msgs/msg/Odometry
-    from_domain: 2
-    to_domain: 0
+  # ross/wheel/odom:
+  #   type: nav_msgs/msg/Odometry
+  #   from_domain: 2
+  #   to_domain: 0
 
-  ross/tf:
-    type: tf2_msgs/msg/TFMessage
-    from_domain: 2
-    to_domain: 0
+  # ross/tf:
+  #   type: tf2_msgs/msg/TFMessage
+  #   from_domain: 2
+  #   to_domain: 0
 
   # Home PC topics output
   monica/cmd_vel:
@@ -47,25 +47,25 @@ topics:
     from_domain: 0
     to_domain: 2
 
-  monica/px100_virtual_pose_updater:
-    type: std_msgs/msg/Float64
-    from_domain: 0
-    to_domain: 1
+  # monica/px100_virtual_pose_updater:
+  #   type: std_msgs/msg/Float64
+  #   from_domain: 0
+  #   to_domain: 1
     
-  ross/px100_virtual_pose_updater:
-    type: std_msgs/msg/Float64
-    from_domain: 0
-    to_domain: 2
+  # ross/px100_virtual_pose_updater:
+  #   type: std_msgs/msg/Float64
+  #   from_domain: 0
+  #   to_domain: 2
 
-  monica/goal_pose:
-    type: geometry_msgs/msg/PoseStamped
-    from_domain: 0
-    to_domain: 1
+  # monica/goal_pose:
+  #   type: geometry_msgs/msg/PoseStamped
+  #   from_domain: 0
+  #   to_domain: 1
 
-  ross/goal_pose:
-    type: geometry_msgs/msg/PoseStamped
-    from_domain: 0
-    to_domain: 2
+  # ross/goal_pose:
+  #   type: geometry_msgs/msg/PoseStamped
+  #   from_domain: 0
+  #   to_domain: 2
   
   monica/px100_base_link_pose:
     type: geometry_msgs/msg/Pose

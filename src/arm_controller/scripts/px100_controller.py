@@ -85,14 +85,14 @@ class ArmController(InterbotixManipulatorXS):
             # This could help make calculations a bit easier
             self.core.get_node().create_subscription(
                 Pose,
-                '/monica/px100_base_link_pose',
+                '/world_monica_manipulator_pose',
                 self.update_monica_vicon_pose_cb,
                 10
             )
 
             self.core.get_node().create_subscription(
                 Pose,
-                '/ross/px100_base_link_pose',
+                '/world_ross_manipulator_pose',
                 self.update_ross_vicon_pose_cb,
                 10
             )
