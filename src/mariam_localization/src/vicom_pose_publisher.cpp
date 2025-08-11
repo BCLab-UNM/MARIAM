@@ -16,9 +16,9 @@ public:
         
         // Create publishers
         ross_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_pose", 10);
-        ross_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_manipulator_pose", 10);
+        // ross_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_manipulator_pose", 10);
         monica_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_pose", 10);
-        monica_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_manipulator_pose", 10);
+        // monica_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_manipulator_pose", 10);
 
         // Initialize T_vm transform (vicon to manipulator)
         tf2::Matrix3x3 rotation( 0, 1, 0,
@@ -51,7 +51,7 @@ private:
             geometry_msgs::msg::Pose ross_manipulator_pose = applyTransform(ross_pose, T_vm_);
             
             ross_pub_->publish(ross_pose);
-            ross_manipulator_pub_->publish(ross_manipulator_pose);
+            // ross_manipulator_pub_->publish(ross_manipulator_pose);
 
         }
         catch (tf2::TransformException &ex) {
@@ -71,7 +71,7 @@ private:
             geometry_msgs::msg::Pose monica_manipulator_pose = applyTransform(monica_pose, T_vm_);
 
             monica_pub_->publish(monica_pose);
-            monica_manipulator_pub_->publish(monica_manipulator_pose);
+            // monica_manipulator_pub_->publish(monica_manipulator_pose);
         }
         catch (tf2::TransformException &ex) {
             // Skip publishing if transform not available
@@ -97,9 +97,9 @@ private:
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr ross_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr ross_manipulator_pub_;
+    // rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr ross_manipulator_pub_;
     rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr monica_pub_;
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr monica_manipulator_pub_;
+    // rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr monica_manipulator_pub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
     tf2::Transform T_vm_;
