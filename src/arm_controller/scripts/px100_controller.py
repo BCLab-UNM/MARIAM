@@ -42,9 +42,15 @@ class ArmController(InterbotixManipulatorXS):
     # so we will not adjust the heading until they are updated
     # by the callbacks
     # pose of monica's base relative to world frame
-    T_mb_in_world = np.eye(4)
+    T_world_to_mm = np.eye(4)
     # pose of ross' base relative to world frame
-    T_rb_in_world = np.eye(4)
+    T_world_to_rm = np.eye(4)
+    # transform from vicon to manipulator frame
+    # this is the same for both robots
+    T_v_to_m = np.array([ [ 0, 1, 0,  0.23],
+                          [-1, 0, 0, -0.07],
+                          [ 0, 0, 1, -0.06],
+                          [ 0, 0, 0,  1]])
 
     # offset to apply so the end effector is pitched up by theta degrees
     pitch_offset = np.array(R.from_euler('y', -15, degrees=True).as_matrix())
@@ -85,14 +91,14 @@ class ArmController(InterbotixManipulatorXS):
             # This could help make calculations a bit easier
             self.core.get_node().create_subscription(
                 Pose,
-                '/world_monica_manipulator_pose',
+                '/world_monica_pose',
                 self.update_monica_vicon_pose_cb,
                 10
             )
 
             self.core.get_node().create_subscription(
                 Pose,
-                '/world_ross_manipulator_pose',
+                '/world_ross_pose',
                 self.update_ross_vicon_pose_cb,
                 10
             )
@@ -201,13 +207,13 @@ class ArmController(InterbotixManipulatorXS):
 
         if self.robot_name == 'monica':
             # compute ross' base relative to monica's base
-            T_rb_in_mb = np.linalg.inv(self.T_mb_in_world) @ self.T_rb_in_world
+            T_rb_in_mb = np.linalg.inv(self.T_world_to_mm) @ self.T_world_to_rm
 
             # extract the angle from the transformation matrix
             theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
 
         elif self.robot_name == 'ross':
-            T_rb_in_mb = np.linalg.inv(self.T_rb_in_world) @ self.T_mb_in_world
+            T_rb_in_mb = np.linalg.inv(self.T_world_to_rm) @ self.T_world_to_mm
 
             # extract the angle from the transformation matrix
             theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
@@ -234,27 +240,35 @@ class ArmController(InterbotixManipulatorXS):
             self.desired_pose = copy.deepcopy(msg)
 
     def update_monica_vicon_pose_cb(self, msg: Pose):
-        self.T_mb_in_world[:3, :3] = R.from_quat([
+        # Get world to vicon transform
+        self.T_world_to_mm[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.T_mb_in_world[0, 3] = msg.position.x
-        self.T_mb_in_world[1, 3] = msg.position.y
-        self.T_mb_in_world[2, 3] = msg.position.z
+        self.T_world_to_mm[0, 3] = msg.position.x
+        self.T_world_to_mm[1, 3] = msg.position.y
+        self.T_world_to_mm[2, 3] = msg.position.z
+
+        # calculate world to manipulator transform
+        self.T_world_to_mm = self.T_world_to_mm @ self.T_v_to_m
         self.updated_monica_pose = True
 
     def update_ross_vicon_pose_cb(self, msg: Pose):
-        self.T_rb_in_world[:3, :3] = R.from_quat([
+        # Get world to vicon transform
+        self.T_world_to_rm[:3, :3] = R.from_quat([
             msg.orientation.x,
             msg.orientation.y,
             msg.orientation.z,
             msg.orientation.w,
         ]).as_matrix()
-        self.T_rb_in_world[0, 3] = msg.position.x
-        self.T_rb_in_world[1, 3] = msg.position.y
-        self.T_rb_in_world[2, 3] = msg.position.z
+        self.T_world_to_rm[0, 3] = msg.position.x
+        self.T_world_to_rm[1, 3] = msg.position.y
+        self.T_world_to_rm[2, 3] = msg.position.z
+
+        # calculate world to manipulator transform
+        self.T_world_to_rm = self.T_world_to_rm @ self.T_v_to_m
         self.updated_ross_pose = True
 
     def log_info(self, msg):
