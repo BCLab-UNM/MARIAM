@@ -52,6 +52,8 @@ class ArmController(InterbotixManipulatorXS):
                           [ 0, 0, 1, -0.06],
                           [ 0, 0, 0,  1]])
 
+    current_theta = np.pi/2 # Default to no heading adjustment
+
     # offset to apply so the end effector is pitched up by theta degrees
     pitch_offset = np.array(R.from_euler('y', -15, degrees=True).as_matrix())
 
@@ -210,19 +212,19 @@ class ArmController(InterbotixManipulatorXS):
             T_rb_in_mb = np.linalg.inv(self.T_world_to_mm) @ self.T_world_to_rm
 
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
+            self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
 
         elif self.robot_name == 'ross':
             T_rb_in_mb = np.linalg.inv(self.T_world_to_rm) @ self.T_world_to_mm
 
             # extract the angle from the transformation matrix
-            theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
+            self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
         else:
             return T_sd
 
         # adjust the desired transformation matrix
         T_sy[:3, :3] = np.array(
-            R.from_euler('z', theta, degrees=False).as_matrix())
+            R.from_euler('z', self.current_theta, degrees=False).as_matrix())
         return T_sy @ T_yd
 
     def update_desired_pose_cb(self, msg: Pose):
