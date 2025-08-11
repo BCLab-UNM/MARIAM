@@ -155,7 +155,7 @@ def launch_setup(context, *args, **kwargs):
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
-        vicon_tf2_updater_node
+        # vicon_tf2_updater_node
         # realsense_imu_launch_desc,
         # ekf_launch_desc,
         # slam_launch_desc,
