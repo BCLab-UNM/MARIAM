@@ -16,7 +16,7 @@ def launch_setup(context, *args, **kwargs):
     robot_name_launch_arg = LaunchConfiguration('robot_name')
     admittance_control_launch_arg = LaunchConfiguration(
         'use_admittance_control')
-    dynamic_paremeterization_launch_arg = LaunchConfiguration(
+    dynamic_parameterization_launch_arg = LaunchConfiguration(
         'use_dynamic_parameterization')
 
     # Get the robot name and set ROS_DOMAIN_ID based on namespace
