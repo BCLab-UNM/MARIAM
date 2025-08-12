@@ -132,7 +132,7 @@ class ArmController(InterbotixManipulatorXS):
         orientation_tolerance = 1e-3
 
         with self.lock:
-            desired_pose = self.desired_pose
+            desired_pose = self.desired_pose           
 
         # create a rotation matrix from the desired pose's quaternion
         desired_rotation_matrix = np.array(R.from_quat([
@@ -180,10 +180,18 @@ class ArmController(InterbotixManipulatorXS):
                 # print the first value of the joint commands
                 self.log_debug(f'Waist joint commands: {joint_cmds[0]}')
 
+                x = desired_trans_matrix[0, 3]
+                y = desired_trans_matrix[1, 3]
+
                 # Safety check to make sure waist in operating range (0,pi)
                 if joint_cmds[0] < 0 or joint_cmds[0] > np.pi:
                     self.log_info(
                         'Waist joint command out of bounds, skipping')
+                    return
+                
+                elif np.sqrt(x*x + y*y) > 0.29:
+                    self.log_info(
+                        'desired end-effector position is out of bounds, skipping')
                     return
 
                 msg = JointGroupCommand(name="arm", cmd=joint_cmds)
