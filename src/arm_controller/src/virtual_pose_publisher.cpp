@@ -15,7 +15,7 @@ class VirtualPosePublisher : public rclcpp::Node {
       );
 
       pose_updater_sub = this->create_subscription<geometry_msgs::msg::Pose>(
-        "px100_virtual_pose_updater",
+        "admittance_control/px100_virtual_pose_updater",
         10,
         std::bind(&VirtualPosePublisher::sub_callback, this, _1)
       );

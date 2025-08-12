@@ -23,15 +23,23 @@ public:
     this->declare_parameter("x_pos", 0.0);
     this->declare_parameter("y_pos", 0.0);
     this->declare_parameter("z_pos", 0.0);
+    this->declare_parameter("x", 0.0);
+    this->declare_parameter("y", 0.0);
+    this->declare_parameter("z", 0.707);
+    this->declare_parameter("w", 0.707);
     
     // Get parameter values
     mass_value_ = this->get_parameter("mass").as_double();
     damping_value_ = this->get_parameter("damping").as_double();
     stiffness_value_ = this->get_parameter("stiffness").as_double();
     double timer_period = this->get_parameter("frequency").as_double();
-    double default_x = this->get_parameter("x_pos").as_double();
-    double default_y = this->get_parameter("y_pos").as_double();
-    double default_z = this->get_parameter("z_pos").as_double();
+    default_x = this->get_parameter("x_pos").as_double();
+    default_y = this->get_parameter("y_pos").as_double();
+    default_z = this->get_parameter("z_pos").as_double();
+    default_orientation_x = this->get_parameter("x").as_double();
+    default_orientation_y = this->get_parameter("y").as_double();
+    default_orientation_z = this->get_parameter("z").as_double();
+    default_orientation_w = this->get_parameter("w").as_double();
     
     // Create publishers
     mass_pub_ = this->create_publisher<std_msgs::msg::Float64>(
@@ -42,11 +50,6 @@ public:
       "admittance_control/stiffness", 10);
     pose_updater_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(
       "admittance_control/px100_virtual_pose_updater", 10);
-    
-    // Create subscribers
-    slam_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
-      "slam_pose", 10,
-      std::bind(&DistributedParameterizer::SlamPoseCallback, this, std::placeholders::_1));
       
     force_sub_ = this->create_subscription<std_msgs::msg::Float32>(
       "force", 10,
@@ -65,11 +68,11 @@ public:
     current_virtual_pose_.position.x = default_x;
     current_virtual_pose_.position.y = default_y;
     current_virtual_pose_.position.z = default_z;
-    current_virtual_pose_.orientation.x = 0.0;
-    current_virtual_pose_.orientation.y = 0.0;
-    current_virtual_pose_.orientation.z = 0.0;
-    current_virtual_pose_.orientation.w = 1.0;
-    
+    current_virtual_pose_.orientation.x = default_orientation_x;
+    current_virtual_pose_.orientation.y = default_orientation_y;
+    current_virtual_pose_.orientation.z = default_orientation_z;
+    current_virtual_pose_.orientation.w = default_orientation_w;
+
     current_force_ = 0.0;
     current_agent_displacement_error_ = 0.0;
     
@@ -88,24 +91,6 @@ public:
   }
 
 private:
-  void SlamPoseCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg)
-  {
-    current_virtual_pose_ = msg->pose.pose;  // Note the extra .pose
-    
-    // Extract covariance matrix (6x6 = 36 elements)
-    // Layout: [x, y, z, roll, pitch, yaw] 
-    auto covariance = msg->pose.covariance;
-    
-    // Extract position errors (standard deviations) and store in Vector3
-    current_position_errors_.x = sqrt(covariance[0]);   // x variance
-    current_position_errors_.y = sqrt(covariance[7]);   // y variance  
-    current_position_errors_.z = sqrt(covariance[14]);  // z variance
-    
-    RCLCPP_DEBUG(this->get_logger(), 
-                "SLAM pose: [%.3f, %.3f, %.3f], errors: [%.3f, %.3f, %.3f]",
-                current_virtual_pose_.position.x, current_virtual_pose_.position.y, current_virtual_pose_.position.z,
-                current_position_errors_.x, current_position_errors_.y, current_position_errors_.z);
-  }
   
   void ForceCallback(const std_msgs::msg::Float32::SharedPtr msg)
   {
@@ -115,7 +100,7 @@ private:
   
   void AgentDisplacementCallback(const std_msgs::msg::Float64::SharedPtr msg)
   {
-    current_agent_displacement_error_ = msg->data - 0.85;
+    current_agent_displacement_error_ = msg->data - 0.99;
     RCLCPP_DEBUG(this->get_logger(), "Received agent displacement error: %.3f", current_agent_displacement_error_);
   }
   
@@ -125,12 +110,19 @@ private:
     // where e = current_agent_displacement_error_, u = current_position_errors_.x
     double calculated_stiffness = 100.0 + (2.0 * abs(current_agent_displacement_error_));
     
-    // Calculate dynamic x position using equation: x = 23cm + 0.5*e + 0.01*u
-    // where e = current_agent_displacement_error_, u = current_position_errors_.x
-    double calculated_x = 0.23 + (0.5 * current_agent_displacement_error_);
+    // Calculate dynamic y position using equation: y = 23cm + 0.5*e + 0.01*u
+    // where e = current_agent_displacement_error_, u = current_position_errors_.y
+    double calculated_y = 0.23 + (0.5 * current_agent_displacement_error_);
     
-    // Update current pose with calculated x position
-    current_virtual_pose_.position.x = calculated_x;
+    // Update current pose with calculated y position
+    geometry_msgs::msg::Pose output_virtual_pose_;
+    output_virtual_pose_.position.x = default_x;  // Keep x constant
+    output_virtual_pose_.position.y = calculated_y;
+    output_virtual_pose_.position.z = default_z;  // Keep z constant
+    output_virtual_pose_.orientation.x = default_orientation_x;
+    output_virtual_pose_.orientation.y = default_orientation_y;
+    output_virtual_pose_.orientation.z = default_orientation_z;
+    output_virtual_pose_.orientation.w = default_orientation_w;
     
     // Create and populate messages
     auto mass_msg = std_msgs::msg::Float64();
@@ -145,7 +137,7 @@ private:
     mass_pub_->publish(mass_msg);
     damping_pub_->publish(damping_msg);
     stiffness_pub_->publish(stiffness_msg);
-    pose_updater_pub_->publish(current_virtual_pose_);
+    pose_updater_pub_->publish(output_virtual_pose_);
     
     // Optional: Log periodically (every 500 calls = 1 second at 500Hz)
     // static int counter = 0;
@@ -176,6 +168,15 @@ private:
   double mass_value_;
   double damping_value_;
   double stiffness_value_;
+
+  // Default pose values
+  double default_x = 0.0;
+  double default_y = 0.0;
+  double default_z = 0.0;
+  double default_orientation_x = 0.0;
+  double default_orientation_y = 0.0;
+  double default_orientation_z = 0.707; // Example value
+  double default_orientation_w = 0.707; // Example value
   
   // Storage for most recent messages
   geometry_msgs::msg::Pose current_virtual_pose_;
