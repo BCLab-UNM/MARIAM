@@ -45,11 +45,21 @@ ament_target_dependencies(agent_displacement_estimator
   tf2_geometry_msgs
 )
 
+# Add executable, specify dependencies for vicon_agent_displacement_estimator
+add_executable(vicon_agent_displacement_estimator src/vicon_agent_displacement_estimator.cpp)
+ament_target_dependencies(vicon_agent_displacement_estimator
+  rclcpp
+  std_msgs
+  tf2_ros
+  tf2_geometry_msgs
+)
+
 # Install executables
 install(TARGETS
   centralized_parameterizer
   distributed_parameterizer
   agent_displacement_estimator
+  vicon_agent_displacement_estimator
   DESTINATION lib/${PROJECT_NAME}
 )
 

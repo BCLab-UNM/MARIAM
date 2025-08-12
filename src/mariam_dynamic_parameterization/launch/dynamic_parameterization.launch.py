@@ -37,7 +37,7 @@ def generate_launch_description():
         # Launch the agent displacement estimator node
         Node(
             package='mariam_dynamic_parameterization',
-            executable='agent_displacement_estimator',
+            executable='vicon_agent_displacement_estimator',
             name='agent_displacement_estimator',
             namespace=LaunchConfiguration('namespace'),
             output='screen',

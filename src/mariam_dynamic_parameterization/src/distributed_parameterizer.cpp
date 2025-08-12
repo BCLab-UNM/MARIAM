@@ -71,7 +71,7 @@ public:
     current_virtual_pose_.orientation.w = 1.0;
     
     current_force_ = 0.0;
-    current_agent_displacement_ = 0.0;
+    current_agent_displacement_error_ = 0.0;
     
     // Initialize position errors
     current_position_errors_.x = 0.0;
@@ -115,19 +115,19 @@ private:
   
   void AgentDisplacementCallback(const std_msgs::msg::Float64::SharedPtr msg)
   {
-    current_agent_displacement_ = msg->data;
-    RCLCPP_DEBUG(this->get_logger(), "Received agent displacement: %.3f", current_agent_displacement_);
+    current_agent_displacement_error_ = msg->data - 0.85;
+    RCLCPP_DEBUG(this->get_logger(), "Received agent displacement error: %.3f", current_agent_displacement_error_);
   }
   
   void TimerCallback()
   {
     // Calculate dynamic stiffness using equation: K = 100 + 10*e + 2*u
-    // where e = current_agent_displacement_, u = current_position_errors_.x
-    double calculated_stiffness = 100.0 + (10.0 * current_agent_displacement_) + (2.0 * current_position_errors_.x);
+    // where e = current_agent_displacement_error_, u = current_position_errors_.x
+    double calculated_stiffness = 100.0 + (2.0 * abs(current_agent_displacement_error_));
     
     // Calculate dynamic x position using equation: x = 23cm + 0.5*e + 0.01*u
-    // where e = current_agent_displacement_, u = current_position_errors_.x
-    double calculated_x = 0.23 + (0.5 * current_agent_displacement_) + (0.01 * current_position_errors_.x);
+    // where e = current_agent_displacement_error_, u = current_position_errors_.x
+    double calculated_x = 0.23 + (0.5 * current_agent_displacement_error_);
     
     // Update current pose with calculated x position
     current_virtual_pose_.position.x = calculated_x;
@@ -153,7 +153,7 @@ private:
     //   RCLCPP_INFO(this->get_logger(), 
     //               "Publishing - Mass: %.2f, Damping: %.2f, Stiffness: %.2f, X: %.3f (e=%.3f, u=%.3f)",
     //               mass_value_, damping_value_, calculated_stiffness, calculated_x,
-    //               current_agent_displacement_, current_position_errors_.x);
+    //               current_agent_displacement_error_, current_position_errors_.x);
     //   counter = 0;
     // }
   }
@@ -180,7 +180,7 @@ private:
   // Storage for most recent messages
   geometry_msgs::msg::Pose current_virtual_pose_;
   float current_force_;
-  double current_agent_displacement_;
+  double current_agent_displacement_error_;
   geometry_msgs::msg::Vector3 current_position_errors_;
 };
 

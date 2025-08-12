@@ -16,6 +16,8 @@ def launch_setup(context, *args, **kwargs):
     robot_name_launch_arg = LaunchConfiguration('robot_name')
     admittance_control_launch_arg = LaunchConfiguration(
         'use_admittance_control')
+    dynamic_paremeterization_launch_arg = LaunchConfiguration(
+        'use_dynamic_parameterization')
 
     # Get the robot name and set ROS_DOMAIN_ID based on namespace
     robot_name = robot_name_launch_arg.perform(context)
@@ -151,10 +153,25 @@ def launch_setup(context, *args, **kwargs):
             ]
     )
 
+    dynamic_parameterization_launch_desc = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([
+                FindPackageShare('mariam_dynamic_parameterization'),
+                'launch',
+                'dynamic_parameterization.launch.py'
+            ])
+        ]),
+        launch_arguments={
+            'namespace': robot_name_launch_arg,
+        }.items(),
+        condition=IfCondition(dynamic_parameterization_launch_arg)
+    )
+
     return [
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
+        dynamic_parameterization_launch_desc,
         # vicon_tf2_updater_node
         # realsense_imu_launch_desc,
         # ekf_launch_desc,
@@ -178,6 +195,12 @@ def generate_launch_description():
             default_value='true',
             choices=('true', 'false'),
             description='Whether to use admittance control'
+        ),
+        DeclareLaunchArgument(
+            'use_dynamic_parameterization',
+            default_value='false',
+            choices=('true', 'false'),
+            description='Whether to use dynamic parameterization'
         )
     ]
 
