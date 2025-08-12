@@ -14,7 +14,7 @@ class VirtualPosePublisher : public rclcpp::Node {
         10
       );
 
-      pose_updater_sub = this->create_subscription<std_msgs::msg::Float64>(
+      pose_updater_sub = this->create_subscription<geometry_msgs::msg::Pose>(
         "px100_virtual_pose_updater",
         10,
         std::bind(&VirtualPosePublisher::sub_callback, this, _1)
@@ -63,7 +63,7 @@ class VirtualPosePublisher : public rclcpp::Node {
 
       rclcpp::TimerBase::SharedPtr timer;
       rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr pose_publisher;
-      rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr pose_updater_sub;
+      rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_updater_sub;
       const rclcpp::Logger LOGGER = rclcpp::get_logger("virtual_pose_publisher");
 
       void callback() {
@@ -78,22 +78,28 @@ class VirtualPosePublisher : public rclcpp::Node {
         msg.orientation.y = y;
         msg.orientation.z = z;
         
-        // RCLCPP_INFO(LOGGER,
-        //   "Publishing: (%f, %f, %f)\n(%f, %f, %f, %f)",
-        //   x_pos,
-        //   y_pos,
-        //   z_pos,
-        //   w,
-        //   x,
-        //   y,
-        //   z
-        // );
+        RCLCPP_DEBUG(LOGGER,
+          "Publishing: (%f, %f, %f)\n(%f, %f, %f, %f)",
+          x_pos,
+          y_pos,
+          z_pos,
+          w,
+          x,
+          y,
+          z
+        );
 
         pose_publisher->publish(msg);
       }
 
-      void sub_callback(const std_msgs::msg::Float64::SharedPtr msg) {
-        z_pos = msg->data;
+      void sub_callback(const geometry_msgs::msg::Pose &msg) {
+        x_pos = msg.position.x;
+        y_pos = msg.position.y;
+        z_pos = msg.position.z;
+        w = msg.orientation.w;
+        x = msg.orientation.x;
+        y = msg.orientation.y;
+        z = msg.orientation.z;
       }
 };
 
