@@ -90,6 +90,14 @@ ament_target_dependencies(vicom_dual_linear_constant_velocity_open_loop
   nav_msgs
 )
 
+# Create the trajectory_follower executable
+add_executable(trajectory_follower src/trajectory_follower.cpp)
+ament_target_dependencies(trajectory_follower
+  rclcpp
+  geometry_msgs
+  nav_msgs
+)
+
 # Install the executables
 install(TARGETS
   dual_waypoint_publisher
@@ -100,6 +108,7 @@ install(TARGETS
   dual_linear_sinusoidal_acceleration_open_loop
   dual_curved_constant_velocity
   vicom_dual_linear_constant_velocity_open_loop
+  trajectory_follower
   DESTINATION lib/${PROJECT_NAME}
 )
 

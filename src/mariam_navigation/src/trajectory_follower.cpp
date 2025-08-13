@@ -1,0 +1,290 @@
+#include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <vector>
+#include <cmath>
+#include <chrono>
+#include <nav_msgs/msg/path.hpp>
+
+// A struct to hold the coefficients of a cubic polynomial
+struct CubicPolynomial {
+    double a, b, c, d;
+    
+    // Evaluate the polynomial at a given time t
+    double position(double t) const {
+        return a * std::pow(t, 3) + b * std::pow(t, 2) + c * t + d;
+    }
+    
+    // Evaluate the first derivative (velocity)
+    double velocity(double t) const {
+        return 3 * a * std::pow(t, 2) + 2 * b * t + c;
+    }
+    
+    // Evaluate the second derivative (acceleration)
+    double acceleration(double t) const {
+        return 6 * a * t + 2 * b;
+    }
+};
+
+// 2D trajectory using two cubic polynomials
+struct Trajectory2D {
+    CubicPolynomial x_poly;
+    CubicPolynomial y_poly;
+    double duration;
+    
+    struct Point2D {
+        double x, y;
+        double vx, vy;
+        double ax, ay;
+    };
+    
+    Point2D getPoint(double t) const {
+        Point2D point;
+        point.x = x_poly.position(t);
+        point.y = y_poly.position(t);
+        point.vx = x_poly.velocity(t);
+        point.vy = y_poly.velocity(t);
+        point.ax = x_poly.acceleration(t);
+        point.ay = y_poly.acceleration(t);
+        return point;
+    }
+};
+
+// Simple PID controller
+class PIDController {
+public:
+    PIDController(double kp, double ki, double kd) : kp_(kp), ki_(ki), kd_(kd), 
+                  prev_error_(0.0), integral_(0.0) {}
+    
+    double compute(double error, double dt) {
+        integral_ += error * dt;
+        double derivative = (error - prev_error_) / dt;
+        double output = kp_ * error + ki_ * integral_ + kd_ * derivative;
+        prev_error_ = error;
+        return output;
+    }
+    
+    void reset() {
+        prev_error_ = 0.0;
+        integral_ = 0.0;
+    }
+
+private:
+    double kp_, ki_, kd_;
+    double prev_error_;
+    double integral_;
+};
+
+class TrajectoryFollower : public rclcpp::Node {
+  public:
+    TrajectoryFollower() : Node("navigation_node"),
+      pid_x_(2.0, 0.1, 0.5),  // Tunable PID gains
+      pid_y_(2.0, 0.1, 0.5),
+      pid_theta_(3.0, 0.0, 0.8) {
+        
+      // Parameters
+      this->declare_parameter("x_0", 0.0);
+      this->declare_parameter("y_0", 0.0);
+      this->declare_parameter("x_f", 3.0);
+      this->declare_parameter("y_f", 0.0);
+      this->declare_parameter("trajectory_duration", 10.0);
+      this->declare_parameter("control_frequency", 50.0);
+      this->declare_parameter("max_linear_vel", 0.5);
+      this->declare_parameter("max_angular_vel", 1.0);
+        
+      std::string robot_name = this->get_namespace();
+
+      // Publishers and subscribers
+      cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+      pose_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+        robot_name == "ross" ? "/world_ross_pose" : "/world_monica_pose",
+        10,
+        std::bind(&TrajectoryFollower::poseCallback, this, std::placeholders::_1)
+      );
+      path_pub_ = this->create_publisher<nav_msgs::msg::Path>("trajectory_path", 10);
+      
+      RCLCPP_INFO(this->get_logger(),
+        "Subscribing to vicon pose: %s",
+        robot_name == "ross" ? "/world_ross_pose" : "/world_monica_pose"
+      );
+
+      // Generate trajectory
+      generateTrajectory();
+      publishTrajectoryPath();
+      
+      // Start control timer
+      double control_freq = this->get_parameter("control_frequency").as_double();
+      auto timer_period = std::chrono::duration<double>(1.0 / control_freq);
+      control_timer_ = this->create_wall_timer(timer_period,
+          std::bind(&TrajectoryFollower::controlLoop, this));
+      
+      trajectory_start_time_ = this->now();
+      
+      RCLCPP_INFO(this->get_logger(), "TrajectoryFollower initialized. Starting trajectory following.");
+    }
+
+  private:
+    // Function to generate a cubic polynomial trajectory for each axis
+    CubicPolynomial generate_cubic_trajectory(
+      double start_pos, double start_vel,
+      double end_pos, double end_vel,
+      double duration) {
+      
+      CubicPolynomial p;
+      double square_term = duration * duration;
+      double cubic_term = square_term * duration;
+      
+      // Use the derived formulas to calculate the coefficients
+      p.d = start_pos;
+      p.c = start_vel;
+      p.b = (3.0 * (end_pos - start_pos) - duration * (2.0 * start_vel + end_vel)) / square_term;
+      p.a = (2.0 * (start_pos - end_pos) + duration * (start_vel + end_vel)) / cubic_term;
+      
+      return p;
+    }
+    
+    void generateTrajectory() {
+      double x_0 = this->get_parameter("x_0").as_double();
+      double y_0 = this->get_parameter("y_0").as_double();
+      double x_f = this->get_parameter("x_f").as_double();
+      double y_f = this->get_parameter("y_f").as_double();
+      double duration = this->get_parameter("trajectory_duration").as_double();
+      
+      // Generate cubic polynomial for x and y coordinates
+      // Assuming zero initial and final velocities for smooth start/stop
+      trajectory_.x_poly = generate_cubic_trajectory(x_0, 0.0, x_f, 0.0, duration);
+      trajectory_.y_poly = generate_cubic_trajectory(y_0, 0.0, y_f, 0.0, duration);
+      trajectory_.duration = duration;
+      
+      RCLCPP_INFO(this->get_logger(), "Generated trajectory from (%.2f, %.2f) to (%.2f, %.2f) over %.2f seconds",
+                  x_0, y_0, x_f, y_f, duration);
+    }
+    
+    void publishTrajectoryPath() {
+      nav_msgs::msg::Path path;
+      path.header.frame_id = "world";  // Adjust frame as needed
+      path.header.stamp = this->now();
+      
+      // Sample the trajectory at regular intervals for visualization
+      int num_samples = 100;
+      for (int i = 0; i <= num_samples; ++i) {
+          double t = (static_cast<double>(i) / num_samples) * trajectory_.duration;
+          auto point = trajectory_.getPoint(t);
+          
+          geometry_msgs::msg::PoseStamped pose;
+          pose.header.frame_id = "map";
+          pose.header.stamp = this->now();
+          pose.pose.position.x = point.x;
+          pose.pose.position.y = point.y;
+          pose.pose.position.z = 0.0;
+          
+          // Calculate orientation from velocity direction
+          double theta = std::atan2(point.vy, point.vx);
+          pose.pose.orientation.z = std::sin(theta / 2.0);
+          pose.pose.orientation.w = std::cos(theta / 2.0);
+          
+          path.poses.push_back(pose);
+      }
+      
+      path_pub_->publish(path);
+    }
+    
+    void poseCallback(const geometry_msgs::msg::Pose &msg) {
+      current_pose_ = msg;
+      pose_received_ = true;
+    }
+    
+    void controlLoop() {
+      if (!pose_received_) {
+          RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                                "No pose received from Vicon system");
+          return;
+      }
+      
+      // Calculate time elapsed since trajectory start
+      double elapsed_time = (this->now() - trajectory_start_time_).seconds();
+      
+      // Check if trajectory is complete
+      if (elapsed_time > trajectory_.duration) {
+          geometry_msgs::msg::Twist cmd_vel;
+          cmd_vel_pub_->publish(cmd_vel);  // Stop the robot
+          RCLCPP_INFO_ONCE(this->get_logger(), "Trajectory completed!");
+          return;
+      }
+      
+      // Get desired position and velocity from trajectory
+      auto desired = trajectory_.getPoint(elapsed_time);
+      
+      // Current robot position
+      double current_x = current_pose_.position.x;
+      double current_y = current_pose_.position.y;
+      
+      // Extract current orientation (assuming quaternion represents yaw only)
+      double current_theta = 2.0 * std::atan2(current_pose_.orientation.z,
+                                              current_pose_.orientation.w);
+      
+      // Calculate position errors
+      double error_x = desired.x - current_x;
+      double error_y = desired.y - current_y;
+      
+      // Calculate desired heading from desired velocity
+      double desired_theta = std::atan2(desired.vy, desired.vx);
+      double error_theta = desired_theta - current_theta;
+      
+      // Normalize angle error to [-pi, pi]
+      while (error_theta > M_PI) error_theta -= 2 * M_PI;
+      while (error_theta < -M_PI) error_theta += 2 * M_PI;
+      
+      // PID control (simplified approach)
+      double dt = 1.0 / this->get_parameter("control_frequency").as_double();
+      
+      // Transform position errors to robot frame for better control
+      double error_forward = error_x * std::cos(current_theta) + error_y * std::sin(current_theta);
+      double error_lateral = -error_x * std::sin(current_theta) + error_y * std::cos(current_theta);
+      
+      // Compute control commands
+      double linear_vel = pid_x_.compute(error_forward, dt);
+      double angular_vel = pid_theta_.compute(error_theta, dt) + 
+                          0.5 * pid_y_.compute(error_lateral, dt);  // Lateral error contributes to turning
+      
+      // Apply velocity limits
+      double max_linear = this->get_parameter("max_linear_vel").as_double();
+      double max_angular = this->get_parameter("max_angular_vel").as_double();
+      
+      linear_vel = std::clamp(linear_vel, -max_linear, max_linear);
+      angular_vel = std::clamp(angular_vel, -max_angular, max_angular);
+      
+      // Publish command
+      geometry_msgs::msg::Twist cmd_vel;
+      cmd_vel.linear.x = linear_vel;
+      cmd_vel.angular.z = angular_vel;
+      cmd_vel_pub_->publish(cmd_vel);
+      
+      // Debug output
+      RCLCPP_DEBUG(this->get_logger(), 
+                  "t=%.2f, desired=(%.2f,%.2f), current=(%.2f,%.2f), error=(%.2f,%.2f), cmd=(%.2f,%.2f)",
+                  elapsed_time, desired.x, desired.y, current_x, current_y,
+                  error_x, error_y, linear_vel, angular_vel);
+    }
+    
+    // Member variables
+    Trajectory2D trajectory_;
+    PIDController pid_x_, pid_y_, pid_theta_;
+    
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_sub_;
+    rclcpp::TimerBase::SharedPtr control_timer_;
+    
+    geometry_msgs::msg::Pose current_pose_;
+    bool pose_received_ = false;
+    rclcpp::Time trajectory_start_time_;
+};
+
+int main(int argc, char** argv) {
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<TrajectoryFollower>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
+}
