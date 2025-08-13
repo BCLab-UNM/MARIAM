@@ -5,75 +5,10 @@
 #include <cmath>
 #include <chrono>
 #include <nav_msgs/msg/path.hpp>
+#include "pid_controller.hpp"
+#include "cubic_spline.hpp"
+#include "cubic_polynomial.hpp"
 
-// A struct to hold the coefficients of a cubic polynomial
-struct CubicPolynomial {
-    double a, b, c, d;
-    
-    // Evaluate the polynomial at a given time t
-    double position(double t) const {
-        return a * std::pow(t, 3) + b * std::pow(t, 2) + c * t + d;
-    }
-    
-    // Evaluate the first derivative (velocity)
-    double velocity(double t) const {
-        return 3 * a * std::pow(t, 2) + 2 * b * t + c;
-    }
-    
-    // Evaluate the second derivative (acceleration)
-    double acceleration(double t) const {
-        return 6 * a * t + 2 * b;
-    }
-};
-
-// 2D trajectory using two cubic polynomials
-struct Trajectory2D {
-    CubicPolynomial x_poly;
-    CubicPolynomial y_poly;
-    double duration;
-    
-    struct Point2D {
-        double x, y;
-        double vx, vy;
-        double ax, ay;
-    };
-    
-    Point2D getPoint(double t) const {
-        Point2D point;
-        point.x = x_poly.position(t);
-        point.y = y_poly.position(t);
-        point.vx = x_poly.velocity(t);
-        point.vy = y_poly.velocity(t);
-        point.ax = x_poly.acceleration(t);
-        point.ay = y_poly.acceleration(t);
-        return point;
-    }
-};
-
-// Simple PID controller
-class PIDController {
-public:
-    PIDController(double kp, double ki, double kd) : kp_(kp), ki_(ki), kd_(kd), 
-                  prev_error_(0.0), integral_(0.0) {}
-    
-    double compute(double error, double dt) {
-        integral_ += error * dt;
-        double derivative = (error - prev_error_) / dt;
-        double output = kp_ * error + ki_ * integral_ + kd_ * derivative;
-        prev_error_ = error;
-        return output;
-    }
-    
-    void reset() {
-        prev_error_ = 0.0;
-        integral_ = 0.0;
-    }
-
-private:
-    double kp_, ki_, kd_;
-    double prev_error_;
-    double integral_;
-};
 
 class TrajectoryFollower : public rclcpp::Node {
   public:
@@ -91,6 +26,9 @@ class TrajectoryFollower : public rclcpp::Node {
       this->declare_parameter("control_frequency", 50.0);
       this->declare_parameter("max_linear_vel", 0.5);
       this->declare_parameter("max_angular_vel", 1.0);
+      // for splines only
+      this->declare_parameter("num_waypoints", 5);
+      this->declare_parameter("arc_magnitude", 0.5);
         
       std::string robot_name = this->get_namespace();
 
@@ -109,7 +47,8 @@ class TrajectoryFollower : public rclcpp::Node {
       );
 
       // Generate trajectory
-      generateTrajectory();
+      // generatePolynomialTrajectory();
+      generateSplineTrajectory();
       publishTrajectoryPath();
       
       // Start control timer
@@ -142,8 +81,40 @@ class TrajectoryFollower : public rclcpp::Node {
       
       return p;
     }
+
+    void generateSplineTrajectory() {
+      double x_0 = this->get_parameter("x_0").as_double();
+      double y_0 = this->get_parameter("y_0").as_double();
+      double x_f = this->get_parameter("x_f").as_double();
+      double y_f = this->get_parameter("y_f").as_double();
+      double duration = this->get_parameter("trajectory_duration").as_double();
+      int num_waypoints = this->get_parameter("num_waypoints").as_int();
+      double mag = this->get_parameter("arc_magnitude").as_double();
+      
+      // Generate waypoints with a sinusoidal curve
+      std::vector<double> t_waypoints, x_waypoints, y_waypoints;
+      
+      for (int i = 0; i < num_waypoints; ++i) {
+        double progress = static_cast<double>(i) / (num_waypoints - 1);
+        double t = progress * duration;
+        double x = x_0 + progress * (x_f - x_0);
+        double y = y_0 + progress * (y_f - y_0) + mag * progress * progress;
+        
+        t_waypoints.push_back(t);
+        x_waypoints.push_back(x);
+        y_waypoints.push_back(y);
+      }
+      
+      // Create splines
+      trajectory_.x_spline.setPoints(t_waypoints, x_waypoints);
+      trajectory_.y_spline.setPoints(t_waypoints, y_waypoints);
+      trajectory_.duration = duration;
+      
+      RCLCPP_INFO(this->get_logger(), "Generated spline trajectory with %d waypoints over %.2f seconds",
+                  num_waypoints, duration);
+    }
     
-    void generateTrajectory() {
+    void generatePolynomialTrajectory() {
       double x_0 = this->get_parameter("x_0").as_double();
       double y_0 = this->get_parameter("y_0").as_double();
       double x_f = this->get_parameter("x_f").as_double();
@@ -152,8 +123,8 @@ class TrajectoryFollower : public rclcpp::Node {
       
       // Generate cubic polynomial for x and y coordinates
       // Assuming zero initial and final velocities for smooth start/stop
-      trajectory_.x_poly = generate_cubic_trajectory(x_0, 0.0, x_f, 0.0, duration);
-      trajectory_.y_poly = generate_cubic_trajectory(y_0, 0.0, y_f, 0.0, duration);
+      // trajectory_.x_poly = generate_cubic_trajectory(x_0, 0.0, x_f, 0.0, duration);
+      // trajectory_.y_poly = generate_cubic_trajectory(y_0, 0.0, y_f, 0.0, duration);
       trajectory_.duration = duration;
       
       RCLCPP_INFO(this->get_logger(), "Generated trajectory from (%.2f, %.2f) to (%.2f, %.2f) over %.2f seconds",
@@ -168,22 +139,22 @@ class TrajectoryFollower : public rclcpp::Node {
       // Sample the trajectory at regular intervals for visualization
       int num_samples = 100;
       for (int i = 0; i <= num_samples; ++i) {
-          double t = (static_cast<double>(i) / num_samples) * trajectory_.duration;
-          auto point = trajectory_.getPoint(t);
-          
-          geometry_msgs::msg::PoseStamped pose;
-          pose.header.frame_id = "map";
-          pose.header.stamp = this->now();
-          pose.pose.position.x = point.x;
-          pose.pose.position.y = point.y;
-          pose.pose.position.z = 0.0;
-          
-          // Calculate orientation from velocity direction
-          double theta = std::atan2(point.vy, point.vx);
-          pose.pose.orientation.z = std::sin(theta / 2.0);
-          pose.pose.orientation.w = std::cos(theta / 2.0);
-          
-          path.poses.push_back(pose);
+        double t = (static_cast<double>(i) / num_samples) * trajectory_.duration;
+        auto point = trajectory_.getPoint(t);
+        
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header.frame_id = "map";
+        pose.header.stamp = this->now();
+        pose.pose.position.x = point.x;
+        pose.pose.position.y = point.y;
+        pose.pose.position.z = 0.0;
+        
+        // Calculate orientation from velocity direction
+        double theta = std::atan2(point.vy, point.vx);
+        pose.pose.orientation.z = std::sin(theta / 2.0);
+        pose.pose.orientation.w = std::cos(theta / 2.0);
+        
+        path.poses.push_back(pose);
       }
       
       path_pub_->publish(path);
@@ -196,9 +167,9 @@ class TrajectoryFollower : public rclcpp::Node {
     
     void controlLoop() {
       if (!pose_received_) {
-          RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                                "No pose received from Vicon system");
-          return;
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+                              "No pose received from Vicon system");
+        return;
       }
       
       // Calculate time elapsed since trajectory start
@@ -206,10 +177,10 @@ class TrajectoryFollower : public rclcpp::Node {
       
       // Check if trajectory is complete
       if (elapsed_time > trajectory_.duration) {
-          geometry_msgs::msg::Twist cmd_vel;
-          cmd_vel_pub_->publish(cmd_vel);  // Stop the robot
-          RCLCPP_INFO_ONCE(this->get_logger(), "Trajectory completed!");
-          return;
+        geometry_msgs::msg::Twist cmd_vel;
+        cmd_vel_pub_->publish(cmd_vel);  // Stop the robot
+        RCLCPP_INFO_ONCE(this->get_logger(), "Trajectory completed!");
+        return;
       }
       
       // Get desired position and velocity from trajectory
@@ -268,7 +239,8 @@ class TrajectoryFollower : public rclcpp::Node {
     }
     
     // Member variables
-    Trajectory2D trajectory_;
+    // Trajectory2D trajectory_;
+    SplineTrajectory2D trajectory_;
     PIDController pid_x_, pid_y_, pid_theta_;
     
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
