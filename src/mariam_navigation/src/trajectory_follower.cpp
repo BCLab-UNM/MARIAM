@@ -14,8 +14,8 @@ class TrajectoryFollower : public rclcpp::Node {
   public:
     TrajectoryFollower() : Node("trajectory_follower"),
       // PID parameters
-      pid_x_(2.0, 0.1, 0.5),
-      pid_y_(2.0, 0.1, 0.5),
+      pid_x_(2.0, 1.0, 0.5),
+      pid_y_(2.0, 1.0, 0.5),
       pid_theta_(3.0, 0.0, 0.8) {
         
       // Declare parameters
@@ -29,7 +29,7 @@ class TrajectoryFollower : public rclcpp::Node {
       this->declare_parameter("max_angular_vel", 1.0);
       // these are for splines only
       this->declare_parameter("num_waypoints", 5);
-      this->declare_parameter("quadratic_coeff", -1.5);
+      this->declare_parameter("parabola_coeff", -1.5);
         
       this->robot_name = this->get_namespace(); // make namespace an std::string
       std::string pose_topic = robot_name == "/ross" ? "/world_ross_pose" : "/world_monica_pose";
@@ -113,7 +113,7 @@ class TrajectoryFollower : public rclcpp::Node {
       double y_f = this->get_parameter("y_f").as_double();
       double duration = this->get_parameter("trajectory_duration").as_double();
       int num_waypoints = this->get_parameter("num_waypoints").as_int();
-      double a = this->get_parameter("quadratic_coeff").as_double();
+      double a = this->get_parameter("parabola_coeff").as_double();
       
       // Generate waypoints with a sinusoidal curve
       std::vector<double> t_waypoints, x_waypoints, y_waypoints;

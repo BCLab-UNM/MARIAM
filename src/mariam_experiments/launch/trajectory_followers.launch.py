@@ -16,12 +16,12 @@ def generate_launch_description():
                 'x_0': -0.45,
                 'y_0': -0.36,
                 'x_f': 2.12,
-                'y_f': 1.95,
-                'trajectory_duration': 30.0,
+                'y_f': 1.98,
+                'trajectory_duration': 20.0,
                 'control_frequency': 50.0,
                 'max_linear_vel': 0.2,
                 'max_angular_vel': 0.4,
-                'quadratic_coeff': -1.0,
+                'parabola_coeff': -1.0,
             }],
             output='screen'
         ),
@@ -32,13 +32,13 @@ def generate_launch_description():
             parameters=[{
                 'x_0': -1.49,
                 'y_0': -0.26,
-                'x_f': 1.61,
-                'y_f': 1.29,
-                'trajectory_duration': 30.0,
+                'x_f': 1.41,
+                'y_f': 1.09,
+                'trajectory_duration': 20.0,
                 'control_frequency': 50.0,
                 'max_linear_vel': 0.2,
                 'max_angular_vel': 0.4,
-                'quadratic_coeff': -1.0,
+                'parabola_coeff': -1.0,
             }],
             output='screen'
         )
