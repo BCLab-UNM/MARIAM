@@ -12,12 +12,13 @@
 
 class TrajectoryFollower : public rclcpp::Node {
   public:
-    TrajectoryFollower() : Node("navigation_node"),
-      pid_x_(2.0, 0.1, 0.5),  // Tunable PID gains
+    TrajectoryFollower() : Node("trajectory_follower"),
+      // PID parameters
+      pid_x_(2.0, 0.1, 0.5),
       pid_y_(2.0, 0.1, 0.5),
       pid_theta_(3.0, 0.0, 0.8) {
         
-      // Parameters
+      // Declare parameters
       this->declare_parameter("x_0", 0.0);
       this->declare_parameter("y_0", 0.0);
       this->declare_parameter("x_f", 3.0);
@@ -26,9 +27,9 @@ class TrajectoryFollower : public rclcpp::Node {
       this->declare_parameter("control_frequency", 50.0);
       this->declare_parameter("max_linear_vel", 0.5);
       this->declare_parameter("max_angular_vel", 1.0);
-      // for splines only
+      // these are for splines only
       this->declare_parameter("num_waypoints", 5);
-      this->declare_parameter("arc_magnitude", 0.5);
+      this->declare_parameter("arc_magnitude", 1.5);
         
       std::string robot_name = this->get_namespace();
 
@@ -54,30 +55,47 @@ class TrajectoryFollower : public rclcpp::Node {
       // Start control timer
       double control_freq = this->get_parameter("control_frequency").as_double();
       auto timer_period = std::chrono::duration<double>(1.0 / control_freq);
-      control_timer_ = this->create_wall_timer(timer_period,
-          std::bind(&TrajectoryFollower::controlLoop, this));
+      control_timer_ = this->create_wall_timer(
+        timer_period,
+        std::bind(&TrajectoryFollower::controlLoop, this)
+      );
       
       trajectory_start_time_ = this->now();
       
-      RCLCPP_INFO(this->get_logger(), "TrajectoryFollower initialized. Starting trajectory following.");
+      RCLCPP_INFO(this->get_logger(),
+        "TrajectoryFollower initialized. Starting trajectory following.");
     }
 
   private:
-    // Function to generate a cubic polynomial trajectory for each axis
+    /**
+     * This function will generate a trajectory between two points,
+     * which is represented as a cubic polynomial.
+     * 
+     * @param start_pos: the initial position.
+     * @param start_vel: the initial velocity.
+     * @param end_pos: the final position.
+     * @param end_vel: the final velocity.
+     * @param duration: the amount of time to traverse the trajectory.
+     */
     CubicPolynomial generate_cubic_trajectory(
       double start_pos, double start_vel,
       double end_pos, double end_vel,
       double duration) {
       
       CubicPolynomial p;
-      double square_term = duration * duration;
-      double cubic_term = square_term * duration;
+      // T = short hand for total duration
+      double T_squared = duration * duration;
+      double T_cubed = T_squared * duration;
       
-      // Use the derived formulas to calculate the coefficients
-      p.d = start_pos;
-      p.c = start_vel;
-      p.b = (3.0 * (end_pos - start_pos) - duration * (2.0 * start_vel + end_vel)) / square_term;
-      p.a = (2.0 * (start_pos - end_pos) + duration * (start_vel + end_vel)) / cubic_term;
+      /** the cubic polynomial is of the form
+      *     ax^3 + bx^2 + cx + d
+      */ 
+      p.d = start_pos; // p(0) = start_pos = d
+      p.c = start_vel; // p'(0) = start_vel = c
+      // These formulas can be derived by solving a system
+      // of equations (confirmed through hand calculations)
+      p.b = (3.0 * (end_pos - start_pos) - duration * (2.0 * start_vel + end_vel)) / T_squared; 
+      p.a = (2.0 * (start_pos - end_pos) + duration * (start_vel + end_vel)) / T_cubed;
       
       return p;
     }
@@ -143,7 +161,7 @@ class TrajectoryFollower : public rclcpp::Node {
         auto point = trajectory_.getPoint(t);
         
         geometry_msgs::msg::PoseStamped pose;
-        pose.header.frame_id = "map";
+        pose.header.frame_id = "world";
         pose.header.stamp = this->now();
         pose.pose.position.x = point.x;
         pose.pose.position.y = point.y;
