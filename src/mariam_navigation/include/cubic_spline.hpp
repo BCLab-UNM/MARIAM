@@ -27,26 +27,30 @@ struct SplineSegment {
 // Cubic spline class
 class CubicSpline {
   public:
+  /**
+   * This function will set 
+   */
   void setPoints(const std::vector<double>& t, const std::vector<double>& y) {
     if (t.size() != y.size() || t.size() < 2) {
       throw std::invalid_argument("Invalid input vectors for spline");
     }
       
-    int n = t.size();
+    int n = t.size(); // N + 1 points
     segments_.clear();
-    segments_.reserve(n - 1);
+    segments_.reserve(n - 1); // reserve space for N splines
       
-    // Build coefficient matrix for natural spline (zero second derivatives at endpoints)
+    // Setup system of equations Ac = b
+    // the system is (N+1) x (N+) = (n) x (n)
     std::vector<std::vector<double>> A(n, std::vector<double>(n, 0.0));
     std::vector<double> b(n, 0.0);
     
-    // Natural boundary conditions: second derivatives = 0 at endpoints
+    // Set natural boundary conditions: second derivatives = 0 at endpoints
     A[0][0] = 1.0;
     A[n-1][n-1] = 1.0;
     b[0] = 0.0;
     b[n-1] = 0.0;
     
-    // Interior points: continuity of second derivative
+    // Set interior points (continuity of second derivative)
     for (int i = 1; i < n - 1; ++i) {
       double h1 = t[i] - t[i-1];
       double h2 = t[i+1] - t[i];
@@ -137,19 +141,19 @@ struct SplineTrajectory2D {
     double duration;
     
     struct Point2D {
-        double x, y;
-        double vx, vy;
-        double ax, ay;
+      double x, y;
+      double vx, vy;
+      double ax, ay;
     };
     
     Point2D getPoint(double t) const {
-        Point2D point;
-        point.x = x_spline.evaluate(t);
-        point.y = y_spline.evaluate(t);
-        point.vx = x_spline.derivative(t);
-        point.vy = y_spline.derivative(t);
-        point.ax = x_spline.secondDerivative(t);
-        point.ay = y_spline.secondDerivative(t);
-        return point;
+      Point2D point;
+      point.x = x_spline.evaluate(t);
+      point.y = y_spline.evaluate(t);
+      point.vx = x_spline.derivative(t);
+      point.vy = y_spline.derivative(t);
+      point.ax = x_spline.secondDerivative(t);
+      point.ay = y_spline.secondDerivative(t);
+      return point;
     }
 };

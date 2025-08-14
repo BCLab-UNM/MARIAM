@@ -29,14 +29,20 @@ class TrajectoryFollower : public rclcpp::Node {
       this->declare_parameter("max_angular_vel", 1.0);
       // these are for splines only
       this->declare_parameter("num_waypoints", 5);
-      this->declare_parameter("arc_magnitude", 1.5);
+      this->declare_parameter("quadratic_coeff", -1.5);
         
-      std::string robot_name = this->get_namespace();
+      this->robot_name = this->get_namespace(); // make namespace an std::string
+      std::string pose_topic = robot_name == "/ross" ? "/world_ross_pose" : "/world_monica_pose";
+
+      RCLCPP_INFO(this->get_logger(),
+        "Robot name: %s",
+        robot_name.c_str()
+      );
 
       // Publishers and subscribers
       cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
       pose_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
-        robot_name == "ross" ? "/world_ross_pose" : "/world_monica_pose",
+        pose_topic,
         10,
         std::bind(&TrajectoryFollower::poseCallback, this, std::placeholders::_1)
       );
@@ -44,7 +50,7 @@ class TrajectoryFollower : public rclcpp::Node {
       
       RCLCPP_INFO(this->get_logger(),
         "Subscribing to vicon pose: %s",
-        robot_name == "ross" ? "/world_ross_pose" : "/world_monica_pose"
+        pose_topic.c_str()
       );
 
       // Generate trajectory
@@ -107,21 +113,27 @@ class TrajectoryFollower : public rclcpp::Node {
       double y_f = this->get_parameter("y_f").as_double();
       double duration = this->get_parameter("trajectory_duration").as_double();
       int num_waypoints = this->get_parameter("num_waypoints").as_int();
-      double mag = this->get_parameter("arc_magnitude").as_double();
+      double a = this->get_parameter("quadratic_coeff").as_double();
       
       // Generate waypoints with a sinusoidal curve
       std::vector<double> t_waypoints, x_waypoints, y_waypoints;
       
+      // add additional waypoints
       for (int i = 0; i < num_waypoints; ++i) {
-        double progress = static_cast<double>(i) / (num_waypoints - 1);
+        // progress is the path parameter and is from [0, 1]
+        double progress = static_cast<double>(i) / (num_waypoints);
         double t = progress * duration;
         double x = x_0 + progress * (x_f - x_0);
-        double y = y_0 + progress * (y_f - y_0) + mag * progress * progress;
+        double y = y_0 + progress * (y_f - y_0) + a * progress * progress;
         
         t_waypoints.push_back(t);
         x_waypoints.push_back(x);
         y_waypoints.push_back(y);
       }
+
+      t_waypoints.push_back(duration);
+      x_waypoints.push_back(x_f);
+      y_waypoints.push_back(y_f);
       
       // Create splines
       trajectory_.x_spline.setPoints(t_waypoints, x_waypoints);
@@ -212,12 +224,21 @@ class TrajectoryFollower : public rclcpp::Node {
       double current_theta = 2.0 * std::atan2(current_pose_.orientation.z,
                                               current_pose_.orientation.w);
       
+      if (this->robot_name == "/monica") {
+        // make it think the heading is facing behind monica
+        current_theta += M_PI;
+        // Normalize current heading to [-pi, pi]
+        while (current_theta > M_PI) current_theta -= 2 * M_PI;
+        while (current_theta < -M_PI) current_theta += 2 * M_PI;
+      }
+
       // Calculate position errors
       double error_x = desired.x - current_x;
       double error_y = desired.y - current_y;
       
       // Calculate desired heading from desired velocity
       double desired_theta = std::atan2(desired.vy, desired.vx);
+
       double error_theta = desired_theta - current_theta;
       
       // Normalize angle error to [-pi, pi]
@@ -242,6 +263,11 @@ class TrajectoryFollower : public rclcpp::Node {
       
       linear_vel = std::clamp(linear_vel, -max_linear, max_linear);
       angular_vel = std::clamp(angular_vel, -max_angular, max_angular);
+
+      // negate the linear velocity if it's monica
+      if (this->robot_name == "/monica") {
+        linear_vel = linear_vel * -1.0;
+      }
       
       // Publish command
       geometry_msgs::msg::Twist cmd_vel;
@@ -260,6 +286,7 @@ class TrajectoryFollower : public rclcpp::Node {
     // Trajectory2D trajectory_;
     SplineTrajectory2D trajectory_;
     PIDController pid_x_, pid_y_, pid_theta_;
+    std::string robot_name;
     
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
