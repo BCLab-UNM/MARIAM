@@ -187,6 +187,13 @@ class ExperimentNode(Node):
         self.ross_nav2_pose_publisher.publish(ross_pose)
         self.monica_nav2_pose_publisher.publish(monica_pose)
 
+    def start_trajectory_follower(self):
+        monica_cmd = 'ROS_DOMAIN_ID=1 ros2 run mariam_navigation trajectory_follower --ros-args -r __ns:=/monica -p x_0:=-0.45 -p y_0:=-0.36 -p x_f:=2.12 -p y_f:=1.95 -p trajectory_duration:=30.0 -p control_frequency:=50.0 -p max_linear_vel:=0.2 -p max_angular_vel:=0.4 -p quadratic_coeff:=1.0'
+
+        ross_cmd = 'ROS_DOMAIN_ID=2 ros2 run mariam_navigation trajectory_follower --ros-args -r __ns:=/ross -p x_0:=-1.49 -p y_0:=-0.26 -p x_f:=1.61 -p y_f:=1.29 -p trajectory_duration:=30.0 -p control_frequency:=50.0 -p max_linear_vel:=0.2 -p max_angular_vel:=0.4 -p quadratic_coeff:=1.0'
+
+        self.monica_conn.run(monica_cmd, hide=True, disown=True)
+        self.ross_conn.run(ross_cmd, hide=True, disown=True)
 
     def lift_object(self):
         height = 0.067
@@ -300,18 +307,7 @@ def main(args=None):
 
     try:        
         while rclpy.ok():
-            input("Press Enter to get monica to learn the environment\n")
-
-            experiment_node.drive_robot_nav2('monica', monica_pose)
-
-            input("Press Enter to turn monica back around\n")
-            
-            experiment_node.drive_robot_nav2('monica', monica_pose2)
-
-            input("Press Enter to start an experiment\n")
-
-            experiment_node.drive_robots_nav2(monica_pose3, ross_pose)
-            
+            input("Press CTRL+C to kill the robots\n")            
     
     except KeyboardInterrupt:
         experiment_node.shutdown_robots()
