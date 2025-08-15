@@ -11,34 +11,36 @@ def generate_launch_description():
         Node(
             package='mariam_navigation',
             executable='trajectory_follower',
-            namespace='monica',
+            namespace='ross',
             parameters=[{
-                'x_0': -0.45,
-                'y_0': -0.36,
-                'x_f': 2.12,
-                'y_f': 1.98,
-                'trajectory_duration': 20.0,
+                'x_0': -1.70,
+                'y_0': -0.26,
+                'x_f': 1.51,
+                'y_f': -0.26,
+                'trajectory_duration': 25.0,
                 'control_frequency': 50.0,
-                'max_linear_vel': 0.2,
+                'max_linear_vel': 0.15,
                 'max_angular_vel': 0.4,
-                'parabola_coeff': -1.0,
+                'parabola_coeff': 0.75,
+                'num_waypoints': 5
             }],
             output='screen'
         ),
         Node(
             package='mariam_navigation',
             executable='trajectory_follower',
-            namespace='ross',
+            namespace='monica',
             parameters=[{
-                'x_0': -1.49,
-                'y_0': -0.26,
-                'x_f': 1.41,
-                'y_f': 1.09,
-                'trajectory_duration': 20.0,
+                'x_0': -0.6,
+                'y_0': -0.36,
+                'x_f': 2.55,
+                'y_f': -0.36,
+                'trajectory_duration': 25.0,
                 'control_frequency': 50.0,
-                'max_linear_vel': 0.2,
+                'max_linear_vel': 0.15,
                 'max_angular_vel': 0.4,
-                'parabola_coeff': -1.0,
+                'parabola_coeff': 0.75,
+                'num_waypoints': 5
             }],
             output='screen'
         )
