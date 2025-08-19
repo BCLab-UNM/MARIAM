@@ -1,6 +1,6 @@
 // Topic defines
-#define NAMESPACE "monica"
-// #define NAMESPACE "ross"
+// #define NAMESPACE "monica"
+#define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
@@ -12,8 +12,8 @@
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 #define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 #define JOINT_STATES_TOPIC_NAME NAMESPACE "/joint_states"
-#define DOMAIN_ID 1 // for MONICA
-// #define DOMAIN_ID 2 // for ROSS
+// #define DOMAIN_ID 1 // for MONICA
+#define DOMAIN_ID 2 // for ROSS
 
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
   static volatile int64_t init = -1; \
@@ -451,7 +451,7 @@ void create_entities() {
   // --------------------------------------------------------------------------
   // Left PID output publisher
   RCCHECK(rclc_publisher_init_best_effort(
-    &left_pid_output_publisher,
+    &left_pid_output_publisher, 
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
 
@@ -480,13 +480,13 @@ void create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), FORCE_TOPIC_NAME));
 
   // Wheel odom publisher
-  RCCHECK(rclc_publisher_init_best_effort(
+  RCCHECK(rclc_publisher_init_default(
     &odom_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), ODOM_TOPIC_NAME));
 
   // Joint state publisher
-  RCCHECK(rclc_publisher_init_best_effort(
+  RCCHECK(rclc_publisher_init_default(
     &joint_state_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState), JOINT_STATES_TOPIC_NAME));
