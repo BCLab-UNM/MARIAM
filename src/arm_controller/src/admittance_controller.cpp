@@ -116,17 +116,17 @@ class AdmittanceController : public rclcpp::Node {
     }
 
     void mass_callback(const Float64::SharedPtr msg) {
-      RCLCPP_INFO(LOGGER, "Updating mass from %.2f to %.2f", mass, msg->data);
+      RCLCPP_DEBUG(LOGGER, "Updating mass from %.2f to %.2f", mass, msg->data);
       mass = msg->data;
     }
     
     void damping_callback(const Float64::SharedPtr msg) {
-      RCLCPP_INFO(LOGGER, "Updating damping from %.2f to %.2f", damping, msg->data);
+      RCLCPP_DEBUG(LOGGER, "Updating damping from %.2f to %.2f", damping, msg->data);
       damping = msg->data;
     }
     
     void stiffness_callback(const Float64::SharedPtr msg) {
-      RCLCPP_INFO(LOGGER, "Updating stiffness from %.2f to %.2f", stiffness, msg->data);
+      RCLCPP_DEBUG(LOGGER, "Updating stiffness from %.2f to %.2f", stiffness, msg->data);
       stiffness = msg->data;
     }
 };

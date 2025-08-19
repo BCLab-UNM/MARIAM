@@ -113,7 +113,7 @@ def launch_setup(context, *args, **kwargs):
             'namespace': robot_name_launch_arg,
         }.items(),
     )
-    
+
     nav2_bringup_launch_desc = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             PathJoinSubstitution([
@@ -140,7 +140,7 @@ def launch_setup(context, *args, **kwargs):
             "'", robot_name_launch_arg, "' == 'ross'"
         ]))
     )
-    
+
     vicon_tf2_updater_node = Node(
         package='mariam_localization',
         executable='vicon_tf2_updater',
@@ -150,7 +150,7 @@ def launch_setup(context, *args, **kwargs):
         remappings=[
                 ('/tf', 'tf'),
                 ('/tf_static', 'tf_static'),
-            ]
+        ]
     )
 
     dynamic_parameterization_launch_desc = IncludeLaunchDescription(
@@ -172,7 +172,7 @@ def launch_setup(context, *args, **kwargs):
         micro_ros_desc,
         mariam_description_launch_desc,
         dynamic_parameterization_launch_desc,
-        # vicon_tf2_updater_node
+        # vicon_tf2_updater_node,
         # realsense_imu_launch_desc,
         # ekf_launch_desc,
         # slam_launch_desc,

@@ -10,16 +10,20 @@ using std::placeholders::_1;
 class AdmittanceRvizMarkers : public rclcpp::Node {
 public:
   AdmittanceRvizMarkers() : Node("admittance_rviz_markers") {
+    // change QoS settings
+    auto qos_profile = rclcpp::QoS(10);
+    qos_profile.best_effort();
+    qos_profile.durability_volatile();
     // Create separate publishers for the target and virtual RViz markers
     target_marker_publisher = this->create_publisher<MarkerArray>("target_pose_rviz_markers", 10);
     virtual_marker_publisher = this->create_publisher<MarkerArray>("virtual_pose_rviz_markers", 10);
 
     // Subscribe to the target and virtual poses
     target_pose_sub = this->create_subscription<Pose>(
-      "px100_target_pose", 10, std::bind(&AdmittanceRvizMarkers::target_pose_callback, this, _1)
+      "px100_target_pose", qos_profile, std::bind(&AdmittanceRvizMarkers::target_pose_callback, this, _1)
     );
     virtual_pose_sub = this->create_subscription<Pose>(
-      "px100_virtual_pose", 10, std::bind(&AdmittanceRvizMarkers::virtual_pose_callback, this, _1)
+      "px100_virtual_pose", qos_profile, std::bind(&AdmittanceRvizMarkers::virtual_pose_callback, this, _1)
     );
   }
 
