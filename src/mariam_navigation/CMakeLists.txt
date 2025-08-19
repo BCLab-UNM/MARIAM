@@ -100,6 +100,28 @@ ament_target_dependencies(trajectory_follower
   nav_msgs
 )
 
+# Create the hermite_path_generator executable
+add_executable(hermite_path_generator src/hermite_path_generator.cpp)
+ament_target_dependencies(hermite_path_generator
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs 
+)
+
+# Create the synchronized_trajectory_controller executable
+# add_executable(synchronized_trajectory_controller src/synchronized_trajectory_controller.cpp)
+# ament_target_dependencies(synchronized_trajectory_controller
+#   rclcpp
+#   geometry_msgs
+#   nav_msgs
+#   tf2_ros
+#   tf2_geometry_msgs
+#   tf2_msgs 
+# )
+
 # Install the executables
 install(TARGETS
   dual_waypoint_publisher
@@ -111,12 +133,13 @@ install(TARGETS
   dual_curved_constant_velocity
   vicom_dual_linear_constant_velocity_open_loop
   trajectory_follower
+  hermite_path_generator
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # Install folders
 install(
-  DIRECTORY config maps launch
+  DIRECTORY config maps launch scripts
   DESTINATION share/${PROJECT_NAME}
 )
 

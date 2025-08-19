@@ -1,13 +1,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/utils.h>
-#include <tf2_msgs/msg/tf_message.hpp>
-#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 #include <cmath>
+#include <chrono>
 
 class RobotFollower : public rclcpp::Node
 {
@@ -15,260 +10,232 @@ public:
     RobotFollower() : Node("robot_follower")
     {
         // Parameters
-        following_distance_ = 0.5;  // meters
-        position_tolerance_ = 0.1;  // meters - increased tolerance
-        angle_tolerance_ = 0.1;  // radians
+        desired_distance_ = 0.99;  // meters
+        distance_tolerance_ = 0.03;  // +/- 3cm tolerance
+        heading_tolerance_ = 0.05;   // +/- ~3 degrees (0.05 rad = ~2.9 degrees)
+        max_linear_vel_ = 0.5;     // m/s
+        max_angular_vel_ = 1.0;    // rad/s
         
-        // Velocity limits (matching Monica's constraints)
-        max_linear_vel_ = 0.2;
-        min_linear_vel_ = -0.2;
-        max_angular_vel_ = 0.4;
-        min_angular_vel_ = -0.4;
+        // PID Parameters (tuned for low-speed following)
+        kp_linear_ = 0.8;      // Proportional gain for linear velocity
+        ki_linear_ = 0.1;      // Integral gain for linear velocity  
+        kd_linear_ = 0.05;     // Derivative gain for linear velocity
         
-        // Control gains
-        linear_gain_ = 1.0;
-        angular_gain_ = 2.0;
+        kp_angular_ = 2.0;     // Proportional gain for angular velocity
         
-        // TF2 setup - separate buffers for each robot's namespaced topics
-        monica_tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-        ross_tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+        // PID state variables
+        prev_error_ = 0.0;
+        integral_error_ = 0.0;
+        prev_time_ = this->get_clock()->now();
         
-        // Subscribe to namespaced TF topics
-        monica_tf_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-            "/monica/tf", 10,
-            std::bind(&RobotFollower::monica_tf_callback, this, std::placeholders::_1));
-            
-        ross_tf_sub_ = this->create_subscription<tf2_msgs::msg::TFMessage>(
-            "/ross/tf", 10,
-            std::bind(&RobotFollower::ross_tf_callback, this, std::placeholders::_1));
+        // Robot poses
+        leader_pose_received_ = false;
+        follower_pose_received_ = false;
         
-        // Publisher
-        cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/ross/cmd_vel", 10);
+        // Publishers and Subscribers
+        cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
+            "/ross/cmd_vel", 10);
         
-        // Timer for control loop
+        leader_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+            "/world_monica_pose", 10,
+            std::bind(&RobotFollower::leader_pose_callback, this, std::placeholders::_1));
+        
+        follower_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+            "/world_ross_pose", 10,
+            std::bind(&RobotFollower::follower_pose_callback, this, std::placeholders::_1));
+        
+        // Control timer (50 Hz control loop)
         control_timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(100),  // 10 Hz
-            std::bind(&RobotFollower::controlLoop, this));
+            std::chrono::milliseconds(20),
+            std::bind(&RobotFollower::control_callback, this));
         
-        // Safety timer
-        safety_timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(500),  // 2 Hz
-            std::bind(&RobotFollower::safetyCheck, this));
+        // Logging counter
+        log_counter_ = 0;
         
-        // Initialize safety tracking
-        transforms_initialized_ = false;
-        last_monica_transform_time_ = this->now();
-        last_ross_transform_time_ = this->now();
-        
-        RCLCPP_INFO(this->get_logger(), "Robot Follower Node initialized with custom TF topics");
-    }
-
-    void monica_tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
-    {
-        for (const auto& transform : msg->transforms) {
-            monica_tf_buffer_->setTransform(transform, "monica_tf", false);
-        }
-    }
-    
-    void ross_tf_callback(const tf2_msgs::msg::TFMessage::SharedPtr msg)
-    {
-        for (const auto& transform : msg->transforms) {
-            ross_tf_buffer_->setTransform(transform, "ross_tf", false);
-        }
-    }
-
-    // Public method to stop the robot
-    void stopRobot()
-    {
-        geometry_msgs::msg::Twist stop_cmd;
-        stop_cmd.linear.x = 0.0;
-        stop_cmd.angular.z = 0.0;
-        cmd_vel_pub_->publish(stop_cmd);
+        RCLCPP_INFO(this->get_logger(), "Robot Follower Node Started");
+        RCLCPP_INFO(this->get_logger(), "Target distance: %.3fm", desired_distance_);
+        RCLCPP_INFO(this->get_logger(), "Max linear velocity: %.3fm/s", max_linear_vel_);
     }
 
 private:
+    void leader_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
+    {
+        leader_pose_ = *msg;
+        leader_pose_received_ = true;
+    }
+
+    void follower_pose_callback(const geometry_msgs::msg::Pose::SharedPtr msg)
+    {
+        follower_pose_ = *msg;
+        follower_pose_received_ = true;
+    }
+
+    void control_callback()
+    {
+        // Check if we have both poses
+        if (!leader_pose_received_ || !follower_pose_received_)
+        {
+            return;
+        }
+        
+        // Extract positions
+        double leader_x = leader_pose_.position.x;
+        double leader_y = leader_pose_.position.y;
+        
+        double follower_x = follower_pose_.position.x;
+        double follower_y = follower_pose_.position.y;
+        
+        // Calculate current distance
+        double dx = leader_x - follower_x;
+        double dy = leader_y - follower_y;
+        double current_distance = sqrt(dx*dx + dy*dy);
+        
+        // Calculate distance error with tolerance deadband
+        double distance_error = current_distance - desired_distance_;
+        
+        // Apply distance tolerance (deadband)
+        double distance_control_error = 0.0;
+        if (abs(distance_error) > distance_tolerance_)
+        {
+            // Remove tolerance from error to maintain smooth control
+            distance_control_error = (distance_error > 0) ? 
+                (distance_error - distance_tolerance_) : 
+                (distance_error + distance_tolerance_);
+        }
+        
+        // Calculate time step
+        rclcpp::Time current_time = this->get_clock()->now();
+        double dt = (current_time - prev_time_).seconds();
+        prev_time_ = current_time;
+        
+        if (dt > 0.1)  // Reset if too much time has passed (initial startup)
+        {
+            dt = 0.02;
+            prev_error_ = distance_control_error;
+            integral_error_ = 0.0;
+        }
+        
+        // PID control for linear velocity (using control error, not raw error)
+        integral_error_ += distance_control_error * dt;
+        double derivative_error = (dt > 0) ? (distance_control_error - prev_error_) / dt : 0.0;
+        
+        // Integral windup protection
+        double max_integral = (ki_linear_ > 0) ? 0.3 / ki_linear_ : 0;
+        integral_error_ = std::max(-max_integral, std::min(max_integral, integral_error_));
+        
+        // Calculate linear velocity command
+        double linear_vel = kp_linear_ * distance_control_error + 
+                           ki_linear_ * integral_error_ + 
+                           kd_linear_ * derivative_error;
+        
+        // Clamp linear velocity
+        linear_vel = std::max(-max_linear_vel_, std::min(max_linear_vel_, linear_vel));
+        
+        // Calculate desired heading (toward leader)
+        double desired_heading = atan2(dy, dx);
+        
+        // Get current heading from follower pose
+        double follower_heading = quaternion_to_yaw(follower_pose_.orientation);
+        
+        // Calculate heading error (normalized to [-pi, pi])
+        double heading_error = desired_heading - follower_heading;
+        heading_error = atan2(sin(heading_error), cos(heading_error));
+        
+        // Apply heading tolerance (deadband)
+        double heading_control_error = 0.0;
+        if (abs(heading_error) > heading_tolerance_)
+        {
+            // Remove tolerance from error to maintain smooth control
+            heading_control_error = (heading_error > 0) ? 
+                (heading_error - heading_tolerance_) : 
+                (heading_error + heading_tolerance_);
+        }
+        
+        // Calculate angular velocity (simple proportional control)
+        double angular_vel = kp_angular_ * heading_control_error;
+        angular_vel = std::max(-max_angular_vel_, std::min(max_angular_vel_, angular_vel));
+        
+        // Create and publish command
+        geometry_msgs::msg::Twist cmd;
+        cmd.linear.x = linear_vel;
+        cmd.angular.z = angular_vel;
+        
+        cmd_pub_->publish(cmd);
+        
+        // Store previous error (using control error for PID continuity)
+        prev_error_ = distance_control_error;
+        
+        // Log status (every 50 iterations = 1 second)
+        log_counter_++;
+        if (log_counter_ % 50 == 0)
+        {
+            RCLCPP_INFO(this->get_logger(),
+                "Distance: %.3fm (error: %.3fm, in_tol: %s), Heading error: %.3frad (in_tol: %s), Linear vel: %.3fm/s, Angular vel: %.3frad/s",
+                current_distance, distance_error, 
+                (abs(distance_error) <= distance_tolerance_) ? "Y" : "N",
+                heading_error,
+                (abs(heading_error) <= heading_tolerance_) ? "Y" : "N",
+                linear_vel, angular_vel);
+        }
+    }
+
+    double quaternion_to_yaw(const geometry_msgs::msg::Quaternion& quat)
+    {
+        // Convert quaternion to yaw angle
+        double siny_cosp = 2 * (quat.w * quat.z + quat.x * quat.y);
+        double cosy_cosp = 1 - 2 * (quat.y * quat.y + quat.z * quat.z);
+        return atan2(siny_cosp, cosy_cosp);
+    }
+
     // Parameters
-    double following_distance_;
-    double position_tolerance_;
-    double angle_tolerance_;
+    double desired_distance_;
+    double distance_tolerance_;
+    double heading_tolerance_;
     double max_linear_vel_;
-    double min_linear_vel_;
     double max_angular_vel_;
-    double min_angular_vel_;
-    double linear_gain_;
-    double angular_gain_;
     
-    // TF components
-    std::shared_ptr<tf2_ros::Buffer> monica_tf_buffer_;
-    std::shared_ptr<tf2_ros::Buffer> ross_tf_buffer_;
+    // PID parameters
+    double kp_linear_, ki_linear_, kd_linear_;
+    double kp_angular_;
     
-    // TF subscribers for custom topics
-    rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr monica_tf_sub_;
-    rclcpp::Subscription<tf2_msgs::msg::TFMessage>::SharedPtr ross_tf_sub_;
+    // PID state variables
+    double prev_error_;
+    double integral_error_;
+    rclcpp::Time prev_time_;
     
-    // ROS components
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
+    // Robot poses
+    geometry_msgs::msg::Pose leader_pose_;
+    geometry_msgs::msg::Pose follower_pose_;
+    bool leader_pose_received_;
+    bool follower_pose_received_;
+    
+    // ROS2 components
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
+    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr leader_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr follower_sub_;
     rclcpp::TimerBase::SharedPtr control_timer_;
-    rclcpp::TimerBase::SharedPtr safety_timer_;
     
-    // Last successful transform times for safety
-    rclcpp::Time last_monica_transform_time_;
-    rclcpp::Time last_ross_transform_time_;
-    bool transforms_initialized_;
-    
-    bool getTransform(std::shared_ptr<tf2_ros::Buffer> buffer, 
-                     const std::string& target_frame, 
-                     const std::string& source_frame,
-                     geometry_msgs::msg::TransformStamped& transform)
-    {
-        try {
-            transform = buffer->lookupTransform(target_frame, source_frame, tf2::TimePointZero);
-            return true;
-        } catch (const tf2::TransformException& ex) {
-            RCLCPP_DEBUG(this->get_logger(), "TF Exception for %s->%s: %s", 
-                        source_frame.c_str(), target_frame.c_str(), ex.what());
-            return false;
-        }
-    }
-    
-    double quaternionToYaw(const geometry_msgs::msg::Quaternion& quaternion)
-    {
-        tf2::Quaternion q(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
-        return tf2::getYaw(q);
-    }
-    
-    std::pair<double, double> calculateTargetPosition(const geometry_msgs::msg::TransformStamped& monica_transform)
-    {
-        double monica_yaw = quaternionToYaw(monica_transform.transform.rotation);
-        
-        // Calculate target position 0.5m behind Monica
-        double target_x = monica_transform.transform.translation.x - following_distance_ * std::cos(monica_yaw);
-        double target_y = monica_transform.transform.translation.y - following_distance_ * std::sin(monica_yaw);
-        
-        return std::make_pair(target_x, target_y);
-    }
-    
-    double normalizeAngle(double angle)
-    {
-        while (angle > M_PI) angle -= 2 * M_PI;
-        while (angle < -M_PI) angle += 2 * M_PI;
-        return angle;
-    }
-    
-    double clamp(double value, double min_val, double max_val)
-    {
-        return std::max(min_val, std::min(max_val, value));
-    }
-    
-    void controlLoop()
-    {
-        geometry_msgs::msg::TransformStamped monica_transform, ross_transform;
-        
-        // Get transforms from base_link to map for both robots
-        bool monica_ok = getTransform(monica_tf_buffer_, "map", "base_link", monica_transform);
-        bool ross_ok = getTransform(ross_tf_buffer_, "map", "base_link", ross_transform);
-        
-        if (!monica_ok || !ross_ok) {
-            if (!monica_ok) {
-                RCLCPP_DEBUG(this->get_logger(), "Failed to get Monica's transform (base_link->map)");
-            }
-            if (!ross_ok) {
-                RCLCPP_DEBUG(this->get_logger(), "Failed to get Ross's transform (base_link->map)");
-            }
-            return;
-        }
-        
-        // Update last successful transform times
-        last_monica_transform_time_ = this->now();
-        last_ross_transform_time_ = this->now();
-        transforms_initialized_ = true;
-        
-        // Calculate target position
-        auto [target_x, target_y] = calculateTargetPosition(monica_transform);
-        
-        // Current Ross position
-        double ross_x = ross_transform.transform.translation.x;
-        double ross_y = ross_transform.transform.translation.y;
-        double ross_yaw = quaternionToYaw(ross_transform.transform.rotation);
-        
-        // Calculate error
-        double error_x = target_x - ross_x;
-        double error_y = target_y - ross_y;
-        double distance_error = std::sqrt(error_x * error_x + error_y * error_y);
-        
-        // Calculate desired heading (angle to target)
-        double target_angle = std::atan2(error_y, error_x);
-        double angle_error = normalizeAngle(target_angle - ross_yaw);
-        
-        // Create command velocity
-        geometry_msgs::msg::Twist cmd_vel;
-        
-        // Only move if error is significant
-        if (distance_error > position_tolerance_) {
-            // Linear velocity proportional to distance error
-            cmd_vel.linear.x = linear_gain_ * distance_error;
-            
-            // Angular velocity proportional to angle error
-            cmd_vel.angular.z = angular_gain_ * angle_error;
-            
-            // Apply velocity limits
-            cmd_vel.linear.x = clamp(cmd_vel.linear.x, min_linear_vel_, max_linear_vel_);
-            cmd_vel.angular.z = clamp(cmd_vel.angular.z, min_angular_vel_, max_angular_vel_);
-        } else {
-            // Stop if close enough
-            cmd_vel.linear.x = 0.0;
-            cmd_vel.angular.z = 0.0;
-        }
-        
-        // Publish command
-        cmd_vel_pub_->publish(cmd_vel);
-        
-        // Debug info
-        RCLCPP_DEBUG(this->get_logger(),
-            "Monica pos: (%.3f, %.3f), Ross pos: (%.3f, %.3f), "
-            "Target: (%.3f, %.3f), Distance error: %.3f m, Angle error: %.3f rad, "
-            "Cmd: linear=%.3f, angular=%.3f",
-            monica_transform.transform.translation.x, monica_transform.transform.translation.y,
-            ross_x, ross_y, target_x, target_y,
-            distance_error, angle_error, cmd_vel.linear.x, cmd_vel.angular.z);
-    }
-    
-    void safetyCheck()
-    {
-        if (!transforms_initialized_) {
-            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                "Waiting for TF transforms...");
-            stopRobot();
-            return;
-        }
-        
-        rclcpp::Time current_time = this->now();
-        rclcpp::Duration timeout_duration = rclcpp::Duration::from_seconds(2.0);
-        
-        if ((current_time - last_monica_transform_time_) > timeout_duration ||
-            (current_time - last_ross_transform_time_) > timeout_duration) {
-            
-            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                "TF transforms are stale, stopping robot for safety");
-            stopRobot();
-        }
-    }
+    // Logging counter
+    int log_counter_;
 };
 
-int main(int argc, char** argv)
+int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<RobotFollower>();
     
-    try {
+    try
+    {
         rclcpp::spin(node);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
         RCLCPP_ERROR(node->get_logger(), "Exception: %s", e.what());
     }
     
-    // Stop the robot on shutdown
-    node->stopRobot();
-    RCLCPP_INFO(node->get_logger(), "Shutting down robot follower");
+    // Stop the robot before shutting down
+    geometry_msgs::msg::Twist stop_cmd;
+    // stop_cmd is already zero-initialized
     
     rclcpp::shutdown();
     return 0;

@@ -9,6 +9,8 @@ topics:
     type: std_msgs/msg/Float32
     from_domain: 1
     to_domain: 0
+    qos:
+      reliability: best_effort
 
   # monica/wheel/odom:
   #   type: nav_msgs/msg/Odometry
@@ -25,6 +27,8 @@ topics:
     type: std_msgs/msg/Float32
     from_domain: 2
     to_domain: 0
+    qos:
+      reliability: best_effort
 
   # ross/wheel/odom:
   #   type: nav_msgs/msg/Odometry
@@ -41,11 +45,15 @@ topics:
     type: geometry_msgs/msg/Twist
     from_domain: 0
     to_domain: 1
+    qos:
+      reliability: best_effort
 
   ross/cmd_vel:
     type: geometry_msgs/msg/Twist
     from_domain: 0
     to_domain: 2
+    qos:
+      reliability: best_effort
 
   # monica/px100_virtual_pose_updater:
   #   type: std_msgs/msg/Float64
@@ -81,21 +89,29 @@ topics:
     type: geometry_msgs/msg/Pose
     from_domain: 0
     to_domain: 1
+    qos:
+      reliability: best_effort
 
   world_monica_pose:
     type: geometry_msgs/msg/Pose
     from_domain: 0
     to_domain: 2
+    qos:
+      reliability: best_effort
 
   world_ross_pose:
     type: geometry_msgs/msg/Pose
     from_domain: 0
     to_domain: 1
+    qos:
+      reliability: best_effort
 
   world_ross_pose:
     type: geometry_msgs/msg/Pose
     from_domain: 0
     to_domain: 2
+    qos:
+      reliability: best_effort
 
   # world_monica_manipulator_pose:
   #   type: geometry_msgs/msg/Pose
