@@ -12,23 +12,28 @@ public:
         monica_pose_received_ = false;
         ross_pose_received_ = false;
 
+        // change QoS settings
+        auto qos_profile = rclcpp::QoS(10);
+        qos_profile.best_effort();
+        qos_profile.durability_volatile();
+
         // Create subscribers
         monica_subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>(
             "/world_monica_pose", 
-            10, 
+            qos_profile, 
             std::bind(&DistanceCalculatorNode::monica_pose_callback, this, std::placeholders::_1)
         );
 
         ross_subscriber_ = this->create_subscription<geometry_msgs::msg::Pose>(
             "/world_ross_pose", 
-            10, 
+            qos_profile, 
             std::bind(&DistanceCalculatorNode::ross_pose_callback, this, std::placeholders::_1)
         );
 
         // Create publisher
         distance_publisher_ = this->create_publisher<std_msgs::msg::Float64>(
             "agent_displacement", 
-            10
+            qos_profile
         );
 
         RCLCPP_INFO(this->get_logger(), "Distance Calculator Node initialized");

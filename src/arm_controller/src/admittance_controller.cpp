@@ -15,39 +15,43 @@ using std::placeholders::_1;
 class AdmittanceController : public rclcpp::Node {
   public:
     AdmittanceController() : Node("admittance_controller") {
+      auto qos_profile = rclcpp::QoS(10);
+      qos_profile.best_effort();
+      qos_profile.durability_volatile();
+
       // =============== creating publishers and subscriptions ===============
       pose_publisher = this->create_publisher<Pose>(
         "px100_target_pose",
-        10
+        qos_profile
       );
 
       virtual_pose_sub = this->create_subscription<Pose>(
         "px100_virtual_pose",
-        10,
+        qos_profile,
         std::bind(&AdmittanceController::admittance_control_callback, this, _1)
       );
 
       force_sub = this->create_subscription<Float32>(
         "force",
-        10,
+        qos_profile,
         std::bind(&AdmittanceController::force_callback, this, _1)
       );
 
       mass_sub = this->create_subscription<Float64>(
         "admittance_control/mass",
-        10,
+        qos_profile,
         std::bind(&AdmittanceController::mass_callback, this, _1)
       );
       
       damping_sub = this->create_subscription<Float64>(
         "admittance_control/damping",
-        10,
+        qos_profile,
         std::bind(&AdmittanceController::damping_callback, this, _1)
       );
       
       stiffness_sub = this->create_subscription<Float64>(
         "admittance_control/stiffness",
-        10,
+        qos_profile,
         std::bind(&AdmittanceController::stiffness_callback, this, _1)
       );
 

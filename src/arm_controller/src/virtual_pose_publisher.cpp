@@ -9,14 +9,20 @@ using std::placeholders::_1;
 class VirtualPosePublisher : public rclcpp::Node {
   public:
     VirtualPosePublisher() : Node("virtual_pose_publisher") {
+
+      // change QoS settings
+      auto qos_profile = rclcpp::QoS(10);
+      qos_profile.best_effort();
+      qos_profile.durability_volatile();
+
       pose_publisher = this->create_publisher<geometry_msgs::msg::Pose>(
         "px100_virtual_pose",
-        10
+        qos_profile
       );
 
       pose_updater_sub = this->create_subscription<geometry_msgs::msg::Pose>(
         "admittance_control/px100_virtual_pose_updater",
-        10,
+        qos_profile,
         std::bind(&VirtualPosePublisher::sub_callback, this, _1)
       );
 

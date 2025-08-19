@@ -40,23 +40,28 @@ public:
     default_orientation_y = this->get_parameter("y").as_double();
     default_orientation_z = this->get_parameter("z").as_double();
     default_orientation_w = this->get_parameter("w").as_double();
+
+    // change QoS settings
+    auto qos_profile = rclcpp::QoS(10);
+    qos_profile.best_effort();
+    qos_profile.durability_volatile();
     
     // Create publishers
     mass_pub_ = this->create_publisher<std_msgs::msg::Float64>(
-      "admittance_control/mass", 10);
+      "admittance_control/mass", qos_profile);
     damping_pub_ = this->create_publisher<std_msgs::msg::Float64>(
-      "admittance_control/damping", 10);
+      "admittance_control/damping", qos_profile);
     stiffness_pub_ = this->create_publisher<std_msgs::msg::Float64>(
-      "admittance_control/stiffness", 10);
+      "admittance_control/stiffness", qos_profile);
     pose_updater_pub_ = this->create_publisher<geometry_msgs::msg::Pose>(
-      "admittance_control/px100_virtual_pose_updater", 10);
+      "admittance_control/px100_virtual_pose_updater", qos_profile);
       
     force_sub_ = this->create_subscription<std_msgs::msg::Float32>(
-      "force", 10,
+      "force", qos_profile,
       std::bind(&DistributedParameterizer::ForceCallback, this, std::placeholders::_1));
       
     agent_displacement_sub_ = this->create_subscription<std_msgs::msg::Float64>(
-      "agent_displacement", 10,
+      "agent_displacement", qos_profile,
       std::bind(&DistributedParameterizer::AgentDisplacementCallback, this, std::placeholders::_1));
     
     // Create timer with configurable frequency

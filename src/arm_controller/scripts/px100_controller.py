@@ -18,6 +18,8 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 from interbotix_xs_msgs.msg import JointGroupCommand
 from scipy.spatial.transform import Rotation as R
 
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+
 
 class ArmController(InterbotixManipulatorXS):
     """
@@ -75,17 +77,25 @@ class ArmController(InterbotixManipulatorXS):
         self.updated_ross_pose = False
         self.updated_monica_pose = False
 
+        # set QoS to best effort
+        qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+
         self.joint_group_pub = self.core.get_node().create_publisher(
             JointGroupCommand,
             'commands/joint_group',
-            10
+            qos_profile
         )
 
         self.core.get_node().create_subscription(
             Pose,
             'px100_target_pose',
             self.update_desired_pose_cb,
-            10
+            qos_profile
         )
 
         if self.track_other_robot:
@@ -95,14 +105,14 @@ class ArmController(InterbotixManipulatorXS):
                 Pose,
                 '/world_monica_pose',
                 self.update_monica_vicon_pose_cb,
-                10
+                qos_profile
             )
 
             self.core.get_node().create_subscription(
                 Pose,
                 '/world_ross_pose',
                 self.update_ross_vicon_pose_cb,
-                10
+                qos_profile
             )
 
         self.core.get_node().loginfo(f'Robot name: {self.robot_name}')

@@ -10,14 +10,17 @@ class VicomPosePublisher : public rclcpp::Node
 public:
     VicomPosePublisher() : Node("vicom_pose_publisher")
     {
+        auto qos_profile = rclcpp::QoS(10);
+        qos_profile.best_effort();
+        qos_profile.durability_volatile();
         // Initialize tf2 buffer and listener
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
         
         // Create publishers
-        ross_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_pose", 10);
+        ross_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_pose", qos_profile);
         // ross_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_ross_manipulator_pose", 10);
-        monica_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_pose", 10);
+        monica_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_pose", qos_profile);
         // monica_manipulator_pub_ = this->create_publisher<geometry_msgs::msg::Pose>("world_monica_manipulator_pose", 10);
 
         // Initialize T_vm transform (vicon to manipulator)
