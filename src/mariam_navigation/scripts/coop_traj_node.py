@@ -43,10 +43,10 @@ class CooperativeTrajectoryNode(Node):
         self.base2_pose = None
 
         # Transform from vicon to base_link
-        self.T_vb = np.array([   [ 1, 0, 0,  0.1],
-                            [ 0, 1, 0, -0.1],
-                            [ 0, 0, 1, -0.09],
-                            [ 0, 0, 0,  1]])
+        self.T_vm = np.array([  [ 1, 0, 0,  0.23],
+                                [ 0, 1, 0, -0.07],
+                                [ 0, 0, 1, -0.06],
+                                [ 0, 0, 0,  1]])
 
         # Trajectory parameters
         self.trajectory_params = None
@@ -123,12 +123,12 @@ class CooperativeTrajectoryNode(Node):
         T_wv[2, 3] = msg.position.z
 
         # Get world to base_link transform
-        T_wb = T_wv @ self.T_vb
+        T_wm = T_wv @ self.T_vm
 
         # Extract [x, y, theta] from the 3D transformation
-        x = T_wb[0, 3]
-        y = T_wb[1, 3]
-        theta = np.arctan2(T_wb[1, 0], T_wb[0, 0])  # Yaw from rotation matrix
+        x = T_wm[0, 3]
+        y = T_wm[1, 3]
+        theta = np.arctan2(T_wm[1, 0], T_wm[0, 0])  # Yaw from rotation matrix
         
         self.base1_pose = np.array([x, y, theta])
 
@@ -147,12 +147,12 @@ class CooperativeTrajectoryNode(Node):
         T_wv[2, 3] = msg.position.z
 
         # Get world to base_link transform
-        T_wb = T_wv @ self.T_vb
+        T_wm = T_wv @ self.T_vm
 
         # Extract [x, y, theta] from the 3D transformation
-        x = T_wb[0, 3]
-        y = T_wb[1, 3]
-        theta = np.arctan2(T_wb[1, 0], T_wb[0, 0])  # Yaw from rotation matrix
+        x = T_wm[0, 3]
+        y = T_wm[1, 3]
+        theta = np.arctan2(T_wm[1, 0], T_wm[0, 0])  # Yaw from rotation matrix
 
         self.base2_pose = np.array([x, y, theta])
 
@@ -199,8 +199,8 @@ class CooperativeTrajectoryNode(Node):
             quat = transform.transform.rotation
             _, _, theta = tf_transformations.euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
 
-            if frame_id == "payload":
-                return [0, 0, 0]
+            # if frame_id == "payload":
+            #     return [0, 0, 0]
 
             return [x, y, theta]
             
