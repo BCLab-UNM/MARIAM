@@ -64,7 +64,7 @@ def smooth_signal(z, win):
 class BoxParams:
     L: float = 0.16
     W: float = 0.11
-    a: float = 0.16
+    a: float = 0.2
 
 @dataclass
 class SmoothParams:

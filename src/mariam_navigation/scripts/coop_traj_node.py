@@ -199,8 +199,8 @@ class CooperativeTrajectoryNode(Node):
             quat = transform.transform.rotation
             _, _, theta = tf_transformations.euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
 
-            # if frame_id == "payload":
-            #     return [0, 0, 0]
+            if frame_id == "payload":
+                return [0, 0, 0]
 
             return [x, y, theta]
             
@@ -221,8 +221,9 @@ class CooperativeTrajectoryNode(Node):
             )
 
             # Log starting conditions
-            self.get_logger().info(f"Payload starting conditions: {self.get_transform('payload')}")
+            payload_start_pose = self.get_transform('payload')
             base1_start_pose, base2_start_pose = traj(self.trajectory_params, t=0, T=self.trajectory_duration)
+            self.get_logger().info(f"Payload starting conditions: {payload_start_pose[0]:.3f}, {payload_start_pose[1]:.3f}, {payload_start_pose[2]:.3f}")
             self.get_logger().info(f"Base 1 expected conditions: [{base1_start_pose[0]:.3f}, {base1_start_pose[1]:.3f}, {base1_start_pose[2]:.3f}]")
             self.get_logger().info(f"Base 1 actual conditions: [{self.base1_pose[0]:.3f}, {self.base1_pose[1]:.3f}, {self.base1_pose[2]:.3f}]")
             self.get_logger().info(f"Base 2 expected conditions: [{base2_start_pose[0]:.3f}, {base2_start_pose[1]:.3f}, {base2_start_pose[2]:.3f}]")
@@ -304,8 +305,8 @@ class CooperativeTrajectoryNode(Node):
             v2_final = v2_reversed + v2_corrected
 
             # Publish the corrected velocities
-            self.publish_cmd_vel(self.base1_cmd_pub, v1)
-            self.publish_cmd_vel(self.base2_cmd_pub, v2_reversed)
+            self.publish_cmd_vel(self.base1_cmd_pub, v1_final)
+            self.publish_cmd_vel(self.base2_cmd_pub, v2_final)
             
             # Store poses and time for next iteration
             self.last_poses['base1'] = b1.copy()
