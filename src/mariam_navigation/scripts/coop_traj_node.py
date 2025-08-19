@@ -344,6 +344,11 @@ class CooperativeTrajectoryNode(Node):
             
             # Calculate pose errors in world frame
             error = np.array(desired_pose) - np.array(actual_pose)
+
+            # if monica, make the heading face behind the robot
+            if frame_name == "monica":
+                error[2] += np.pi
+            
             error[2] = self.wrap_angle(error[2])  # Wrap angular error
             
             # Apply deadband
