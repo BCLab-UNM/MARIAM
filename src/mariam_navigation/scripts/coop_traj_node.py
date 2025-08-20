@@ -336,10 +336,10 @@ class CooperativeTrajectoryNode(Node):
             self.trajectory_over_time['desired_monica'].append(b2)
             # save actual base positions
             self.trajectory_over_time['actual_ross'].append(
-                self.get_transform('ross')
+                self.base1_pose
             )
             self.trajectory_over_time['actual_monica'].append(
-                self.get_transform('monica')
+                self.base2_pose
             )
             
         except Exception as e:
@@ -481,12 +481,12 @@ def main(args=None):
     except KeyboardInterrupt:
         # plot trajectories
         plot_trajectories(
-            node.trajectory_over_time['desired_ross'],
-            node.trajectory_over_time['desired_monica'],
-            node.trajectory_over_time['actual_ross'],
-            node.trajectory_over_time['desired_monica'],
+            np.array(node.trajectory_over_time['desired_ross']),
+            np.array(node.trajectory_over_time['desired_monica']),
+            np.array(node.trajectory_over_time['actual_ross']),
+            np.array(node.trajectory_over_time['actual_monica'])
         )
-        pass
+        
     except Exception as e:
         print(f"Error: {e}")
     finally:

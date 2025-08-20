@@ -111,30 +111,44 @@ def plot_summary(params, show=True, save_prefix=None):
 def plot_trajectories(
     desired_ross_poses, desired_monica_poses,
     ross_poses, monica_poses):
-    # ross trajectory
+
     plt.plot(
-        desired_ross_poses[0],
-        desired_ross_poses[1],
-        '-r'
+        desired_ross_poses[:, 0],
+        desired_ross_poses[:, 1],
+        label='Desired Ross Trajectory',
+        color='blue',
+        linestyle='-',
+        markersize=6
     )
     plt.plot(
-        desired_monica_poses[0],
-        desired_monica_poses[1],
-        '-b'
+        desired_monica_poses[:, 0],
+        desired_monica_poses[:, 1],
+        label='Desired Monica Trajectory',
+        color='red',
+        linestyle='-',
+        markersize=6
     )
     plt.plot(
-        ross_poses[0],
-        ross_poses[1],
-        '--r'
+        ross_poses[:, 0],
+        ross_poses[:, 1],
+        label='Actual Ross Trajectory',
+        color='blue',
+        linestyle='--',
+        markersize=6
     )
     plt.plot(
-        monica_poses[0],
-        monica_poses[1],
-        '--b'
+        monica_poses[:, 0],
+        monica_poses[:, 1],
+        label='Actual Monica Trajectory',
+        color='red',
+        linestyle='--',
+        markersize=6
     )
     plt.grid(True)
     plt.xlabel('x (m)')
     plt.ylabel('y (m)')
+    plt.legend()
+    plt.axis('equal')
     plt.title(f'Trajectory over time')
     plt.savefig(fname=f'ros2_coop_traj')
 
