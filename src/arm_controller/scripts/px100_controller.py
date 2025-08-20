@@ -49,12 +49,12 @@ class ArmController(InterbotixManipulatorXS):
     T_world_to_rm = np.eye(4)
     # transform from vicon to manipulator frame
     # this is the same for both robots
-    T_v_to_m = np.array([ [ 0, 1, 0,  0.23],
-                          [-1, 0, 0, -0.07],
-                          [ 0, 0, 1, -0.06],
-                          [ 0, 0, 0,  1]])
+    T_v_to_m = np.array([[0, 1, 0,  0.23],
+                         [-1, 0, 0, -0.07],
+                         [0, 0, 1, -0.06],
+                         [0, 0, 0,  1]])
 
-    current_theta = np.pi/2 # Default to no heading adjustment
+    current_theta = np.pi/2  # Default to no heading adjustment
 
     # offset to apply so the end effector is pitched up by theta degrees
     pitch_offset = np.array(R.from_euler('y', -15, degrees=True).as_matrix())
@@ -142,7 +142,7 @@ class ArmController(InterbotixManipulatorXS):
         orientation_tolerance = 1e-3
 
         with self.lock:
-            desired_pose = self.desired_pose           
+            desired_pose = self.desired_pose
 
         # create a rotation matrix from the desired pose's quaternion
         desired_rotation_matrix = np.array(R.from_quat([
@@ -198,8 +198,8 @@ class ArmController(InterbotixManipulatorXS):
                     self.log_info(
                         'Waist joint command out of bounds, skipping')
                     return
-                
-                elif np.sqrt(x*x + y*y) > 0.29 or np.sqrt(x*x + y*y) < 0.6:
+
+                elif np.sqrt(x*x + y*y) > 0.29 or np.sqrt(x*x + y*y) < 0.16:
                     self.log_info(
                         'desired end-effector position is out of bounds, skipping')
                     return
