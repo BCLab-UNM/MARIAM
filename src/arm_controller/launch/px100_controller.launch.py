@@ -197,7 +197,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'use_rviz_markers',
-            default_value='true',
+            default_value='false',
             choices=('true', 'false'),
             description='launches RViz markers if set to `true`.',
         ),

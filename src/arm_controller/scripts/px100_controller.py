@@ -88,7 +88,7 @@ class ArmController(InterbotixManipulatorXS):
         self.joint_group_pub = self.core.get_node().create_publisher(
             JointGroupCommand,
             'commands/joint_group',
-            qos_profile
+            10
         )
 
         self.core.get_node().create_subscription(
@@ -199,7 +199,7 @@ class ArmController(InterbotixManipulatorXS):
                         'Waist joint command out of bounds, skipping')
                     return
                 
-                elif np.sqrt(x*x + y*y) > 0.29:
+                elif np.sqrt(x*x + y*y) > 0.29 or np.sqrt(x*x + y*y) < 0.6:
                     self.log_info(
                         'desired end-effector position is out of bounds, skipping')
                     return
