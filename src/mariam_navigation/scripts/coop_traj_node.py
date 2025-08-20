@@ -27,6 +27,12 @@ class CooperativeTrajectoryNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
+        # Name mapping
+        name_mapping = {
+            'ross': 'base1',
+            'monica': 'base2',
+        }
+
         # Qos profile
         best_effort_qos = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
         
@@ -66,17 +72,17 @@ class CooperativeTrajectoryNode(Node):
 
         # Closed-loop control gains
         self.control_gains = {
-            'kp_linear': 1.0,        # Conservative gain for 0.2 m/s
-            'kp_angular': 1.5,       # Conservative gain for 0.2 rad/s
-            'ki_linear': 0.1,      # Integral gain for position 
-            'ki_angular': 0.2,     # Integral gain for orientation
-            'kd_linear': 0.05,     # Derivative gain for position 
-            'kd_angular': 0.1,     # Derivative gain for orientation
-            'integral_limit': 0.5,  # Limit for integral windup
+            'kp_linear': 0.5,        # Conservative gain for 0.2 m/s
+            'kp_angular': 0.5,       # Conservative gain for 0.2 rad/s
+            'ki_linear': 0.01,      # Integral gain for position 
+            'ki_angular': 0.02,     # Integral gain for orientation
+            'kd_linear': 0.01,     # Derivative gain for position 
+            'kd_angular': 0.01,     # Derivative gain for orientation
+            'integral_limit': 0.2,  # Limit for integral windup
             'max_linear_vel': 0.4,   # 2x expected speed (safety margin)
             'max_angular_vel': 0.4,  # 2x expected angular speed
-            'deadband_linear': 0.01, # 1cm deadband (tight but not jittery)
-            'deadband_angular': 0.02 # ~1.1 degree deadband
+            'deadband_linear': 0.01,
+            'deadband_angular': 0.05 
         }
 
         # Add PID state tracking
@@ -107,6 +113,8 @@ class CooperativeTrajectoryNode(Node):
         self.get_logger().info("Cooperative Trajectory Node initialized")
         self.get_logger().info(f"Relative Goal: {self.relative_goal}")
         self.get_logger().info("Waiting for payload transform...")
+        self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self.get_logger().debug("Debugging active")
 
     def base1_pose_callback(self, msg):
         """Callback for base 1 pose updates"""
@@ -235,10 +243,10 @@ class CooperativeTrajectoryNode(Node):
                     self.get_logger().info(f"Saving trajectory plot with prefix: {self.plot_prefix}")
                     plot_summary(self.trajectory_params, show=False, save_prefix=self.plot_prefix)
                     self.get_logger().info(f"Trajectory plot saved as {self.plot_prefix}_summary.png")
-                    animate_carry(self.trajectory_params, fps=30, head_len=0.18,
-                                   show_arms=True, show_box=True, show_pivots=True,
-                                   frame_step=25, path_stride=6, save_gif=self.animation_file_name)
-                    self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
+                    # animate_carry(self.trajectory_params, fps=30, head_len=0.18,
+                    #                show_arms=True, show_box=True, show_pivots=True,
+                    #                frame_step=25, path_stride=6, save_gif=self.animation_file_name)
+                    # self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
                 except Exception as e:
                     self.get_logger().warn(f"Failed to save trajectory plot: {str(e)}")
 
@@ -298,16 +306,19 @@ class CooperativeTrajectoryNode(Node):
 
             # Calculate PID corrections
             v1_corrected = self.calculate_corrected_velocity(v1, 'base1', b1, dt)
-            v2_corrected = self.calculate_corrected_velocity(v2_reversed, 'base2', b2, dt)
+            v2_corrected = self.calculate_corrected_velocity(v2, 'base2', b2, dt)
 
             # Combine feedforward + correction
             v1_final = v1 + v1_corrected
-            v2_final = v2_reversed + v2_corrected
+            v2_final = v2 + v2_corrected
+
+            v2_final_reversed = v2_final.copy()
+            v2_final_reversed[0] = -v2_final[0]  # reverse x velocity
 
             # Publish the corrected velocities
             self.publish_cmd_vel(self.base1_cmd_pub, v1_final)
-            self.publish_cmd_vel(self.base2_cmd_pub, v2_final)
-            
+            self.publish_cmd_vel(self.base2_cmd_pub, v2_final_reversed)
+
             # Store poses and time for next iteration
             self.last_poses['base1'] = b1.copy()
             self.last_poses['base2'] = b2.copy()
@@ -335,21 +346,19 @@ class CooperativeTrajectoryNode(Node):
             
         try:
             # Get current actual pose of the base
-            frame_name = "ross" if base_name == "base1" else "monica"
-            actual_pose = self.get_transform(frame_name)
-            
-            if actual_pose is None:
-                self.get_logger().warn(f"Could not get pose for {frame_name}, using zero correction")
-                return np.zeros(3)
-            
+            if base_name == "base1":
+                actual_pose = self.base1_pose
+            else:
+                actual_pose = self.base2_pose
+                actual_pose[2] += np.pi
+
             # Calculate pose errors in world frame
             error = np.array(desired_pose) - np.array(actual_pose)
-
-            # if monica, make the heading face behind the robot
-            if frame_name == "monica":
-                error[2] += np.pi
-            
             error[2] = self.wrap_angle(error[2])  # Wrap angular error
+
+            self.get_logger().debug(f"Base {base_name} expected: {desired_pose}")
+            self.get_logger().debug(f"Base {base_name} actual: {actual_pose}")
+            self.get_logger().debug(f"Base {base_name} error: {error}")
             
             # Apply deadband
             error[0] = 0.0 if abs(error[0]) < self.control_gains['deadband_linear'] else error[0]
@@ -399,7 +408,10 @@ class CooperativeTrajectoryNode(Node):
             # Keep history manageable
             if len(pid_state['error_history']) > 100:
                 pid_state['error_history'].pop(0)
-            
+
+            self.get_logger().debug(f"Base {base_name}    feedforward: {feedforward_vel}")
+            self.get_logger().debug(f"Base {base_name} PID correction: {correction}")
+
             return correction
             
         except Exception as e:
