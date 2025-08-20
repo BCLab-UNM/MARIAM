@@ -12,7 +12,7 @@ from scipy.spatial.transform import Rotation as R
 
 # Import the cooperative trajectory planning API
 from coop_traj_api import opt_traj_params, traj
-from coop_traj_viz import plot_summary, animate_carry
+from coop_traj_viz import plot_summary, animate_carry, plot_trajectories
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 # Instructions
@@ -31,6 +31,13 @@ class CooperativeTrajectoryNode(Node):
         name_mapping = {
             'ross': 'base1',
             'monica': 'base2',
+        }
+
+        self.trajectory_over_time = {
+            'desired_ross': [],
+            'desired_monica': [],
+            'actual_ross': [],
+            'actual_monica': []
         }
 
         # Qos profile
@@ -323,6 +330,17 @@ class CooperativeTrajectoryNode(Node):
             self.last_poses['base1'] = b1.copy()
             self.last_poses['base2'] = b2.copy()
             self.last_time = current_time
+
+            # save desired base positions
+            self.trajectory_over_time['desired_ross'].append(b1)
+            self.trajectory_over_time['desired_monica'].append(b2)
+            # save actual base positions
+            self.trajectory_over_time['actual_ross'].append(
+                self.get_transform('ross')
+            )
+            self.trajectory_over_time['actual_monica'].append(
+                self.get_transform('monica')
+            )
             
         except Exception as e:
             self.get_logger().error(f"Error in control callback: {str(e)}")
@@ -461,6 +479,13 @@ def main(args=None):
         node = CooperativeTrajectoryNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
+        # plot trajectories
+        plot_trajectories(
+            node.trajectory_over_time['desired_ross'],
+            node.trajectory_over_time['desired_monica'],
+            node.trajectory_over_time['actual_ross'],
+            node.trajectory_over_time['desired_monica'],
+        )
         pass
     except Exception as e:
         print(f"Error: {e}")
@@ -470,7 +495,6 @@ def main(args=None):
         except:
             pass
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()

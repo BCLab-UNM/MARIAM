@@ -108,6 +108,37 @@ def plot_summary(params, show=True, save_prefix=None):
         plt.close(fig)
 
 
+def plot_trajectories(
+    desired_ross_poses, desired_monica_poses,
+    ross_poses, monica_poses):
+    # ross trajectory
+    plt.plot(
+        desired_ross_poses[0],
+        desired_ross_poses[1],
+        '-r'
+    )
+    plt.plot(
+        desired_monica_poses[0],
+        desired_monica_poses[1],
+        '-b'
+    )
+    plt.plot(
+        ross_poses[0],
+        ross_poses[1],
+        '--r'
+    )
+    plt.plot(
+        monica_poses[0],
+        monica_poses[1],
+        '--b'
+    )
+    plt.grid(True)
+    plt.xlabel('x (m)')
+    plt.ylabel('y (m)')
+    plt.title(f'Trajectory over time')
+    plt.savefig(fname=f'ros2_coop_traj')
+
+
 def animate_carry(params,
                   fps=30,
                   head_len=0.18,          # short/light so it won't be confused with arms
