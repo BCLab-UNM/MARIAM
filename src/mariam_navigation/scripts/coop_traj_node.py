@@ -40,6 +40,7 @@ class CooperativeTrajectoryNode(Node):
             'desired_monica': [],
             'actual_ross': [],
             'actual_monica': [],
+            'actual_payload': [],
             'dt': [],
             'ros_time': []
         }
@@ -58,6 +59,7 @@ class CooperativeTrajectoryNode(Node):
         # Pose tracking [x, y, theta]
         self.base1_pose = None
         self.base2_pose = None
+        self.payload_pose = None
 
         # Transform from vicon to base_link
         self.T_vm = np.array([  [ 1, 0, 0,  0.23],
@@ -174,6 +176,29 @@ class CooperativeTrajectoryNode(Node):
         theta = np.arctan2(T_wm[1, 0], T_wm[0, 0])  # Yaw from rotation matrix
 
         self.base2_pose = np.array([x, y, theta])
+
+    def payload_pose_callback(self, msg):
+        """Callback for payload pose updates"""
+        # Use convert pose into transform
+        T_wv = np.eye(4)
+        T_wv[:3, :3] = R.from_quat([
+            msg.orientation.x,
+            msg.orientation.y,
+            msg.orientation.z,
+            msg.orientation.w,
+        ]).as_matrix()
+        T_wv[0, 3] = msg.position.x
+        T_wv[1, 3] = msg.position.y
+        T_wv[2, 3] = msg.position.z
+
+        # Extract [x, y, theta] from the 3D transformation
+        x = T_wv[0, 3]
+        y = T_wv[1, 3]
+        theta = np.arctan2(T_wv[1, 0], T_wv[0, 0])
+
+        self.payload_pose = np.array([x, y, theta])
+
+
 
     def startup_callback(self):
         """Try to get initial payload transform and start trajectory"""
@@ -335,12 +360,14 @@ class CooperativeTrajectoryNode(Node):
             self.last_poses['base2'] = b2.copy()
             self.last_time = current_time
 
-            # save desired base positions
+            # save desired base poses
             self.trajectory_over_time['desired_ross'].append(b1)
             self.trajectory_over_time['desired_monica'].append(b2)
-            # save actual base positions
+            # save actual base poses
             self.trajectory_over_time['actual_ross'].append(self.base1_pose)
             self.trajectory_over_time['actual_monica'].append(self.base2_pose)
+            # save actual payload poses
+            self.trajectory_over_time['actual_payload'].append(self.get_transform('payload'))
             # save timing data
             self.trajectory_over_time['dt'].append(dt)
             self.trajectory_over_time['ros_time'].append(self.get_clock().now())

@@ -205,7 +205,19 @@ def save_trajectory_csv(trajectory_over_time, trial_name=""):
         data_dict['act_mon_x'] = actual_monica[:, 0]
         data_dict['act_mon_y'] = actual_monica[:, 1]
         data_dict['act_mon_theta'] = actual_monica[:, 2]
-        
+
+        # Extract actual payload data (handle potential None values)
+        actual_payload = []
+        for pose in trajectory_over_time['actual_payload']:
+            if pose is not None:
+                actual_payload.append(pose)
+            else:
+                actual_payload.append([np.nan, np.nan, np.nan])
+        actual_payload = np.array(actual_payload)
+        data_dict['act_payload_x'] = actual_payload[:, 0]
+        data_dict['act_payload_y'] = actual_payload[:, 1]
+        data_dict['act_payload_theta'] = actual_payload[:, 2]
+
         # Add timing data
         data_dict['dt'] = trajectory_over_time['dt']
         data_dict['ros_time_ns'] = [t.nanoseconds for t in trajectory_over_time['ros_time']]
