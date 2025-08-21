@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from matplotlib.patches import Polygon
@@ -110,7 +111,7 @@ def plot_summary(params, show=True, save_prefix=None):
 
 def plot_trajectories(
     desired_ross_poses, desired_monica_poses,
-    ross_poses, monica_poses):
+    ross_poses, monica_poses, file_prefix):
 
     plt.plot(
         desired_ross_poses[:, 0],
@@ -150,7 +151,12 @@ def plot_trajectories(
     plt.legend()
     plt.axis('equal')
     plt.title(f'Trajectory over time')
-    plt.savefig(fname=f'ros2_coop_traj')
+    plt.savefig(fname=f"../figures/{file_prefix}_trajectory_plot.png")
+
+    # Save to CSV
+    pd.DataFrame(np.column_stack([desired_ross_poses, desired_monica_poses, ross_poses, monica_poses]),
+                 columns=['des_ross_x', 'des_ross_y', 'des_ross_theta', 'des_mon_x', 'des_mon_y', 'des_mon_theta', 
+                         'act_ross_x', 'act_ross_y', 'act_ross_theta', 'act_mon_x', 'act_mon_y', 'act_mon_theta']).to_csv(f"../figures/{file_prefix}_trajectory_data.csv", index=False)
 
 
 def animate_carry(params,

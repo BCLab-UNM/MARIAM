@@ -75,7 +75,7 @@ print("b1 pose/vel shapes:", b1_all.shape, v1_all.shape)
 print("b2 pose/vel shapes:", b2_all.shape, v2_all.shape)
 
 # plot summary of trajectories
-plot_summary(params, save_prefix="coop_demo")
+plot_summary(params, save_prefix="../figures/coop_demo")
 
 animate_carry(params, fps=30, head_len=0.18,
               show_arms=True, show_box=True, show_pivots=True,

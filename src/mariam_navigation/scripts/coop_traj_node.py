@@ -7,6 +7,7 @@ from tf2_ros import TransformListener, Buffer
 import tf_transformations
 import numpy as np
 import time
+import sys
 import threading
 from scipy.spatial.transform import Rotation as R
 
@@ -20,7 +21,7 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 # python3 coop_traj_node.py
 
 class CooperativeTrajectoryNode(Node):
-    def __init__(self):
+    def __init__(self, trial_name=""):
         super().__init__('cooperative_trajectory_node')
         
         # TF2 setup for getting payload transform
@@ -70,11 +71,11 @@ class CooperativeTrajectoryNode(Node):
         
         # Plot saving configuration
         self.save_plots = True
-        self.plot_prefix = "ros2_coop_traj"  # Will save as ros2_coop_traj_summary.png
-        self.animation_file_name = "ros2_coop_traj_animation.gif"
-        
+        self.plot_prefix = f"../figures/{trial_name}_ros2_coop_traj"  # Will save as ros2_coop_traj_summary.png
+        self.animation_file_name = f"../figures/{trial_name}_ros2_coop_traj_animation.gif"
+
         # Hard-coded goal relative to the payload's start pose
-        self.relative_goal = [2.0, 0.4, 0.0]  # [x, y, theta] - modify as needed
+        self.relative_goal = [2.0, 0.5, 0.0]  # [x, y, theta] - modify as needed
         self.goal = [0.0, 0.0, 0.0]  # Will be set after getting initial transform
 
         # Closed-loop control gains
@@ -214,8 +215,8 @@ class CooperativeTrajectoryNode(Node):
             quat = transform.transform.rotation
             _, _, theta = tf_transformations.euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
 
-            if frame_id == "payload":
-                return [0, 0, 0]
+            # if frame_id == "payload":
+            #     return [0, 0, 0]
 
             return [x, y, theta]
             
@@ -250,10 +251,10 @@ class CooperativeTrajectoryNode(Node):
                     self.get_logger().info(f"Saving trajectory plot with prefix: {self.plot_prefix}")
                     plot_summary(self.trajectory_params, show=False, save_prefix=self.plot_prefix)
                     self.get_logger().info(f"Trajectory plot saved as {self.plot_prefix}_summary.png")
-                    # animate_carry(self.trajectory_params, fps=30, head_len=0.18,
-                    #                show_arms=True, show_box=True, show_pivots=True,
-                    #                frame_step=25, path_stride=6, save_gif=self.animation_file_name)
-                    # self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
+                    animate_carry(self.trajectory_params, fps=30, head_len=0.18,
+                                   show_arms=True, show_box=True, show_pivots=True,
+                                   frame_step=25, path_stride=6, save_gif=self.animation_file_name)
+                    self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
                 except Exception as e:
                     self.get_logger().warn(f"Failed to save trajectory plot: {str(e)}")
 
@@ -474,9 +475,17 @@ class CooperativeTrajectoryNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
+
+    # Parse command-line arguments
+    trial_name = ""
+    if len(sys.argv) > 1:
+        trial_name = sys.argv[1]
+        print(f"Using trial name: {trial_name}")
+    else:
+        print("No trial name provided, using default file names")
     
     try:
-        node = CooperativeTrajectoryNode()
+        node = CooperativeTrajectoryNode(trial_name=trial_name)
         rclpy.spin(node)
     except KeyboardInterrupt:
         # plot trajectories
@@ -484,7 +493,8 @@ def main(args=None):
             np.array(node.trajectory_over_time['desired_ross']),
             np.array(node.trajectory_over_time['desired_monica']),
             np.array(node.trajectory_over_time['actual_ross']),
-            np.array(node.trajectory_over_time['actual_monica'])
+            np.array(node.trajectory_over_time['actual_monica']),
+            f"../figures/{trial_name}_trajectory_error_plot.png"
         )
         
     except Exception as e:
