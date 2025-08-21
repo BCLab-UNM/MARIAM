@@ -153,11 +153,72 @@ def plot_trajectories(
     plt.title(f'Trajectory over time')
     plt.savefig(fname=f"../figures/{file_prefix}_trajectory_plot.png")
 
-    # Save to CSV
-    pd.DataFrame(np.column_stack([desired_ross_poses, desired_monica_poses, ross_poses, monica_poses]),
-                 columns=['des_ross_x', 'des_ross_y', 'des_ross_theta', 'des_mon_x', 'des_mon_y', 'des_mon_theta', 
-                         'act_ross_x', 'act_ross_y', 'act_ross_theta', 'act_mon_x', 'act_mon_y', 'act_mon_theta']).to_csv(f"../figures/{file_prefix}_trajectory_data.csv", index=False)
-
+def save_trajectory_csv(trajectory_over_time, trial_name=""):
+    """
+    Save trajectory data to CSV file
+    
+    Args:
+        trajectory_over_time: Dictionary containing trajectory data from the node
+        trial_name: String prefix for output files
+    """
+    try:
+        # Check if we have trajectory data
+        if len(trajectory_over_time['desired_ross']) == 0:
+            print("Warning: No trajectory data to save")
+            return
+        
+        # Prepare data for CSV - convert lists of arrays to separate columns
+        data_dict = {}
+        
+        # Extract desired ross data
+        desired_ross = np.array(trajectory_over_time['desired_ross'])
+        data_dict['des_ross_x'] = desired_ross[:, 0]
+        data_dict['des_ross_y'] = desired_ross[:, 1] 
+        data_dict['des_ross_theta'] = desired_ross[:, 2]
+        
+        # Extract desired monica data
+        desired_monica = np.array(trajectory_over_time['desired_monica'])
+        data_dict['des_mon_x'] = desired_monica[:, 0]
+        data_dict['des_mon_y'] = desired_monica[:, 1]
+        data_dict['des_mon_theta'] = desired_monica[:, 2]
+        
+        # Extract actual ross data (handle potential None values)
+        actual_ross = []
+        for pose in trajectory_over_time['actual_ross']:
+            if pose is not None:
+                actual_ross.append(pose)
+            else:
+                actual_ross.append([np.nan, np.nan, np.nan])
+        actual_ross = np.array(actual_ross)
+        data_dict['act_ross_x'] = actual_ross[:, 0]
+        data_dict['act_ross_y'] = actual_ross[:, 1]
+        data_dict['act_ross_theta'] = actual_ross[:, 2]
+        
+        # Extract actual monica data (handle potential None values)
+        actual_monica = []
+        for pose in trajectory_over_time['actual_monica']:
+            if pose is not None:
+                actual_monica.append(pose)
+            else:
+                actual_monica.append([np.nan, np.nan, np.nan])
+        actual_monica = np.array(actual_monica)
+        data_dict['act_mon_x'] = actual_monica[:, 0]
+        data_dict['act_mon_y'] = actual_monica[:, 1]
+        data_dict['act_mon_theta'] = actual_monica[:, 2]
+        
+        # Add timing data
+        data_dict['dt'] = trajectory_over_time['dt']
+        data_dict['ros_time_ns'] = [t.nanoseconds for t in trajectory_over_time['ros_time']]
+        data_dict['ros_time_sec'] = [t.nanoseconds / 1e9 for t in trajectory_over_time['ros_time']]
+                
+        # Create DataFrame and save to CSV
+        df = pd.DataFrame(data_dict)
+        csv_filename = f"../figures/{trial_name}_trajectory_data.csv"
+        df.to_csv(csv_filename, index=False)
+        print(f"Trajectory data saved to {csv_filename}")
+        
+    except Exception as e:
+        print(f"Failed to save trajectory data: {str(e)}")
 
 def animate_carry(params,
                   fps=30,

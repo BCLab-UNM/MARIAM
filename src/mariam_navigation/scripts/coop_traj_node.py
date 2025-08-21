@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist, TransformStamped, Pose
 from tf2_ros import TransformListener, Buffer
 import tf_transformations
 import numpy as np
+import pandas as pd
 import time
 import sys
 import threading
@@ -13,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 
 # Import the cooperative trajectory planning API
 from coop_traj_api import opt_traj_params, traj
-from coop_traj_viz import plot_summary, animate_carry, plot_trajectories
+from coop_traj_viz import plot_summary, animate_carry, plot_trajectories, save_trajectory_csv
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 # Instructions
@@ -38,7 +39,9 @@ class CooperativeTrajectoryNode(Node):
             'desired_ross': [],
             'desired_monica': [],
             'actual_ross': [],
-            'actual_monica': []
+            'actual_monica': [],
+            'dt': [],
+            'ros_time': []
         }
 
         # Qos profile
@@ -336,13 +339,12 @@ class CooperativeTrajectoryNode(Node):
             self.trajectory_over_time['desired_ross'].append(b1)
             self.trajectory_over_time['desired_monica'].append(b2)
             # save actual base positions
-            self.trajectory_over_time['actual_ross'].append(
-                self.base1_pose
-            )
-            self.trajectory_over_time['actual_monica'].append(
-                self.base2_pose
-            )
-            
+            self.trajectory_over_time['actual_ross'].append(self.base1_pose)
+            self.trajectory_over_time['actual_monica'].append(self.base2_pose)
+            # save timing data
+            self.trajectory_over_time['dt'].append(dt)
+            self.trajectory_over_time['ros_time'].append(self.get_clock().now())
+
         except Exception as e:
             self.get_logger().error(f"Error in control callback: {str(e)}")
             self.stop_trajectory()
@@ -496,7 +498,8 @@ def main(args=None):
             np.array(node.trajectory_over_time['actual_monica']),
             f"../figures/{trial_name}_trajectory_error_plot.png"
         )
-        
+        save_trajectory_csv(node.trajectory_over_time, trial_name)
+
     except Exception as e:
         print(f"Error: {e}")
     finally:
