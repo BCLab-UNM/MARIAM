@@ -1,5 +1,7 @@
 // C++
 #include <memory>
+#include <sstream>
+#include <fstream>
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
@@ -10,6 +12,13 @@
 using namespace geometry_msgs::msg;
 using namespace std_msgs::msg;
 using std::placeholders::_1;
+
+struct DataPoint {
+  double K;
+  Pose target_pose;
+  float force;
+  rclcpp::Time ros_time;
+};
 
 
 class AdmittanceController : public rclcpp::Node {
@@ -61,11 +70,49 @@ class AdmittanceController : public rclcpp::Node {
       this->declare_parameter("mass",       5.0);
       this->declare_parameter("damping",   10.0);
       this->declare_parameter("stiffness", 15.0);
+      this->declare_parameter("trial_number", "00");
 
       // storing the initial values into variables
       this->get_parameter("mass",      mass);
       this->get_parameter("damping",   damping);
       this->get_parameter("stiffness", stiffness);
+    }
+
+    void write_to_csv() {
+      std::stringstream file_name_ss;
+      file_name_ss << "data/trial_";
+      file_name_ss << this->get_parameter("trial_number").as_string();
+      file_name_ss << "/admittance_data.csv";
+      std::string file_name = file_name_ss.str();
+      std::ofstream file(file_name);
+
+      file.open();
+
+      if (!file.is_open()) {
+        RCLCPP_ERROR(this->get_logger(), "Failed to open CSV file for writing");
+        return;
+      }
+        
+      // Write header
+      file << "p_x,p_y,p_z,w,x,y,z,force,stiffness,ros_time\n";
+      
+      // Write data with proper precision
+      file << std::fixed << std::setprecision(6);
+      for (const auto& point : data_points_) {
+        file << point.target_pose.position.x << "," 
+         << point.target_pose.position.y << "," 
+         << point.target_pose.position.z << "," 
+         << point.target_pose.orientation.w << "," 
+         << point.target_pose.orientation.x << "," 
+         << point.target_pose.orientation.y << "," 
+         << point.target_pose.orientation.z << "," 
+              << point.force << "," 
+              << point.K << ","
+              << point.ros_time.nanoseconds() << "\n";
+      }
+      
+      file.close();
+      RCLCPP_INFO(this->get_logger(), "Data written to data_log.csv (%zu points)", data_points_.size());
     }
 
   private:
@@ -75,6 +122,9 @@ class AdmittanceController : public rclcpp::Node {
     rclcpp::Subscription<Float64>::SharedPtr mass_sub;
     rclcpp::Subscription<Float64>::SharedPtr damping_sub;
     rclcpp::Subscription<Float64>::SharedPtr stiffness_sub;
+
+    // vector for saving stuff
+    std::vector<DataPoint> data_points_;
     
     // most recent force reading
     double force_reading = 0;
@@ -109,6 +159,14 @@ class AdmittanceController : public rclcpp::Node {
       new_msg.position.y -= position;
       
       this->pose_publisher->publish(new_msg);
+      
+      DataPoint p;
+
+      p.K = stiffness;
+      p.target_pose = new_msg;
+      p.force = force_reading;
+      p.ros_time = this->get_clock()->now();
+      data_points_.push_back(p);
     }
 
     void force_callback(const Float32::SharedPtr msg) {
@@ -129,11 +187,17 @@ class AdmittanceController : public rclcpp::Node {
       RCLCPP_DEBUG(LOGGER, "Updating stiffness from %.2f to %.2f", stiffness, msg->data);
       stiffness = msg->data;
     }
+
+    
 };
 
 int main(int argc, char * argv[]) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<AdmittanceController>());
+  auto node = std::make_shared<AdmittanceController>();
+  rclcpp::spin(node);
+
+  node->write_to_csv();
+
   rclcpp::shutdown();
   return 0;
 }
