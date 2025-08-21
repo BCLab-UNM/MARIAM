@@ -36,7 +36,7 @@ class ArmController(InterbotixManipulatorXS):
     # the pose we want the robot to be in
     # Let the default be where start_lift() will place the robot
     desired_pose = Pose(
-        position=Point(x=0.0, y=0.224, z=0.1),
+        position=Point(x=0.0, y=0.218, z=0.1),
         orientation=Quaternion(x=0.0, y=0.0, z=0.707, w=0.707)
     )
 
