@@ -114,6 +114,8 @@ ament_target_dependencies(
   admittance_controller
   "rclcpp"
   "std_msgs"
+  "ament_index_cpp"
+  "rcpputils"
 )
 install(TARGETS admittance_controller
   DESTINATION lib/${PROJECT_NAME}

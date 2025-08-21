@@ -35,6 +35,7 @@ def launch_setup(context, *args, **kwargs):
         'xs_driver_logging_level')
     use_rsp_launch_arg = LaunchConfiguration('use_rsp')
     use_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
+    trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     admittance_control_launch_arg = LaunchConfiguration(
         'use_admittance_control')
@@ -104,7 +105,8 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             'robot_name': robot_name_launch_arg,
             'use_fake_force': force_node_launch_arg,
-            'use_rviz_markers': use_rviz_markers_launch_arg
+            'use_rviz_markers': use_rviz_markers_launch_arg,
+            'trial_name': trial_name_launch_arg
         }.items(),
         condition=IfCondition(
             PythonExpression([
@@ -201,6 +203,11 @@ def generate_launch_description():
             choices=('true', 'false'),
             description='launches RViz markers if set to `true`.',
         ),
+        DeclareLaunchArgument(
+            'trial_name',
+            default_value='',
+            description='Name of the trial for logging and data collection.'
+        )
     ]
     declared_arguments.extend(
         declare_interbotix_xsarm_robot_description_launch_arguments(

@@ -8,7 +8,7 @@
   ros__parameters:
     frequency: 0.002
     x_pos:     0.0
-    y_pos:     0.230
+    y_pos:     0.250
     z_pos:     0.1
     x:         0.0
     y:         0.0

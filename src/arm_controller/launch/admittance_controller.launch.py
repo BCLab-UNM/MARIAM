@@ -18,6 +18,7 @@ def generate_launch_description():
     # determines if the force node should be created
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
     admittance_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
+    trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     config_file = os.path.join(
         get_package_share_directory('arm_controller'),
@@ -26,11 +27,14 @@ def generate_launch_description():
 
 
     admittance_controller_node = Node(
-       name='admittance_controller_node',
-       package='arm_controller',
-       executable='admittance_controller',
-       namespace=robot_name_launch_arg,
-       parameters=[config_file]
+        name='admittance_controller_node',
+        package='arm_controller',
+        executable='admittance_controller',
+        namespace=robot_name_launch_arg,
+        parameters=[
+            config_file,
+            {'trial_name': LaunchConfiguration('trial_name')}
+        ]
     )
 
     admittance_rviz_markers_node = Node(
@@ -86,6 +90,10 @@ def generate_launch_description():
             'use_rviz_markers',
             default_value='true',
             choices=('true', 'false')
+        ),
+        DeclareLaunchArgument(
+            'trial_name',
+            default_value=''
         ),
 
         admittance_controller_node,

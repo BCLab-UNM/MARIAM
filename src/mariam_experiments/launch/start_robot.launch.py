@@ -18,6 +18,7 @@ def launch_setup(context, *args, **kwargs):
         'use_admittance_control')
     dynamic_parameterization_launch_arg = LaunchConfiguration(
         'use_dynamic_parameterization')
+    trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     # Get the robot name and set ROS_DOMAIN_ID based on namespace
     robot_name = robot_name_launch_arg.perform(context)
@@ -45,7 +46,8 @@ def launch_setup(context, *args, **kwargs):
             'use_fake_force': 'false',
             'use_sim': 'false',
             'use_rsp': 'false',
-            'track_other_robot': 'true'
+            'track_other_robot': 'true',
+            'trial_name': trial_name_launch_arg
 
         }.items()
     )
@@ -201,6 +203,11 @@ def generate_launch_description():
             default_value='false',
             choices=('true', 'false'),
             description='Whether to use dynamic parameterization'
+        ),
+        DeclareLaunchArgument(
+            'trial_name',
+            default_value='',
+            description='Name of the trial for logging and data collection.'
         )
     ]
 
