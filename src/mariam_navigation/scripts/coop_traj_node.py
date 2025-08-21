@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import time
 import sys
+import os
 import threading
 from scipy.spatial.transform import Rotation as R
 
@@ -76,8 +77,8 @@ class CooperativeTrajectoryNode(Node):
         
         # Plot saving configuration
         self.save_plots = True
-        self.plot_prefix = f"../figures/{trial_name}_ros2_coop_traj"  # Will save as ros2_coop_traj_summary.png
-        self.animation_file_name = f"../figures/{trial_name}_ros2_coop_traj_animation.gif"
+        self.plot_prefix = f"../../../data/{trial_name}/ros2_coop_traj"  # Will save as ros2_coop_traj_summary.png
+        self.animation_file_name = f"../../../data/{trial_name}/ros2_coop_traj_animation.gif"
 
         # Hard-coded goal relative to the payload's start pose
         self.relative_goal = [2.0, 0.5, 0.0]  # [x, y, theta] - modify as needed
@@ -510,6 +511,9 @@ def main(args=None):
     if len(sys.argv) > 1:
         trial_name = sys.argv[1]
         print(f"Using trial name: {trial_name}")
+
+        # Create a directory for trial
+        os.makedirs(f"../../../data/{trial_name}", exist_ok=True)
     else:
         print("No trial name provided, using default file names")
     
@@ -523,7 +527,7 @@ def main(args=None):
             np.array(node.trajectory_over_time['desired_monica']),
             np.array(node.trajectory_over_time['actual_ross']),
             np.array(node.trajectory_over_time['actual_monica']),
-            f"../figures/{trial_name}_trajectory_error_plot.png"
+            trial_name
         )
         save_trajectory_csv(node.trajectory_over_time, trial_name)
 

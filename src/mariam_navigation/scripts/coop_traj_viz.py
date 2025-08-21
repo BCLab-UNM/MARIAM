@@ -111,7 +111,7 @@ def plot_summary(params, show=True, save_prefix=None):
 
 def plot_trajectories(
     desired_ross_poses, desired_monica_poses,
-    ross_poses, monica_poses, file_prefix):
+    ross_poses, monica_poses, trial_name):
 
     plt.plot(
         desired_ross_poses[:, 0],
@@ -151,7 +151,7 @@ def plot_trajectories(
     plt.legend()
     plt.axis('equal')
     plt.title(f'Trajectory over time')
-    plt.savefig(fname=f"../figures/{file_prefix}_trajectory_plot.png")
+    plt.savefig(fname=f"../../../data/{trial_name}/trajectory_plot.png")
 
 def save_trajectory_csv(trajectory_over_time, trial_name=""):
     """
@@ -225,7 +225,7 @@ def save_trajectory_csv(trajectory_over_time, trial_name=""):
                 
         # Create DataFrame and save to CSV
         df = pd.DataFrame(data_dict)
-        csv_filename = f"../figures/{trial_name}_trajectory_data.csv"
+        csv_filename = f"../../../data/{trial_name}/trajectory_data.csv"
         df.to_csv(csv_filename, index=False)
         print(f"Trajectory data saved to {csv_filename}")
         
