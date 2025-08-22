@@ -505,39 +505,46 @@ class CooperativeTrajectoryNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-
     # Parse command-line arguments
     trial_name = ""
     if len(sys.argv) > 1:
         trial_name = sys.argv[1]
         print(f"Using trial name: {trial_name}")
-
         # Create a directory for trial
         os.makedirs(f"../../../data/{trial_name}", exist_ok=True)
     else:
         print("No trial name provided, using default file names")
     
+    node = None
     try:
         node = CooperativeTrajectoryNode(trial_name=trial_name)
         rclpy.spin(node)
     except KeyboardInterrupt:
-        # plot trajectories
-        plot_trajectories(
-            np.array(node.trajectory_over_time['desired_ross']),
-            np.array(node.trajectory_over_time['desired_monica']),
-            np.array(node.trajectory_over_time['actual_ross']),
-            np.array(node.trajectory_over_time['actual_monica']),
-            trial_name
-        )
-        save_trajectory_csv(node.trajectory_over_time, trial_name)
-
+        print("Node interrupted by user")
     except Exception as e:
         print(f"Error: {e}")
     finally:
-        try:
-            node.destroy_node()
-        except:
-            pass
+        # Always plot trajectories and save data, regardless of how the node ended
+        if node is not None:
+            try:
+                # Plot trajectories
+                plot_trajectories(
+                    np.array(node.trajectory_over_time['desired_ross']),
+                    np.array(node.trajectory_over_time['desired_monica']),
+                    np.array(node.trajectory_over_time['actual_ross']),
+                    np.array(node.trajectory_over_time['actual_monica']),
+                    trial_name
+                )
+                save_trajectory_csv(node.trajectory_over_time, trial_name)
+                print("Trajectories plotted and data saved successfully")
+            except Exception as plot_error:
+                print(f"Error creating plots or saving data: {plot_error}")
+            
+            try:
+                node.destroy_node()
+            except:
+                pass
+        
         rclpy.shutdown()
 
 if __name__ == '__main__':
