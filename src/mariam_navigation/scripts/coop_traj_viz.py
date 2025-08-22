@@ -218,6 +218,29 @@ def save_trajectory_csv(trajectory_over_time, trial_name=""):
         data_dict['act_payload_y'] = actual_payload[:, 1]
         data_dict['act_payload_theta'] = actual_payload[:, 2]
 
+        ross_cmd_vel = []
+        for cmd_vel in trajectory_over_time['ross_cmd_vel']:
+            if cmd_vel is not None:
+                ross_cmd_vel.append([cmd_vel.linear.x, cmd_vel.angular.z])
+            else:
+                ross_cmd_vel.append([np.nan, np.nan])
+        
+        monica_cmd_vel = []
+        for cmd_vel in trajectory_over_time['monica_cmd_vel']:
+            if cmd_vel is not None:
+                ross_cmd_vel.append([cmd_vel.linear.x, cmd_vel.angular.z])
+            else:
+                ross_cmd_vel.append([np.nan, np.nan])
+
+        ross_cmd_vel = np.array(ross_cmd_vel)
+        monica_cmd_vel = np.array(monica_cmd_vel)
+
+        # Extract cmd_vel data
+        data_dict['ross_cmd_vel_linear_x'] = ross_cmd_vel[:, 0]
+        data_dict['ross_cmd_vel_angular_z'] = ross_cmd_vel[:, 1]
+        data_dict['monica_cmd_vel_linear_x'] = monica_cmd_vel[:, 0]
+        data_dict['monica_cmd_vel_angular_z'] = monica_cmd_vel[:, 1]
+
         # Add timing data
         data_dict['dt'] = trajectory_over_time['dt']
         data_dict['ros_time_ns'] = [t.nanoseconds for t in trajectory_over_time['ros_time']]
