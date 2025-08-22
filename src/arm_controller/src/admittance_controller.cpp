@@ -79,6 +79,7 @@ class AdmittanceController : public rclcpp::Node {
       this->declare_parameter("damping",   10.0);
       this->declare_parameter("stiffness", 15.0);
       this->declare_parameter("trial_name", "");
+      this->declare_parameter("robot_name", "");
 
       // storing the initial values into variables
       this->get_parameter("mass",      mass);
@@ -121,8 +122,10 @@ class AdmittanceController : public rclcpp::Node {
           }
           RCLCPP_INFO(this->get_logger(), "Using directory: %s", data_dir.string().c_str());
           
-          // Construct the full file path
-          file_path = data_dir / "admittance_data.csv";
+          // Construct the full file path - Fixed string concatenation
+          std::string robot_name_str = this->get_parameter("robot_name").as_string();
+          std::string filename = robot_name_str + "_admittance_data.csv";
+          file_path = data_dir / filename;
         } else {
           // trial_name is just a name, use with data_directory parameter
           // Check if data_directory parameter exists, if not create a default

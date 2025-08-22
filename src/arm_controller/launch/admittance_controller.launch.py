@@ -33,7 +33,8 @@ def generate_launch_description():
         namespace=robot_name_launch_arg,
         parameters=[
             config_file,
-            {'trial_name': LaunchConfiguration('trial_name')}
+            {'trial_name': LaunchConfiguration('trial_name')},
+            {'robot_name': robot_name_launch_arg}
         ]
     )
 
