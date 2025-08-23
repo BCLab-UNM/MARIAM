@@ -113,7 +113,7 @@ private:
   {
     // Calculate dynamic stiffness using equation: K = 100 + 10*e + 2*u
     // where e = current_agent_displacement_error_, u = current_position_errors_.x
-    double calculated_stiffness = 70.0 + (2.0 * abs(current_agent_displacement_error_));
+    double calculated_stiffness = 70.0 + (1.0 * abs(current_agent_displacement_error_));
     
     // Calculate dynamic y position using equation: y = 23cm + 0.5*e + 0.01*u
     // where e = current_agent_displacement_error_, u = current_position_errors_.y
