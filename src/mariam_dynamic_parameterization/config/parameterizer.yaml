@@ -1,11 +1,11 @@
 /**/distributed_parameterizer:
   ros__parameters:
     mass:       5.0
-    damping:   20.0
-    stiffness: 100.0
+    damping:   70.0
+    stiffness: 60.0
     frequency: 0.002
     x_pos:     0.0
-    y_pos:     0.230
+    y_pos:     0.250
     z_pos:     0.1
     x: 0.0
     y: 0.0
