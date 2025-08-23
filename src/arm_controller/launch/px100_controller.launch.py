@@ -106,14 +106,15 @@ def launch_setup(context, *args, **kwargs):
             'robot_name': robot_name_launch_arg,
             'use_fake_force': force_node_launch_arg,
             'use_rviz_markers': use_rviz_markers_launch_arg,
-            'trial_name': trial_name_launch_arg
+            'trial_name': trial_name_launch_arg,
+            'disable_virtual_pose_publisher': admittance_control_launch_arg
         }.items(),
-        condition=IfCondition(
-            PythonExpression([
-                "'", admittance_control_launch_arg,
-                "' == 'true'"
-            ])
-        )
+        # condition=IfCondition(
+        #     PythonExpression([
+        #         "'", admittance_control_launch_arg,
+        #         "' == 'true'"
+        #     ])
+        # )
     )
 
     return [

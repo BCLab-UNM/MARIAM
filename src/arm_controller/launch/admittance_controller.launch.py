@@ -18,6 +18,7 @@ def generate_launch_description():
     # determines if the force node should be created
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
     admittance_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
+    disable_virtual_pose_publisher_launch_arg = LaunchConfiguration('disable_virtual_pose_publisher')
     trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     config_file = os.path.join(
@@ -57,7 +58,13 @@ def generate_launch_description():
        executable='virtual_pose_publisher',
        name='virtual_pose_publisher_node',
        namespace=robot_name_launch_arg,
-       parameters=[config_file]
+       parameters=[config_file],
+       condition=IfCondition(
+           PythonExpression([
+               "'", disable_virtual_pose_publisher_launch_arg,
+               "' == 'true'"
+           ])
+       )
    )
 
     force_node = Node(
@@ -80,6 +87,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_name',
             default_value='px100'
+        ),
+        DeclareLaunchArgument(
+            'disable_virtual_pose_publisher',
+            default_value='false'
         ),
         DeclareLaunchArgument(
             'use_fake_force',
