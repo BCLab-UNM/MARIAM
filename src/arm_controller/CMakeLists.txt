@@ -307,6 +307,24 @@ install(TARGETS heading_publisher
 )
 
 
+#-----------------------------------------------
+# For executable force_listener.cpp
+#-----------------------------------------------
+add_executable(force_listener src/force_listener.cpp)
+target_include_directories(force_listener PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(force_listener PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+ament_target_dependencies(
+  force_listener
+  "rclcpp"
+  std_msgs
+)
+install(TARGETS force_listener
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
 #===============================================
 #       Add launch file to share folder
 #===============================================

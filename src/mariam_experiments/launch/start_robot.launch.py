@@ -4,7 +4,7 @@ from launch.actions import (
     IncludeLaunchDescription,
     OpaqueFunction
 )
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
@@ -169,11 +169,24 @@ def launch_setup(context, *args, **kwargs):
         condition=IfCondition(dynamic_parameterization_launch_arg)
     )
 
+    force_listener_node = Node(
+        package='arm_controller',
+        executable='force_listener',
+        name='force_listener_node',
+        namespace=robot_name_launch_arg,
+        parameters=[{
+            'trial_name': trial_name_launch_arg,
+            'robot_name': robot_name_launch_arg
+        }],
+        condition=UnlessCondition(admittance_control_launch_arg)
+    )
+
     return [
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
         dynamic_parameterization_launch_desc,
+        force_listener_node,
         # vicon_tf2_updater_node,
         # realsense_imu_launch_desc,
         # ekf_launch_desc,

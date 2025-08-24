@@ -12,20 +12,20 @@ from ament_index_python.packages import get_package_share_directory
 
 import os
 
+
 def generate_launch_description():
     robot_name_launch_arg = LaunchConfiguration('robot_name')
-    
+
     # determines if the force node should be created
     force_node_launch_arg = LaunchConfiguration('use_fake_force')
-    admittance_rviz_markers_launch_arg = LaunchConfiguration('use_rviz_markers')
-    disable_virtual_pose_publisher_launch_arg = LaunchConfiguration('disable_virtual_pose_publisher')
+    admittance_rviz_markers_launch_arg = LaunchConfiguration(
+        'use_rviz_markers')
     trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     config_file = os.path.join(
         get_package_share_directory('arm_controller'),
         'config/admittance_control.yaml'
     )
-
 
     admittance_controller_node = Node(
         name='admittance_controller_node',
@@ -40,47 +40,40 @@ def generate_launch_description():
     )
 
     admittance_rviz_markers_node = Node(
-       name='admittance_rviz_markers_node',
-       package='arm_controller',
-       executable='admittance_rviz_markers',
-       namespace=robot_name_launch_arg,
-       condition=IfCondition(
-           PythonExpression([
-               "'", admittance_rviz_markers_launch_arg,
-               "' == 'true'"
-           ])
-       )
+        name='admittance_rviz_markers_node',
+        package='arm_controller',
+        executable='admittance_rviz_markers',
+        namespace=robot_name_launch_arg,
+        condition=IfCondition(
+            PythonExpression([
+                "'", admittance_rviz_markers_launch_arg,
+                "' == 'true'"
+            ])
+        )
     )
 
     # Admittance control nodes
     virtual_pose_node = Node(
-       package='arm_controller',
-       executable='virtual_pose_publisher',
-       name='virtual_pose_publisher_node',
-       namespace=robot_name_launch_arg,
-       parameters=[config_file],
-       condition=IfCondition(
-           PythonExpression([
-               "'", disable_virtual_pose_publisher_launch_arg,
-               "' == 'true'"
-           ])
-       )
-   )
-
-    force_node = Node(
-       package='arm_controller',
-       executable='force_publisher',
-       name='force_publisher_node',
-       namespace=robot_name_launch_arg,
-       parameters=[config_file],
-       condition=IfCondition(
-           PythonExpression([
-               "'", force_node_launch_arg,
-               "' == 'true'"
-           ])
-       )
+        package='arm_controller',
+        executable='virtual_pose_publisher',
+        name='virtual_pose_publisher_node',
+        namespace=robot_name_launch_arg,
+        parameters=[config_file]
     )
 
+    force_node = Node(
+        package='arm_controller',
+        executable='force_publisher',
+        name='force_publisher_node',
+        namespace=robot_name_launch_arg,
+        parameters=[config_file],
+        condition=IfCondition(
+            PythonExpression([
+                "'", force_node_launch_arg,
+                "' == 'true'"
+            ])
+        )
+    )
 
     return LaunchDescription([
         # Declaring launch arguments
@@ -89,14 +82,11 @@ def generate_launch_description():
             default_value='px100'
         ),
         DeclareLaunchArgument(
-            'disable_virtual_pose_publisher',
-            default_value='false'
-        ),
-        DeclareLaunchArgument(
             'use_fake_force',
             default_value='true',
             choices=('true', 'false'),
-            description=("If true, launches a node to publish fake force measurements")
+            description=(
+                "If true, launches a node to publish fake force measurements")
         ),
         DeclareLaunchArgument(
             'use_rviz_markers',
@@ -113,6 +103,3 @@ def generate_launch_description():
         force_node,
         admittance_rviz_markers_node
     ])
-
-
-   
