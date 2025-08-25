@@ -282,10 +282,10 @@ class CooperativeTrajectoryNode(Node):
                     self.get_logger().info(f"Saving trajectory plot with prefix: {self.plot_prefix}")
                     plot_summary(self.trajectory_params, show=False, save_prefix=self.plot_prefix)
                     self.get_logger().info(f"Trajectory plot saved as {self.plot_prefix}_summary.png")
-                    animate_carry(self.trajectory_params, fps=30, head_len=0.18,
-                                   show_arms=True, show_box=True, show_pivots=True,
-                                   frame_step=25, path_stride=6, save_gif=self.animation_file_name)
-                    self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
+                    # animate_carry(self.trajectory_params, fps=30, head_len=0.18,
+                    #                show_arms=True, show_box=True, show_pivots=True,
+                    #                frame_step=25, path_stride=6, save_gif=self.animation_file_name)
+                    # self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
                 except Exception as e:
                     self.get_logger().warn(f"Failed to save trajectory plot: {str(e)}")
 
@@ -531,25 +531,24 @@ def main(args=None):
         print(f"Error: {e}")
     finally:
         # Always plot trajectories and save data, regardless of how the node ended
-        if node is not None:
-            try:
-                # Plot trajectories
-                plot_trajectories(
-                    np.array(node.trajectory_over_time['desired_ross']),
-                    np.array(node.trajectory_over_time['desired_monica']),
-                    np.array(node.trajectory_over_time['actual_ross']),
-                    np.array(node.trajectory_over_time['actual_monica']),
-                    trial_name
-                )
-                save_trajectory_csv(node.trajectory_over_time, trial_name)
-                print("Trajectories plotted and data saved successfully")
-            except Exception as plot_error:
-                print(f"Error creating plots or saving data: {plot_error}")
-            
-            try:
-                node.destroy_node()
-            except:
-                pass
+        try:
+            # Plot trajectories
+            plot_trajectories(
+                np.array(node.trajectory_over_time['desired_ross']),
+                np.array(node.trajectory_over_time['desired_monica']),
+                np.array(node.trajectory_over_time['actual_ross']),
+                np.array(node.trajectory_over_time['actual_monica']),
+                trial_name
+            )
+            save_trajectory_csv(node.trajectory_over_time, trial_name)
+            print("Trajectories plotted and data saved successfully")
+        except Exception as plot_error:
+            print(f"Error creating plots or saving data: {plot_error}")
+        
+        try:
+            node.destroy_node()
+        except:
+            pass
         
         rclpy.shutdown()
 
