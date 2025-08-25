@@ -85,6 +85,11 @@ class AdmittanceController : public rclcpp::Node {
       this->get_parameter("mass",      mass);
       this->get_parameter("damping",   damping);
       this->get_parameter("stiffness", stiffness);
+
+      // Set logger level to DEBUG
+      auto ret = rcutils_logging_set_logger_level(this->get_logger().get_name(), RCUTILS_LOG_SEVERITY_DEBUG);
+      if (ret != RCUTILS_RET_OK) RCLCPP_ERROR(this->get_logger(), "Error setting logger level");
+      RCLCPP_DEBUG(this->get_logger(), "Debug message");
     }
 
     void write_to_csv() {
@@ -234,7 +239,11 @@ class AdmittanceController : public rclcpp::Node {
       new_msg.orientation = msg->orientation;
       // Using Hooke's law to compute desired position
       // new_msg.position.y -= force_reading / stiffness;
-      
+
+      // Print admittance parameters 
+      // RCLCPP_INFO(LOGGER, "Admittance Parameters: Mass: %.2f, Damping: %.2f, Stiffness: %.2f",
+      //              mass, damping, stiffness);
+
       // Using Euler's method to compute desired position
       // acceleration is in meters per second squared
       double acceleration = (force_reading-damping*velocity-stiffness*position)/mass;

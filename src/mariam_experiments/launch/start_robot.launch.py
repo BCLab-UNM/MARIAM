@@ -16,8 +16,8 @@ def launch_setup(context, *args, **kwargs):
     robot_name_launch_arg = LaunchConfiguration('robot_name')
     admittance_control_launch_arg = LaunchConfiguration(
         'use_admittance_control')
-    dynamic_parameterization_launch_arg = LaunchConfiguration(
-        'use_dynamic_parameterization')
+    dp_launch_arg = LaunchConfiguration(
+        'use_dp')
     trial_name_launch_arg = LaunchConfiguration('trial_name')
 
     # Get the robot name and set ROS_DOMAIN_ID based on namespace
@@ -166,7 +166,7 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             'namespace': robot_name_launch_arg,
         }.items(),
-        condition=IfCondition(dynamic_parameterization_launch_arg)
+        condition=IfCondition(dp_launch_arg)
     )
 
     force_listener_node = Node(
@@ -212,7 +212,7 @@ def generate_launch_description():
             description='Whether to use admittance control'
         ),
         DeclareLaunchArgument(
-            'use_dynamic_parameterization',
+            'use_dp',
             default_value='false',
             choices=('true', 'false'),
             description='Whether to use dynamic parameterization'
