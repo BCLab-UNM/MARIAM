@@ -105,7 +105,8 @@ private:
   
   void AgentDisplacementCallback(const std_msgs::msg::Float64::SharedPtr msg)
   {
-    current_agent_displacement_error_ = msg->data - 0.53;
+    double manipulator_distance = 0.55;
+    current_agent_displacement_error_ = msg->data - manipulator_distance;
     RCLCPP_DEBUG(this->get_logger(), "Received agent displacement error: %.3f", current_agent_displacement_error_);
   }
   
