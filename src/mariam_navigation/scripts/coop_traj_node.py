@@ -42,8 +42,10 @@ class CooperativeTrajectoryNode(Node):
             'actual_ross': [],
             'actual_monica': [],
             'actual_payload': [],
-            'ross_cmd_vel': [],
-            'monica_cmd_vel': [],
+            'ross_cmd_vel_linear_x': [],
+            'ross_cmd_vel_angular_z': [],
+            'monica_cmd_vel_linear_x': [],
+            'monica_cmd_vel_angular_z': [],
             'dt': [],
             'ros_time': []
         }
@@ -376,8 +378,10 @@ class CooperativeTrajectoryNode(Node):
             self.trajectory_over_time['dt'].append(dt)
             self.trajectory_over_time['ros_time'].append(self.get_clock().now())
             # save cmd_vel data
-            self.trajectory_over_time['ross_cmd_vel'].append(self.base1_cmd_pub)
-            self.trajectory_over_time['monica_cmd_vel'].append(self.base2_cmd_pub)
+            self.trajectory_over_time['ross_cmd_vel_linear_x'].append(v1_final[0])
+            self.trajectory_over_time['ross_cmd_vel_angular_z'].append(v1_final[2])
+            self.trajectory_over_time['monica_cmd_vel_linear_x'].append(v2_final_reversed[0])
+            self.trajectory_over_time['monica_cmd_vel_angular_z'].append(v2_final_reversed[2])
 
         except Exception as e:
             self.get_logger().error(f"Error in control callback: {str(e)}")
