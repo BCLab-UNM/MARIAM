@@ -153,6 +153,69 @@ def plot_trajectories(
     plt.title(f'Trajectory over time')
     plt.savefig(fname=f"../../../data/{trial_name}/trajectory_plot.png")
 
+def plot_trajectory_components(
+    desired_ross_poses, desired_monica_poses,
+    ross_poses, monica_poses, trial_name):
+    
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12))
+    
+    # Create time steps for x-axis
+    steps_desired_ross = range(len(desired_ross_poses))
+    steps_desired_monica = range(len(desired_monica_poses))
+    steps_ross = range(len(ross_poses))
+    steps_monica = range(len(monica_poses))
+    
+    # X over time subplot
+    ax1.plot(steps_desired_ross, desired_ross_poses[:, 0], 
+             label='Desired Ross Trajectory', color='blue', linestyle='-')
+    ax1.plot(steps_desired_monica, desired_monica_poses[:, 0], 
+             label='Desired Monica Trajectory', color='red', linestyle='-')
+    ax1.plot(steps_ross, ross_poses[:, 0], 
+             label='Actual Ross Trajectory', color='blue', linestyle='--')
+    ax1.plot(steps_monica, monica_poses[:, 0], 
+             label='Actual Monica Trajectory', color='red', linestyle='--')
+    ax1.grid(True)
+    ax1.set_xlabel('Step')
+    ax1.set_ylabel('x (m)')
+    ax1.set_title('X Position over Time')
+    
+    # Y over time subplot
+    ax2.plot(steps_desired_ross, desired_ross_poses[:, 1], 
+             label='Desired Ross Trajectory', color='blue', linestyle='-')
+    ax2.plot(steps_desired_monica, desired_monica_poses[:, 1], 
+             label='Desired Monica Trajectory', color='red', linestyle='-')
+    ax2.plot(steps_ross, ross_poses[:, 1], 
+             label='Actual Ross Trajectory', color='blue', linestyle='--')
+    ax2.plot(steps_monica, monica_poses[:, 1], 
+             label='Actual Monica Trajectory', color='red', linestyle='--')
+    ax2.grid(True)
+    ax2.set_xlabel('Step')
+    ax2.set_ylabel('y (m)')
+    ax2.set_title('Y Position over Time')
+    
+    # Theta over time subplot
+    ax3.plot(steps_desired_ross, desired_ross_poses[:, 2], 
+             label='Desired Ross Trajectory', color='blue', linestyle='-')
+    ax3.plot(steps_desired_monica, desired_monica_poses[:, 2], 
+             label='Desired Monica Trajectory', color='red', linestyle='-')
+    ax3.plot(steps_ross, ross_poses[:, 2], 
+             label='Actual Ross Trajectory', color='blue', linestyle='--')
+    ax3.plot(steps_monica, monica_poses[:, 2], 
+             label='Actual Monica Trajectory', color='red', linestyle='--')
+    ax3.grid(True)
+    ax3.set_xlabel('Step')
+    ax3.set_ylabel('theta (radians)')
+    ax3.set_title('Theta over Time')
+    
+    # Add shared legend above the top plot
+    handles, labels = ax1.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0.95), ncol=4)
+    
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.9)  # Make room for the legend
+    plt.savefig(fname=f"../../../data/{trial_name}/trajectory_plot_components.png")
+    plt.show()
+
 def save_trajectory_csv(trajectory_over_time, trial_name=""):
     """
     Save trajectory data to CSV file
