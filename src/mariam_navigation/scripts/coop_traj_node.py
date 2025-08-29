@@ -68,14 +68,14 @@ class CooperativeTrajectoryNode(Node):
 
         # Transform from vicon to base_link
         self.T_vm = np.array([  [ 1, 0, 0,  0.23],
-                                [ 0, 1, 0, -0.07],
+                                [ 0, 1, 0, -0.06],
                                 [ 0, 0, 1, -0.06],
                                 [ 0, 0, 0,  1]])
 
         # Trajectory parameters
         self.trajectory_params = None
         self.trajectory_start_time = None
-        self.trajectory_duration = 20.0  # seconds
+        self.trajectory_duration = 30.0  # seconds
         self.control_rate = 50.0  # Hz
         self.control_dt = 1.0 / self.control_rate
         
@@ -91,24 +91,24 @@ class CooperativeTrajectoryNode(Node):
         # Closed-loop control gains
         self.control_gains = {
             # Longitudinal control (e_x -> v)
-            'kp_linear_x': 1.0,      # P gain for longitudinal error
-            'ki_linear_x': 0.0,      # I gain for longitudinal error  
-            'kd_linear_x': 0.0,      # D gain for longitudinal error
+            'kp_linear_x': 5.0,      # P gain for longitudinal error
+            'ki_linear_x': 0.001,      # I gain for longitudinal error  
+            'kd_linear_x': 0.001,      # D gain for longitudinal error
             
             # Heading control (e_theta -> omega)
-            'kp_angular': 0.0,       # P gain for heading error
-            'ki_angular': 0.0,       # I gain for heading error
-            'kd_angular': 0.0,       # D gain for heading error
+            'kp_angular': 3.0,       # P gain for heading error
+            'ki_angular': 0.001,       # I gain for heading error
+            'kd_angular': 0.001,       # D gain for heading error
             
             # Cross-track control (e_y -> omega) - keep modest!
-            'kp_lateral': 0.0,       # P gain for lateral error
-            'kd_lateral': 0.00,      # D gain for lateral error (no I term usually)
+            'kp_lateral': 3.0,       # P gain for lateral error
+            'kd_lateral': 0.001,      # D gain for lateral error (no I term usually)
             
             'integral_limit': 0.2,
             'max_linear_vel': 0.4,
             'max_angular_vel': 0.4,
-            'deadband_linear': 0.01,
-            'deadband_angular': 0.05,
+            'deadband_linear': 0.00,
+            'deadband_angular': 0.00,
             'heading_gate_threshold': np.pi/4,  # Gate forward motion if heading error > 45°
         }
 
@@ -356,6 +356,9 @@ class CooperativeTrajectoryNode(Node):
                 v1 = (b1 - self.last_poses['base1']) / dt
                 v2 = (b2 - self.last_poses['base2']) / dt
 
+            if t < 1.0 or t > (self.trajectory_duration - 1.0):  # First/last second
+                self.get_logger().info(f"t={t:.3f}: v1_ff=[{v1[0]:.3f}, {v1[2]:.3f}], v2_ff=[{v2[0]:.3f}, {v2[2]:.3f}]")
+
             # Reverse linear.x for base2 (Monica) since it drives backwards
             v2_reversed = v2.copy()
             v2_reversed[0] = -v2[0]  # reverse x velocity
@@ -368,13 +371,17 @@ class CooperativeTrajectoryNode(Node):
             v1_final = v1 + v1_corrected
             v2_final = v2 + v2_corrected
 
+            # Reverse values for Monica
             v2_final_reversed = v2_final.copy()
             v2_final_reversed[0] = -v2_final[0]  # reverse x velocity
 
             # Publish the corrected velocities
             self.publish_cmd_vel(self.base1_cmd_pub, v1_final)
             self.publish_cmd_vel(self.base2_cmd_pub, v2_final_reversed)
-            # add to CSV
+
+            # Reverse the pose for Monica
+            base2_pose_reversed = self.base2_pose.copy()
+            base2_pose_reversed[2] = self.wrap_angle(base2_pose_reversed[2] + np.pi)
 
             # Store poses and time for next iteration
             self.last_poses['base1'] = b1.copy()
@@ -386,7 +393,7 @@ class CooperativeTrajectoryNode(Node):
             self.trajectory_over_time['desired_monica'].append(b2)
             # save actual base poses
             self.trajectory_over_time['actual_ross'].append(self.base1_pose)
-            self.trajectory_over_time['actual_monica'].append(self.base2_pose)
+            self.trajectory_over_time['actual_monica'].append(base2_pose_reversed)
             # save actual payload poses
             self.trajectory_over_time['actual_payload'].append(self.get_transform('payload'))
             # save timing data
@@ -508,8 +515,10 @@ class CooperativeTrajectoryNode(Node):
             if len(pid_state['error_history']) > 100:
                 pid_state['error_history'].pop(0)
 
-            self.get_logger().debug(f"{base_name} v_ff={v_ff:.3f}, omega_ff={omega_ff:.3f}")
-            self.get_logger().debug(f"{base_name} v_cmd={v_cmd:.3f}, omega_cmd={omega_cmd:.3f}")
+            # Replace the existing two debug lines with these three:
+            self.get_logger().debug(f"{base_name} feedforward:  v={v_ff:.3f}, omega={omega_ff:.3f}")
+            self.get_logger().debug(f"{base_name} PID correct:  v={v_feedback:.3f}, omega={omega_feedback:.3f}")
+            self.get_logger().debug(f"{base_name} final cmd:    v={v_cmd:.3f}, omega={omega_cmd:.3f}")
 
             # Return as [v_cmd, 0, omega_cmd] - no vy for skid-steer
             return np.array([v_cmd, 0.0, omega_cmd])
@@ -572,10 +581,6 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         print("Node interrupted by user")
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # Always plot trajectories and save data, regardless of how the node ended
         try:
             # Plot trajectories
             plot_trajectories(
@@ -599,6 +604,9 @@ def main(args=None):
         except Exception as plot_error:
             print(f"Error creating plots or saving data: {plot_error}")
         
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
         try:
             node.destroy_node()
         except:
