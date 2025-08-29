@@ -76,7 +76,7 @@ class CooperativeTrajectoryNode(Node):
         self.trajectory_params = None
         self.trajectory_start_time = None
         self.trajectory_duration = 30.0  # seconds
-        self.control_rate = 50.0  # Hz
+        self.control_rate = 100.0  # Hz
         self.control_dt = 1.0 / self.control_rate
         
         # Plot saving configuration
@@ -85,24 +85,26 @@ class CooperativeTrajectoryNode(Node):
         self.animation_file_name = f"../../../data/{trial_name}/ros2_coop_traj_animation.gif"
 
         # Hard-coded goal relative to the payload's start pose
-        self.relative_goal = [2.0, 1.0, 0.0]  # [x, y, theta] - modify as needed
+        self.relative_goal = [3.0, 1.0, 0.0]  # [x, y, theta] - modify as needed
         self.goal = [0.0, 0.0, 0.0]  # Will be set after getting initial transform
 
         # Closed-loop control gains
         self.control_gains = {
             # Longitudinal control (e_x -> v)
-            'kp_linear_x': 5.0,      # P gain for longitudinal error
-            'ki_linear_x': 0.001,      # I gain for longitudinal error  
-            'kd_linear_x': 0.001,      # D gain for longitudinal error
+            # KC=12.0, freq=1.5
+            'kp_linear_x': 5.4,      
+            'ki_linear_x': 4.32,    
+            'kd_linear_x': 0.0,
             
             # Heading control (e_theta -> omega)
-            'kp_angular': 3.0,       # P gain for heading error
-            'ki_angular': 0.001,       # I gain for heading error
-            'kd_angular': 0.001,       # D gain for heading error
-            
+            # KC=14.0, freq=1.2
+            'kp_angular': 6.3,
+            'ki_angular': 6.3,
+            'kd_angular': 0.0,  
+                        
             # Cross-track control (e_y -> omega) - keep modest!
-            'kp_lateral': 3.0,       # P gain for lateral error
-            'kd_lateral': 0.001,      # D gain for lateral error (no I term usually)
+            'kp_lateral': 25.0,       # P gain for lateral error
+            'kd_lateral': 1.0,      # D gain for lateral error (no I term usually)
             
             'integral_limit': 0.2,
             'max_linear_vel': 0.4,
@@ -299,10 +301,10 @@ class CooperativeTrajectoryNode(Node):
                     self.get_logger().info(f"Saving trajectory plot with prefix: {self.plot_prefix}")
                     plot_summary(self.trajectory_params, show=False, save_prefix=self.plot_prefix)
                     self.get_logger().info(f"Trajectory plot saved as {self.plot_prefix}_summary.png")
-                    # animate_carry(self.trajectory_params, fps=30, head_len=0.18,
-                    #                show_arms=True, show_box=True, show_pivots=True,
-                    #                frame_step=25, path_stride=6, save_gif=self.animation_file_name)
-                    # self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
+                    animate_carry(self.trajectory_params, fps=30, head_len=0.18,
+                                   show_arms=True, show_box=True, show_pivots=True,
+                                   frame_step=25, path_stride=6, save_gif=self.animation_file_name)
+                    self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
                 except Exception as e:
                     self.get_logger().warn(f"Failed to save trajectory plot: {str(e)}")
 
@@ -315,6 +317,36 @@ class CooperativeTrajectoryNode(Node):
             
         except Exception as e:
             self.get_logger().error(f"Failed to plan trajectory: {str(e)}")
+
+    def get_trajectory_velocities(self, t, dt_small=0.01):
+        """Get analytical velocities from trajectory by sampling nearby points"""
+        if t <= dt_small:
+            # Forward difference at start
+            t_future = min(t + dt_small, self.trajectory_duration)
+            b1_now, b2_now = traj(self.trajectory_params, t, T=self.trajectory_duration)
+            b1_fut, b2_fut = traj(self.trajectory_params, t_future, T=self.trajectory_duration)
+            
+            v1 = (np.array(b1_fut) - np.array(b1_now)) / (t_future - t)
+            v2 = (np.array(b2_fut) - np.array(b2_now)) / (t_future - t)
+            
+        elif t >= self.trajectory_duration - dt_small:
+            # Backward difference at end  
+            t_past = max(t - dt_small, 0.0)
+            b1_past, b2_past = traj(self.trajectory_params, t_past, T=self.trajectory_duration)
+            b1_now, b2_now = traj(self.trajectory_params, t, T=self.trajectory_duration)
+            
+            v1 = (np.array(b1_now) - np.array(b1_past)) / (t - t_past)
+            v2 = (np.array(b2_now) - np.array(b2_past)) / (t - t_past)
+            
+        else:
+            # Central difference in middle
+            b1_past, b2_past = traj(self.trajectory_params, t - dt_small, T=self.trajectory_duration)
+            b1_fut, b2_fut = traj(self.trajectory_params, t + dt_small, T=self.trajectory_duration)
+            
+            v1 = (np.array(b1_fut) - np.array(b1_past)) / (2 * dt_small)
+            v2 = (np.array(b2_fut) - np.array(b2_past)) / (2 * dt_small)
+        
+        return v1, v2
 
     def control_callback(self):
         """Main control loop - publish cmd_vel for both bases"""
@@ -349,8 +381,9 @@ class CooperativeTrajectoryNode(Node):
             b2 = np.asarray(base2_pose, dtype=float)  # [x, y, theta]
             
             # Calculate velocities using simple finite differences
+            # v1, v2 = self.get_trajectory_velocities(t)
             if self.last_poses['base1'] is None or self.last_poses['base2'] is None:
-                v1 = np.zeros_like(b1)
+                v1 = np.zeros_like(b1)  # <-- ZERO velocity at start!
                 v2 = np.zeros_like(b2)
             else:
                 v1 = (b1 - self.last_poses['base1']) / dt
@@ -581,6 +614,10 @@ def main(args=None):
         rclpy.spin(node)
     except KeyboardInterrupt:
         print("Node interrupted by user")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        # This block runs regardless of how the node exits
         try:
             # Plot trajectories
             plot_trajectories(
@@ -604,9 +641,6 @@ def main(args=None):
         except Exception as plot_error:
             print(f"Error creating plots or saving data: {plot_error}")
         
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
         try:
             node.destroy_node()
         except:

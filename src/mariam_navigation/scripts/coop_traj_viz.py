@@ -214,7 +214,6 @@ def plot_trajectory_components(
     plt.tight_layout()
     plt.subplots_adjust(top=0.9)  # Make room for the legend
     plt.savefig(fname=f"../../../data/{trial_name}/trajectory_plot_components.png")
-    plt.show()
 
 def save_trajectory_csv(trajectory_over_time, trial_name=""):
     """

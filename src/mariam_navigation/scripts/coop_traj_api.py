@@ -74,7 +74,7 @@ class SmoothParams:
     w_bc:    float = 1e6
     # yaw (phi)
     w_phi_d1:   float = 2.0
-    w_phi_d2:   float = 50.0
+    w_phi_d2:   float = 20.0
     w_align:    float = 30.0
     s0_align:   float = 0.12
     w_phi_bc:   float = 2e5
