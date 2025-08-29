@@ -33,6 +33,8 @@ class ArmController(InterbotixManipulatorXS):
     accel_time = 0.0
     # used to lock the desired_pose field to avoid race conditions
     lock = Lock()
+    monica_lock = Lock()
+    ross_lock = Lock()
     # the pose we want the robot to be in
     # Let the default be where start_lift() will place the robot
     desired_pose = Pose(
@@ -226,17 +228,19 @@ class ArmController(InterbotixManipulatorXS):
         T_yd = np.linalg.inv(T_sy) @ T_sd
 
         if self.robot_name == 'monica':
-            # compute ross' base relative to monica's base
-            T_rb_in_mb = np.linalg.inv(self.T_world_to_mm) @ self.T_world_to_rm
+            with self.monica_lock, self.ross_lock:
+                # compute ross' base relative to monica's base
+                T_rb_in_mb = np.linalg.inv(self.T_world_to_mm) @ self.T_world_to_rm
 
-            # extract the angle from the transformation matrix
-            self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
+                # extract the angle from the transformation matrix
+                self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
 
         elif self.robot_name == 'ross':
-            T_rb_in_mb = np.linalg.inv(self.T_world_to_rm) @ self.T_world_to_mm
+            with self.ross_lock, self.monica_lock:
+                T_rb_in_mb = np.linalg.inv(self.T_world_to_rm) @ self.T_world_to_mm
 
-            # extract the angle from the transformation matrix
-            self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
+                # extract the angle from the transformation matrix
+                self.current_theta = np.arctan2(T_rb_in_mb[1, 3], T_rb_in_mb[0, 3])
         else:
             return T_sd
 
@@ -260,36 +264,38 @@ class ArmController(InterbotixManipulatorXS):
             self.desired_pose = copy.deepcopy(msg)
 
     def update_monica_vicon_pose_cb(self, msg: Pose):
-        # Get world to vicon transform
-        self.T_world_to_mm[:3, :3] = R.from_quat([
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
-        ]).as_matrix()
-        self.T_world_to_mm[0, 3] = msg.position.x
-        self.T_world_to_mm[1, 3] = msg.position.y
-        self.T_world_to_mm[2, 3] = msg.position.z
+        with self.monica_lock:
+            # Get world to vicon transform
+            self.T_world_to_mm[:3, :3] = R.from_quat([
+                msg.orientation.x,
+                msg.orientation.y,
+                msg.orientation.z,
+                msg.orientation.w,
+            ]).as_matrix()
+            self.T_world_to_mm[0, 3] = msg.position.x
+            self.T_world_to_mm[1, 3] = msg.position.y
+            self.T_world_to_mm[2, 3] = msg.position.z
 
-        # calculate world to manipulator transform
-        self.T_world_to_mm = self.T_world_to_mm @ self.T_v_to_m
-        self.updated_monica_pose = True
+            # calculate world to manipulator transform
+            self.T_world_to_mm = self.T_world_to_mm @ self.T_v_to_m
+            self.updated_monica_pose = True
 
     def update_ross_vicon_pose_cb(self, msg: Pose):
-        # Get world to vicon transform
-        self.T_world_to_rm[:3, :3] = R.from_quat([
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
-        ]).as_matrix()
-        self.T_world_to_rm[0, 3] = msg.position.x
-        self.T_world_to_rm[1, 3] = msg.position.y
-        self.T_world_to_rm[2, 3] = msg.position.z
+        with self.ross_lock:
+            # Get world to vicon transform
+            self.T_world_to_rm[:3, :3] = R.from_quat([
+                msg.orientation.x,
+                msg.orientation.y,
+                msg.orientation.z,
+                msg.orientation.w,
+            ]).as_matrix()
+            self.T_world_to_rm[0, 3] = msg.position.x
+            self.T_world_to_rm[1, 3] = msg.position.y
+            self.T_world_to_rm[2, 3] = msg.position.z
 
-        # calculate world to manipulator transform
-        self.T_world_to_rm = self.T_world_to_rm @ self.T_v_to_m
-        self.updated_ross_pose = True
+            # calculate world to manipulator transform
+            self.T_world_to_rm = self.T_world_to_rm @ self.T_v_to_m
+            self.updated_ross_pose = True
 
     def log_info(self, msg):
         self.core.get_node().get_logger().info(f'{msg}')
