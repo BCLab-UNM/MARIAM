@@ -158,7 +158,13 @@ def plot_trajectory_components(
     ross_poses, monica_poses, trial_name):
     
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12))
-    
+
+    # Clear a robots data for debug
+    desired_ross_poses = np.array([]).reshape(0, 3)
+    ross_poses = np.array([]).reshape(0, 3)
+    # desired_monica_poses = np.array([]).reshape(0, 3)
+    # monica_poses = np.array([]).reshape(0, 3)
+
     # Create time steps for x-axis
     steps_desired_ross = range(len(desired_ross_poses))
     steps_desired_monica = range(len(desired_monica_poses))
@@ -177,7 +183,7 @@ def plot_trajectory_components(
     ax1.grid(True)
     ax1.set_xlabel('Step')
     ax1.set_ylabel('x (m)')
-    ax1.set_title('X Position over Time')
+    ax1.set_title('X Position')
     
     # Y over time subplot
     ax2.plot(steps_desired_ross, desired_ross_poses[:, 1], 
@@ -191,7 +197,7 @@ def plot_trajectory_components(
     ax2.grid(True)
     ax2.set_xlabel('Step')
     ax2.set_ylabel('y (m)')
-    ax2.set_title('Y Position over Time')
+    ax2.set_title('Y Position')
     
     # Theta over time subplot
     ax3.plot(steps_desired_ross, desired_ross_poses[:, 2], 
@@ -205,7 +211,7 @@ def plot_trajectory_components(
     ax3.grid(True)
     ax3.set_xlabel('Step')
     ax3.set_ylabel('theta (radians)')
-    ax3.set_title('Theta over Time')
+    ax3.set_title('Theta')
     
     # Add shared legend above the top plot
     handles, labels = ax1.get_legend_handles_labels()

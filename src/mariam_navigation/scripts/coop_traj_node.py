@@ -85,33 +85,60 @@ class CooperativeTrajectoryNode(Node):
         self.animation_file_name = f"../../../data/{trial_name}/ros2_coop_traj_animation.gif"
 
         # Hard-coded goal relative to the payload's start pose
-        self.relative_goal = [3.0, 1.0, 0.0]  # [x, y, theta] - modify as needed
+        self.relative_goal = [2.0, 0.5, 0.0]  # [x, y, theta] - modify as needed
         self.goal = [0.0, 0.0, 0.0]  # Will be set after getting initial transform
 
         # Closed-loop control gains
         self.control_gains = {
-            # Longitudinal control (e_x -> v)
-            # KC=12.0, freq=1.5
-            'kp_linear_x': 5.4,      
-            'ki_linear_x': 4.32,    
-            'kd_linear_x': 0.0,
-            
-            # Heading control (e_theta -> omega)
-            # KC=14.0, freq=1.2
-            'kp_angular': 6.3,
-            'ki_angular': 6.3,
-            'kd_angular': 0.0,  
-                        
-            # Cross-track control (e_y -> omega) - keep modest!
-            'kp_lateral': 25.0,       # P gain for lateral error
-            'kd_lateral': 1.0,      # D gain for lateral error (no I term usually)
-            
-            'integral_limit': 0.2,
-            'max_linear_vel': 0.4,
-            'max_angular_vel': 0.4,
-            'deadband_linear': 0.00,
-            'deadband_angular': 0.00,
-            'heading_gate_threshold': np.pi/4,  # Gate forward motion if heading error > 45°
+            'base1': {
+                # X Controller (e_x -> v_cmd)
+                'kp_linear_x': 0.0,
+                'ki_linear_x': 0.0,
+                'kd_linear_x': 0.0,
+                'x_integral_limit': 0.2,
+                
+                # Y->Theta Cascade Controller
+                'kp_y_to_theta': 0.0,     # Cross-track error -> heading correction
+                'kd_y_to_theta': 0.0,     # Cross-track rate -> heading correction rate
+                
+                # Theta Controller (e_theta_total -> omega_cmd)
+                'kp_angular': 0.0,
+                'ki_angular': 0.0,
+                'kd_angular': 0.0,
+                'theta_integral_limit': 0.2,
+                
+                # Other existing gains
+                'max_linear_vel': 0.4,
+                'max_angular_vel': 0.4,
+                'heading_gate_threshold': np.pi/4,  # Gate forward motion if heading error > 45°
+                'deadband_linear': 0.00,
+                'deadband_angular': 0.00,
+            },
+            'base2': {
+                # X Controller (e_x -> v_cmd)
+                # KC = 17.0, TU = 1.8
+                'kp_linear_x': 10.2, # 0.6 * KC
+                'ki_linear_x': 11.3, # 1.2 * KC / TU
+                'kd_linear_x': 2.3, # 0.075 * KC * TU
+                'x_integral_limit': 0.5,
+                
+                # Y->Theta Cascade Controller
+                'kp_y_to_theta': 1.0,     # Cross-track error -> heading correction
+                'kd_y_to_theta': 0.0,     # Cross-track rate -> heading correction rate
+                
+                # Theta Controller (e_theta_total -> omega_cmd)
+                'kp_angular': 1.0,
+                'ki_angular': 0.0,
+                'kd_angular': 0.0,
+                'theta_integral_limit': 10.0,
+                
+                # Other existing gains
+                'max_linear_vel': 0.4,
+                'max_angular_vel': 0.4,
+                'heading_gate_threshold': np.pi/4,
+                'deadband_linear': 0.00,
+                'deadband_angular': 0.00,
+            }
         }
 
         # Add PID state tracking
@@ -126,6 +153,13 @@ class CooperativeTrajectoryNode(Node):
                 'error_last': np.array([0.0, 0.0, 0.0]),
                 'error_history': []
             }
+        }
+
+        # Filter state
+        self.derivative_filter_alpha = 0.7  # 0.7 = less filtering, 0.3 = more filtering
+        self.filtered_derivatives = {
+            'base1': {'x': 0.0, 'y': 0.0, 'theta': 0.0},
+            'base2': {'x': 0.0, 'y': 0.0, 'theta': 0.0}
         }
 
         # Track maximum errors for tuning
@@ -301,10 +335,10 @@ class CooperativeTrajectoryNode(Node):
                     self.get_logger().info(f"Saving trajectory plot with prefix: {self.plot_prefix}")
                     plot_summary(self.trajectory_params, show=False, save_prefix=self.plot_prefix)
                     self.get_logger().info(f"Trajectory plot saved as {self.plot_prefix}_summary.png")
-                    animate_carry(self.trajectory_params, fps=30, head_len=0.18,
-                                   show_arms=True, show_box=True, show_pivots=True,
-                                   frame_step=25, path_stride=6, save_gif=self.animation_file_name)
-                    self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
+                    # animate_carry(self.trajectory_params, fps=30, head_len=0.18,
+                    #                show_arms=True, show_box=True, show_pivots=True,
+                    #                frame_step=25, path_stride=6, save_gif=self.animation_file_name)
+                    # self.get_logger().info(f"Trajectory animation saved as {self.animation_file_name}")
                 except Exception as e:
                     self.get_logger().warn(f"Failed to save trajectory plot: {str(e)}")
 
@@ -444,7 +478,9 @@ class CooperativeTrajectoryNode(Node):
 
     def calculate_corrected_velocity(self, feedforward_vel, base_name, desired_pose, dt=None):
         """
-        Calculate PID correction for skid-steer robot using proper body-frame errors
+        Calculate PID correction for skid-steer robot using cascaded control:
+        1. X error -> PID -> linear velocity
+        2. Y error -> PD -> theta correction -> combined with trajectory theta -> PID -> angular velocity
         
         Args:
             feedforward_vel: numpy array [vx, vy, vtheta] (feedforward from trajectory)
@@ -466,96 +502,150 @@ class CooperativeTrajectoryNode(Node):
                 actual_pose = self.base2_pose.copy()
                 actual_pose[2] += np.pi  # base2 is oriented backward
 
+            # Get control gains for this base
+            control_gains = self.control_gains[base_name]
+
             # 1. Calculate pose errors in WORLD frame first
             dx = desired_pose[0] - actual_pose[0]
             dy = desired_pose[1] - actual_pose[1] 
-            e_theta = self.wrap_angle(desired_pose[2] - actual_pose[2])
+            e_theta_traj = self.wrap_angle(desired_pose[2] - actual_pose[2])
 
-            # 2. Transform errors to BODY frame (this is the key insight!)
+            # 2. Transform errors to BODY frame
             theta = actual_pose[2]
             e_x =  np.cos(theta) * dx + np.sin(theta) * dy   # longitudinal (forward/back)
             e_y = -np.sin(theta) * dx + np.cos(theta) * dy   # lateral (left/right)
             
-            self.get_logger().debug(f"{base_name} world errors: dx={dx:.3f}, dy={dy:.3f}, dtheta={e_theta:.3f}")
-            self.get_logger().debug(f"{base_name} body errors: ex={e_x:.3f}, ey={e_y:.3f}, etheta={e_theta:.3f}")
+            self.get_logger().debug(f"{base_name} world errors: dx={dx:.3f}, dy={dy:.3f}, dtheta={e_theta_traj:.3f}")
+            self.get_logger().debug(f"{base_name} body errors: ex={e_x:.3f}, ey={e_y:.3f}")
 
             # Apply deadbands
-            e_x = 0.0 if abs(e_x) < self.control_gains['deadband_linear'] else e_x
-            e_y = 0.0 if abs(e_y) < self.control_gains['deadband_linear'] else e_y  
-            e_theta = 0.0 if abs(e_theta) < self.control_gains['deadband_angular'] else e_theta
+            e_x = 0.0 if abs(e_x) < control_gains['deadband_linear'] else e_x
+            e_y = 0.0 if abs(e_y) < control_gains['deadband_linear'] else e_y  
 
             # Get PID state for this base
             pid_state = self.pid_state[base_name]
-            
-            # Store errors in body frame [e_x, e_y, e_theta] 
-            body_errors = np.array([e_x, e_y, e_theta])
 
             # Update maximum errors for tuning
-            self.max_errors[base_name] = np.maximum(self.max_errors[base_name], np.abs(body_errors))
+            self.max_errors[base_name][0] = max(self.max_errors[base_name][0], abs(e_x))
+            self.max_errors[base_name][1] = max(self.max_errors[base_name][1], abs(e_y))
 
-            # Update integrals with windup protection
-            pid_state['error_integral'] += body_errors * dt
-            integral_limit = self.control_gains['integral_limit']
-            pid_state['error_integral'] = np.clip(pid_state['error_integral'], 
-                                                -integral_limit, integral_limit)
+            # ========== CONTROLLER 1: X ERROR -> LINEAR VELOCITY ==========
             
-            # Calculate derivatives
-            if len(pid_state['error_history']) > 0:
-                error_derivative = (body_errors - pid_state['error_last']) / dt
-            else:
-                error_derivative = np.zeros(3)
+            # Update x error integral with windup protection
+            pid_state['x_error_integral'] = pid_state.get('x_error_integral', 0.0) + e_x * dt
+            x_integral_limit = control_gains.get('x_integral_limit', 1.0)
+            pid_state['x_error_integral'] = np.clip(pid_state['x_error_integral'], 
+                                                -x_integral_limit, x_integral_limit)
+            
+            # Calculate x error derivative with filtering
+            x_error_last = pid_state.get('x_error_last', 0.0)
+            raw_x_derivative = (e_x - x_error_last) / dt
+            
+            # Apply exponential filter to x derivative
+            self.filtered_derivatives[base_name]['x'] = (
+                self.derivative_filter_alpha * raw_x_derivative + 
+                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['x']
+            )
+            x_error_derivative = self.filtered_derivatives[base_name]['x']
+            
+            # X PID controller: e_x -> v_feedback
+            v_feedback = (control_gains['kp_linear_x'] * e_x + 
+                        control_gains['ki_linear_x'] * pid_state['x_error_integral'] + 
+                        control_gains['kd_linear_x'] * x_error_derivative)
+            
+            # Print values of each PID component
+            self.get_logger().debug(f"{base_name} PID components: "
+                                    f"P Correction={control_gains['kp_linear_x'] * e_x:.3f}, "
+                                    f"I Correction={control_gains['ki_linear_x'] * pid_state['x_error_integral']:.3f}, "
+                                    f"D Correction={control_gains['kd_linear_x'] * x_error_derivative:.3f}")
 
-            # 3. PROPER SKID-STEER CONTROL LAWS:
+            # ========== CONTROLLER 2: CASCADED Y ERROR -> THETA -> ANGULAR VELOCITY ==========
             
-            # Longitudinal control: e_x drives forward speed
-            v_feedback = (self.control_gains['kp_linear_x'] * e_x + 
-                        self.control_gains['ki_linear_x'] * pid_state['error_integral'][0] + 
-                        self.control_gains['kd_linear_x'] * error_derivative[0])
+            # Step 2a: Y error -> PD controller -> theta correction
+            y_error_last = pid_state.get('y_error_last', 0.0)
+            raw_y_derivative = (e_y - y_error_last) / dt
             
-            # Combined heading + cross-track control: e_theta and e_y drive yaw rate
-            omega_feedback = (self.control_gains['kp_angular'] * e_theta + 
-                            self.control_gains['ki_angular'] * pid_state['error_integral'][2] + 
-                            self.control_gains['kd_angular'] * error_derivative[2] +
-                            self.control_gains['kp_lateral'] * e_y +           # cross-track P
-                            self.control_gains['kd_lateral'] * error_derivative[1])  # cross-track D
+            # Apply exponential filter to y derivative
+            self.filtered_derivatives[base_name]['y'] = (
+                self.derivative_filter_alpha * raw_y_derivative + 
+                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['y']
+            )
+            y_error_derivative = self.filtered_derivatives[base_name]['y']
             
-            # 4. Combine feedforward + feedback
+            # PD controller for cross-track error -> desired heading correction
+            theta_correction = (control_gains['kp_y_to_theta'] * e_y + 
+                            control_gains['kd_y_to_theta'] * y_error_derivative)
+            
+            # Step 2b: Combine theta correction with trajectory theta to get total desired theta
+            theta_desired_total = desired_pose[2] + theta_correction
+            
+            # Step 2c: Calculate theta error for the main theta PID controller
+            e_theta_total = self.wrap_angle(theta_desired_total - actual_pose[2])
+            
+            # Apply deadband to theta error
+            e_theta_total = 0.0 if abs(e_theta_total) < control_gains['deadband_angular'] else e_theta_total
+            
+            # Update theta error integral with windup protection
+            pid_state['theta_error_integral'] = pid_state.get('theta_error_integral', 0.0) + e_theta_total * dt
+            theta_integral_limit = control_gains.get('theta_integral_limit', 1.0)
+            pid_state['theta_error_integral'] = np.clip(pid_state['theta_error_integral'], 
+                                                    -theta_integral_limit, theta_integral_limit)
+            
+            # Calculate theta error derivative with filtering
+            theta_error_last = pid_state.get('theta_error_last', 0.0)
+            raw_theta_derivative = (e_theta_total - theta_error_last) / dt
+            
+            # Apply exponential filter to theta derivative
+            self.filtered_derivatives[base_name]['theta'] = (
+                self.derivative_filter_alpha * raw_theta_derivative + 
+                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['theta']
+            )
+            theta_error_derivative = self.filtered_derivatives[base_name]['theta']
+            
+            # Theta PID controller: e_theta_total -> omega_feedback
+            omega_feedback = (control_gains['kp_angular'] * e_theta_total + 
+                            control_gains['ki_angular'] * pid_state['theta_error_integral'] + 
+                            control_gains['kd_angular'] * theta_error_derivative)
+            
+            # Update controller states
+            pid_state['y_error_last'] = e_y
+            pid_state['theta_error_last'] = e_theta_total
+
+            # Update max theta error for tuning
+            self.max_errors[base_name][2] = max(self.max_errors[base_name][2], abs(e_theta_total))
+
+            # ========== COMBINE FEEDFORWARD + FEEDBACK ==========
+            
             # Extract feedforward v and omega (ignore vy for skid-steer)
             v_ff = feedforward_vel[0]
             omega_ff = feedforward_vel[2]
             
-            v_cmd = v_ff + v_feedback
-            omega_cmd = omega_ff + omega_feedback
+            v_cmd = v_feedback
+            omega_cmd = omega_feedback
             
-            # 5. Apply velocity limits
-            v_cmd = np.clip(v_cmd, -self.control_gains['max_linear_vel'], 
-                                self.control_gains['max_linear_vel'])
-            omega_cmd = np.clip(omega_cmd, -self.control_gains['max_angular_vel'], 
-                                        self.control_gains['max_angular_vel'])
-            
-            # 6. Optional: Gating to avoid "driving sideways"
-            # Reduce forward speed when heading error is large
-            if abs(e_theta) > self.control_gains.get('heading_gate_threshold', np.pi/3):
-                gate_factor = max(0.0, np.cos(e_theta))
-                v_cmd *= gate_factor
-                self.get_logger().debug(f"{base_name} gating applied: factor={gate_factor:.2f}")
+            # Apply velocity limits
+            v_cmd = np.clip(v_cmd, -control_gains['max_linear_vel'], 
+                                control_gains['max_linear_vel'])
+            omega_cmd = np.clip(omega_cmd, -control_gains['max_angular_vel'], 
+                                        control_gains['max_angular_vel'])
 
-            # Update PID state
-            pid_state['error_last'] = body_errors.copy()
-            pid_state['error_history'].append(body_errors.copy())
-            
-            # Keep history manageable
-            if len(pid_state['error_history']) > 100:
-                pid_state['error_history'].pop(0)
+            # Optional: Gating to avoid "driving sideways"
+            # if abs(e_theta_total) > control_gains.get('heading_gate_threshold', np.pi/3):
+            #     gate_factor = max(0.0, np.cos(e_theta_total))
+            #     v_cmd *= gate_factor
+            #     self.get_logger().debug(f"{base_name} gating applied: factor={gate_factor:.2f}")
 
-            # Replace the existing two debug lines with these three:
-            self.get_logger().debug(f"{base_name} feedforward:  v={v_ff:.3f}, omega={omega_ff:.3f}")
-            self.get_logger().debug(f"{base_name} PID correct:  v={v_feedback:.3f}, omega={omega_feedback:.3f}")
-            self.get_logger().debug(f"{base_name} final cmd:    v={v_cmd:.3f}, omega={omega_cmd:.3f}")
+            # Debug logging
+            self.get_logger().debug(f"{base_name} cascaded control:")
+            self.get_logger().debug(f"  y_error={e_y:.3f} -> theta_correction={theta_correction:.3f}")
+            self.get_logger().debug(f"  theta_desired_total={theta_desired_total:.3f}, e_theta_total={e_theta_total:.3f}")
+            self.get_logger().debug(f"  feedforward: v={v_ff:.3f}, omega={omega_ff:.3f}")
+            self.get_logger().debug(f"  feedback: v={v_feedback:.3f}, omega={omega_feedback:.3f}")
+            self.get_logger().debug(f"  final cmd: v={v_cmd:.3f}, omega={omega_cmd:.3f}")
 
             # Return as [v_cmd, 0, omega_cmd] - no vy for skid-steer
             return np.array([v_cmd, 0.0, omega_cmd])
-            
+        
         except Exception as e:
             self.get_logger().error(f"Error calculating PID correction for {base_name}: {str(e)}")
             return np.zeros(3)
