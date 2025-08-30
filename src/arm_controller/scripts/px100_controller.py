@@ -52,7 +52,7 @@ class ArmController(InterbotixManipulatorXS):
     # transform from vicon to manipulator frame
     # this is the same for both robots
     T_v_to_m = np.array([[0, 1, 0,  0.23],
-                         [-1, 0, 0, -0.085],
+                         [-1, 0, 0, -0.078],
                          [0, 0, 1, -0.06],
                          [0, 0, 0,  1]])
 
