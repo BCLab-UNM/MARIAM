@@ -118,7 +118,7 @@ def plot_trajectories(
         desired_ross_poses[:, 1],
         label='Desired Ross Trajectory',
         color='blue',
-        linestyle='-',
+        linestyle='--',
         markersize=6
     )
     plt.plot(
@@ -126,7 +126,7 @@ def plot_trajectories(
         desired_monica_poses[:, 1],
         label='Desired Monica Trajectory',
         color='red',
-        linestyle='-',
+        linestyle='--',
         markersize=6
     )
     plt.plot(
@@ -134,7 +134,7 @@ def plot_trajectories(
         ross_poses[:, 1],
         label='Actual Ross Trajectory',
         color='blue',
-        linestyle='--',
+        linestyle='-',
         markersize=6
     )
     plt.plot(
@@ -142,7 +142,7 @@ def plot_trajectories(
         monica_poses[:, 1],
         label='Actual Monica Trajectory',
         color='red',
-        linestyle='--',
+        linestyle='-',
         markersize=6
     )
     plt.grid(True)
@@ -160,8 +160,8 @@ def plot_trajectory_components(
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 12))
 
     # Clear a robots data for debug
-    desired_ross_poses = np.array([]).reshape(0, 3)
-    ross_poses = np.array([]).reshape(0, 3)
+    # desired_ross_poses = np.array([]).reshape(0, 3)
+    # ross_poses = np.array([]).reshape(0, 3)
     # desired_monica_poses = np.array([]).reshape(0, 3)
     # monica_poses = np.array([]).reshape(0, 3)
 
@@ -173,13 +173,13 @@ def plot_trajectory_components(
     
     # X over time subplot
     ax1.plot(steps_desired_ross, desired_ross_poses[:, 0], 
-             label='Desired Ross Trajectory', color='blue', linestyle='-')
+             label='Desired Ross Trajectory', color='blue', linestyle='--')
     ax1.plot(steps_desired_monica, desired_monica_poses[:, 0], 
-             label='Desired Monica Trajectory', color='red', linestyle='-')
+             label='Desired Monica Trajectory', color='red', linestyle='--')
     ax1.plot(steps_ross, ross_poses[:, 0], 
-             label='Actual Ross Trajectory', color='blue', linestyle='--')
+             label='Actual Ross Trajectory', color='blue', linestyle='-')
     ax1.plot(steps_monica, monica_poses[:, 0], 
-             label='Actual Monica Trajectory', color='red', linestyle='--')
+             label='Actual Monica Trajectory', color='red', linestyle='-')
     ax1.grid(True)
     ax1.set_xlabel('Step')
     ax1.set_ylabel('x (m)')
@@ -187,13 +187,13 @@ def plot_trajectory_components(
     
     # Y over time subplot
     ax2.plot(steps_desired_ross, desired_ross_poses[:, 1], 
-             label='Desired Ross Trajectory', color='blue', linestyle='-')
+             label='Desired Ross Trajectory', color='blue', linestyle='--')
     ax2.plot(steps_desired_monica, desired_monica_poses[:, 1], 
-             label='Desired Monica Trajectory', color='red', linestyle='-')
+             label='Desired Monica Trajectory', color='red', linestyle='--')
     ax2.plot(steps_ross, ross_poses[:, 1], 
-             label='Actual Ross Trajectory', color='blue', linestyle='--')
+             label='Actual Ross Trajectory', color='blue', linestyle='-')
     ax2.plot(steps_monica, monica_poses[:, 1], 
-             label='Actual Monica Trajectory', color='red', linestyle='--')
+             label='Actual Monica Trajectory', color='red', linestyle='-')
     ax2.grid(True)
     ax2.set_xlabel('Step')
     ax2.set_ylabel('y (m)')
@@ -201,13 +201,13 @@ def plot_trajectory_components(
     
     # Theta over time subplot
     ax3.plot(steps_desired_ross, desired_ross_poses[:, 2], 
-             label='Desired Ross Trajectory', color='blue', linestyle='-')
+             label='Desired Ross Trajectory', color='blue', linestyle='--')
     ax3.plot(steps_desired_monica, desired_monica_poses[:, 2], 
-             label='Desired Monica Trajectory', color='red', linestyle='-')
+             label='Desired Monica Trajectory', color='red', linestyle='--')
     ax3.plot(steps_ross, ross_poses[:, 2], 
-             label='Actual Ross Trajectory', color='blue', linestyle='--')
+             label='Actual Ross Trajectory', color='blue', linestyle='-')
     ax3.plot(steps_monica, monica_poses[:, 2], 
-             label='Actual Monica Trajectory', color='red', linestyle='--')
+             label='Actual Monica Trajectory', color='red', linestyle='-')
     ax3.grid(True)
     ax3.set_xlabel('Step')
     ax3.set_ylabel('theta (radians)')

@@ -68,7 +68,7 @@ class CooperativeTrajectoryNode(Node):
 
         # Transform from vicon to base_link
         self.T_vm = np.array([  [ 1, 0, 0,  0.23],
-                                [ 0, 1, 0, -0.06],
+                                [ 0, 1, 0, -0.075],
                                 [ 0, 0, 1, -0.06],
                                 [ 0, 0, 0,  1]])
 
@@ -85,28 +85,30 @@ class CooperativeTrajectoryNode(Node):
         self.animation_file_name = f"../../../data/{trial_name}/ros2_coop_traj_animation.gif"
 
         # Hard-coded goal relative to the payload's start pose
-        self.relative_goal = [2.0, 0.5, 0.0]  # [x, y, theta] - modify as needed
+        self.relative_goal = [2.5, -1.0, 0.0]  # [x, y, theta] - modify as needed
         self.goal = [0.0, 0.0, 0.0]  # Will be set after getting initial transform
 
         # Closed-loop control gains
         self.control_gains = {
             'base1': {
                 # X Controller (e_x -> v_cmd)
-                'kp_linear_x': 0.0,
-                'ki_linear_x': 0.0,
-                'kd_linear_x': 0.0,
-                'x_integral_limit': 0.2,
+                # KU = 15.5, TU = 0.59
+                'kp_linear_x': 9.3,  # 0.6 * KU
+                'ki_linear_x': 1.5,  # 1.2 * KU / TU
+                'kd_linear_x': 1e-4, # 0.68,  # 0.075 * KU * TU
+                'x_integral_limit': 0.15,
                 
                 # Y->Theta Cascade Controller
-                'kp_y_to_theta': 0.0,     # Cross-track error -> heading correction
-                'kd_y_to_theta': 0.0,     # Cross-track rate -> heading correction rate
+                'kp_y_to_theta': 1.8,  # Cross-track error -> heading correction
+                'kd_y_to_theta': 1e-6, # Cross-track rate -> heading correction rate
                 
                 # Theta Controller (e_theta_total -> omega_cmd)
-                'kp_angular': 0.0,
-                'ki_angular': 0.0,
-                'kd_angular': 0.0,
-                'theta_integral_limit': 0.2,
-                
+                # KU = 14.0, TU = 0.62
+                'kp_angular': 7.0,  # 0.6 * KU
+                'ki_angular': 4.0,   # 1.2 * KU / TU
+                'kd_angular': 1e-6,  # 0.6,  # 0.075 * KU * TU
+                'theta_integral_limit': 0.3,
+
                 # Other existing gains
                 'max_linear_vel': 0.4,
                 'max_angular_vel': 0.4,
@@ -116,25 +118,26 @@ class CooperativeTrajectoryNode(Node):
             },
             'base2': {
                 # X Controller (e_x -> v_cmd)
-                # KC = 17.0, TU = 1.8
-                'kp_linear_x': 10.2, # 0.6 * KC
-                'ki_linear_x': 11.3, # 1.2 * KC / TU
-                'kd_linear_x': 2.3, # 0.075 * KC * TU
-                'x_integral_limit': 0.5,
+                # KU = 17.0, TU = 0.55
+                'kp_linear_x': 8.2, # 0.6 * KU
+                'ki_linear_x': 1.5,  # 1.2 * KU / TU
+                'kd_linear_x': 1e-4, # 0.075 * KU * TU
+                'x_integral_limit': 0.2, # 0.15,
                 
                 # Y->Theta Cascade Controller
-                'kp_y_to_theta': 1.0,     # Cross-track error -> heading correction
-                'kd_y_to_theta': 0.0,     # Cross-track rate -> heading correction rate
+                'kp_y_to_theta': 1.8,     # Cross-track error -> heading correction
+                'kd_y_to_theta': 1e-6,    # Cross-track rate -> heading correction rate
                 
                 # Theta Controller (e_theta_total -> omega_cmd)
-                'kp_angular': 1.0,
-                'ki_angular': 0.0,
-                'kd_angular': 0.0,
-                'theta_integral_limit': 10.0,
+                # KU = 20.0, TU = 0.55
+                'kp_angular': 10.0,  # 0.6 * KU
+                'ki_angular': 2.0,   # 1.2 * KU / TU
+                'kd_angular': 1e-6,  # 0.075 * KU * TU
+                'theta_integral_limit': 0.3,
                 
                 # Other existing gains
-                'max_linear_vel': 0.4,
-                'max_angular_vel': 0.4,
+                'max_linear_vel': 0.3,
+                'max_angular_vel': 0.3,
                 'heading_gate_threshold': np.pi/4,
                 'deadband_linear': 0.00,
                 'deadband_angular': 0.00,
@@ -299,8 +302,8 @@ class CooperativeTrajectoryNode(Node):
             quat = transform.transform.rotation
             _, _, theta = tf_transformations.euler_from_quaternion([quat.x, quat.y, quat.z, quat.w])
 
-            if frame_id == "payload":
-                return [0, 0, 0]
+            # if frame_id == "payload":
+            #     return [0, 0, 0]
 
             return [x, y, theta]
             
@@ -430,9 +433,13 @@ class CooperativeTrajectoryNode(Node):
             v2_reversed = v2.copy()
             v2_reversed[0] = -v2[0]  # reverse x velocity
 
+            # Add ramping factor based on time
+            ramp_time = 2.0  # seconds to reach full control
+            ramp_factor = min(1.0, t / ramp_time) if t < ramp_time else 1.0
+
             # Calculate PID corrections
-            v1_corrected = self.calculate_corrected_velocity(v1, 'base1', b1, dt)
-            v2_corrected = self.calculate_corrected_velocity(v2, 'base2', b2, dt)
+            v1_corrected = self.calculate_corrected_velocity(v1, 'base1', b1, dt) * ramp_factor
+            v2_corrected = self.calculate_corrected_velocity(v2, 'base2', b2, dt) * ramp_factor
 
             # Combine feedforward + correction
             v1_final = v1 + v1_corrected
@@ -539,15 +546,19 @@ class CooperativeTrajectoryNode(Node):
             
             # Calculate x error derivative with filtering
             x_error_last = pid_state.get('x_error_last', 0.0)
-            raw_x_derivative = (e_x - x_error_last) / dt
-            
-            # Apply exponential filter to x derivative
-            self.filtered_derivatives[base_name]['x'] = (
-                self.derivative_filter_alpha * raw_x_derivative + 
-                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['x']
-            )
-            x_error_derivative = self.filtered_derivatives[base_name]['x']
-            
+            x_error_derivative = (e_x - x_error_last) / dt
+
+            # # Apply exponential filter to x derivative
+            # self.filtered_derivatives[base_name]['x'] = (
+            #     self.derivative_filter_alpha * raw_x_derivative + 
+            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['x']
+            # )
+            # x_error_derivative = self.filtered_derivatives[base_name]['x']
+
+            # Calculate x error derivative normally
+            x_error_last = pid_state.get('x_error_last', 0.0)
+            x_error_derivative = (e_x - x_error_last) / dt
+
             # X PID controller: e_x -> v_feedback
             v_feedback = (control_gains['kp_linear_x'] * e_x + 
                         control_gains['ki_linear_x'] * pid_state['x_error_integral'] + 
@@ -563,14 +574,14 @@ class CooperativeTrajectoryNode(Node):
             
             # Step 2a: Y error -> PD controller -> theta correction
             y_error_last = pid_state.get('y_error_last', 0.0)
-            raw_y_derivative = (e_y - y_error_last) / dt
+            y_error_derivative = (e_y - y_error_last) / dt
             
             # Apply exponential filter to y derivative
-            self.filtered_derivatives[base_name]['y'] = (
-                self.derivative_filter_alpha * raw_y_derivative + 
-                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['y']
-            )
-            y_error_derivative = self.filtered_derivatives[base_name]['y']
+            # self.filtered_derivatives[base_name]['y'] = (
+            #     self.derivative_filter_alpha * raw_y_derivative + 
+            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['y']
+            # )
+            # y_error_derivative = self.filtered_derivatives[base_name]['y']
             
             # PD controller for cross-track error -> desired heading correction
             theta_correction = (control_gains['kp_y_to_theta'] * e_y + 
@@ -593,15 +604,15 @@ class CooperativeTrajectoryNode(Node):
             
             # Calculate theta error derivative with filtering
             theta_error_last = pid_state.get('theta_error_last', 0.0)
-            raw_theta_derivative = (e_theta_total - theta_error_last) / dt
+            theta_error_derivative = (e_theta_total - theta_error_last) / dt
             
             # Apply exponential filter to theta derivative
-            self.filtered_derivatives[base_name]['theta'] = (
-                self.derivative_filter_alpha * raw_theta_derivative + 
-                (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['theta']
-            )
-            theta_error_derivative = self.filtered_derivatives[base_name]['theta']
-            
+            # self.filtered_derivatives[base_name]['theta'] = (
+            #     self.derivative_filter_alpha * raw_theta_derivative + 
+            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['theta']
+            # )
+            # theta_error_derivative = self.filtered_derivatives[base_name]['theta']
+
             # Theta PID controller: e_theta_total -> omega_feedback
             omega_feedback = (control_gains['kp_angular'] * e_theta_total + 
                             control_gains['ki_angular'] * pid_state['theta_error_integral'] + 
