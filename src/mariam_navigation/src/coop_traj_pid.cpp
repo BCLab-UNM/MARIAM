@@ -2,7 +2,6 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "pid_controller.hpp"
-#include "tf2/LinearMath/Quaternion.h"
 #include <chrono>
 
 class CoopTrajPID : public rclcpp::Node
@@ -23,25 +22,25 @@ public:
     base1_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
       "/base1_pose",
       qos_profile,
-      std::bind(&CoopTrajPID::control_loop, this, std::placeholders::_1)
+      std::bind(&CoopTrajPID::base1_callback, this, std::placeholders::_1)
     );
     
     base2_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
       "/base2_pose",
       qos_profile,
-      std::bind(&CoopTrajPID::control_loop, this, std::placeholders::_1)
+      std::bind(&CoopTrajPID::base2_callback, this, std::placeholders::_1)
     );
     
-    base1_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+    base1_actual_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
       "/world_ross_pose",
       qos_profile,
-      std::bind(&CoopTrajPID::control_loop, this, std::placeholders::_1)
+      std::bind(&CoopTrajPID::base1_actual_callback, this, std::placeholders::_1)
     );
     
-    base2_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+    base2_actual_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
       "/world_ross_pose",
       qos_profile,
-      std::bind(&CoopTrajPID::control_loop, this, std::placeholders::_1)
+      std::bind(&CoopTrajPID::base2_actual_callback, this, std::placeholders::_1)
     );
 
     // Create base 1 PID controllers
@@ -115,12 +114,32 @@ public:
     dt_ = this->get_parameter("dt").as_double();
 
     timer_ = this->create_wall_timer(
-      std::chrono::duration<double>(dt),
+      std::chrono::duration<double>(dt_),
       std::bind(&CoopTrajPID::control_loop, this)
     );
   }
 
 private:
+
+  // subscriber callbacks
+  void base1_actual_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
+    base1_actual_pose_ = *msg;
+  }
+
+  void base2_actual_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
+    base2_actual_pose_ = *msg;
+  }
+
+  void base1_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
+    base1_pose_ = *msg;
+    base1_received_ = true;
+  }
+
+  void base2_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
+    base2_pose_ = *msg;
+    base2_received_ = true;
+  }
+
   void control_loop() {
     // if no data has been received
     if (!base1_received_ || !base2_received_) {
@@ -164,8 +183,7 @@ private:
     // Create Twist message for base 1
     auto cmd_vel1 = geometry_msgs::msg::Twist();
     cmd_vel1.linear.x = control_x1;
-    cmd_vel1.angular.w = std::sin(control_theta1 / 2.0);
-    cmd_vel1.angular.z = std::cos(control_theta1 / 2.0);
+    cmd_vel1.angular.z = control_theta1;
 
     // ----------------------------------------------------------------------
     //                                BASE 2
@@ -198,8 +216,7 @@ private:
     // Create Twist message for base 2
     auto cmd_vel2 = geometry_msgs::msg::Twist();
     cmd_vel2.linear.x = control_x2;
-    cmd_vel2.angular.w = std::sin(control_theta2 / 2.0);
-    cmd_vel2.angular.z = std::cos(control_theta2 / 2.0);
+    cmd_vel2.angular.z = control_theta2;
 
 
     // Publish commands
