@@ -28,7 +28,7 @@ public:
       "/monica/cmd_vel", qos_profile);
 
     bases_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-      "/base_poses",
+      "/desired_poses",
       qos_profile,
       std::bind(&CoopTrajPID::bases_callback, this, std::placeholders::_1)
     );
@@ -190,6 +190,7 @@ private:
   void control_loop() {
     // if no data has been received
     if (!bases_received_) {
+      RCLCPP_WARN(this->get_logger(), "No base poses received yet.");
       // Wait until both base poses are getting published
       // publish zero velocities to stop the robots
       auto zero_twist = geometry_msgs::msg::Twist();
@@ -255,6 +256,18 @@ private:
     auto cmd_vel2 = geometry_msgs::msg::Twist();
     cmd_vel2.linear.x = control_x2;
     cmd_vel2.angular.z = control_theta2;
+
+    // Print debug info
+    RCLCPP_INFO(this->get_logger(), "----------------------------------------");
+    RCLCPP_INFO(this->get_logger(), "Base 1 Desired Pose: x: %.3f, y: %.3f, theta: %.3f", base1_pose_.position.x, base1_pose_.position.y, desired_theta1);
+    RCLCPP_INFO(this->get_logger(), "Base 1 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base1_actual_pose_.position.x, base1_actual_pose_.position.y, actual_theta1);
+    RCLCPP_INFO(this->get_logger(), "Base 1 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x1, error_y1, error_theta1);
+    RCLCPP_INFO(this->get_logger(), "Base 1 Controls: x: %.3f, theta: %.3f", control_x1, control_theta1);
+    RCLCPP_INFO(this->get_logger(), "");
+    RCLCPP_INFO(this->get_logger(), "Base 2 Desired Pose: x: %.3f, y: %.3f, theta: %.3f", base2_pose_.position.x, base2_pose_.position.y, desired_theta2);
+    RCLCPP_INFO(this->get_logger(), "Base 2 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base2_actual_pose_.position.x, base2_actual_pose_.position.y, actual_theta2);
+    RCLCPP_INFO(this->get_logger(), "Base 2 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x2, error_y2, error_theta2);
+    RCLCPP_INFO(this->get_logger(), "Base 2 Controls: x: %.3f, theta: %.3f", control_x2, control_theta2);
 
     // Publish commands
     ross_cmd_vel_pub_->publish(cmd_vel1);
