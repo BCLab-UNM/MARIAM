@@ -15,6 +15,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 # Import the cooperative trajectory planning API
+import coop_traj_api_v2
 from coop_traj_api import opt_traj_params, traj
 from coop_traj_viz import plot_summary, animate_carry, plot_trajectories, save_trajectory_csv, plot_trajectory_components
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
@@ -259,20 +260,21 @@ class CooperativeTrajectoryNode(Node):
                 dt = current_time - self.last_time
             
             # Sample current poses from trajectory
-            base1_pose, base2_pose = traj(self.trajectory_params, t, T=self.trajectory_duration)
+            base1_pose, base2_pose, payload_pose = coop_traj_api_v2.traj(self.trajectory_params, t, T=self.trajectory_duration)
             
             # Convert to numpy arrays for easier math
             b1 = np.asarray(base1_pose, dtype=float)  # [x, y, theta]
             b2 = np.asarray(base2_pose, dtype=float)  # [x, y, theta]
+            p = np.asarray(payload_pose, dtype=float)  # [x, y, theta]
 
             # Publish desired poses for visualization
-            self.publish_robot_poses(b1, b2)
+            self.publish_robot_poses(b1, b2, p)
 
         except Exception as e:
             self.get_logger().error(f"Error in control callback: {str(e)}")
             self.stop_trajectory()
 
-    def publish_robot_poses(self, b1, b2):
+    def publish_robot_poses(self, b1, b2, p):
         """
         Publish 2D poses for two robots
         Args:
@@ -306,8 +308,19 @@ class CooperativeTrajectoryNode(Node):
         pose2.orientation.z = quat2[2]
         pose2.orientation.w = quat2[3]
 
+        # Payload
+        pose_payload = Pose()
+        pose_payload.position.x = float(p[0])
+        pose_payload.position.y = float(p[1])
+        pose_payload.position.z = 0.0
+        quat_payload = tf_transformations.quaternion_from_euler(0, 0, p[2])  # roll=0, pitch=0, yaw=theta
+        pose_payload.orientation.x = quat_payload[0]
+        pose_payload.orientation.y = quat_payload[1]
+        pose_payload.orientation.z = quat_payload[2]
+        pose_payload.orientation.w = quat_payload[3]    
+
         # Add both poses to the array
-        pose_array.poses = [pose1, pose2]
+        pose_array.poses = [pose1, pose2, pose_payload]
 
         # Publish using your publisher
         self.base_desired_poses.publish(pose_array)
