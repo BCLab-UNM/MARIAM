@@ -127,7 +127,9 @@ add_executable(coop_traj_pid src/coop_traj_pid.cpp)
 ament_target_dependencies(coop_traj_pid
   rclcpp
   geometry_msgs
-  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs 
 )
 
 # Install the executables
