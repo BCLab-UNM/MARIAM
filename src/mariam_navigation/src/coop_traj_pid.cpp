@@ -153,7 +153,7 @@ private:
 
   void control_loop() {
     // if no data has been received
-    if (!base1_received_ || !base2_received_) {
+    if (!bases_received_) {
       // Wait until both base poses are getting published
       // publish zero velocities to stop the robots
       auto zero_twist = geometry_msgs::msg::Twist();
@@ -182,7 +182,7 @@ private:
     double control_x1 = base1_pid_x_->compute(error_x1, dt_);
     // TODO: make this match the desired architecture
     double control_y1 = base1_pid_y_->compute(error_y1, dt_);
-    double theta_d1 = error_theta1 + control_y1
+    double theta_d1 = error_theta1 + control_y1;
     double control_theta1 = base1_pid_theta_->compute(theta_d1, dt_);
 
     // Create Twist message for base 1
