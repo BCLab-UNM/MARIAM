@@ -2,6 +2,8 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "pid_controller.hpp"
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <chrono>
 
 class CoopTrajPID : public rclcpp::Node
@@ -16,7 +18,7 @@ public:
     ross_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/ross/cmd_vel", qos_profile);
     
-      monica_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
+    monica_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/monica/cmd_vel", qos_profile);
 
     base1_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
@@ -120,7 +122,6 @@ public:
   }
 
 private:
-
   // subscriber callbacks
   void base1_actual_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
     base1_actual_pose_ = *msg;
@@ -140,6 +141,14 @@ private:
     base2_received_ = true;
   }
 
+  double get_yaw(const geometry_msgs::msg::Quaternion &quat) {
+    tf2::Quaternion q(quat.x, quat.y, quat.z, quat.w);
+    tf2::Matrix3x3 m(q);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    return yaw;
+  }
+
   void control_loop() {
     // if no data has been received
     if (!base1_received_ || !base2_received_) {
@@ -152,19 +161,13 @@ private:
     }
 
     // ----------------------------------------------------------------------
-    //                                BASE 1
+    //                           BASE 1 (Ross)
     // ----------------------------------------------------------------------
     // Calculate errors for base 1
     double error_x1 = base1_pose_.position.x - base1_actual_pose_.position.x;
     double error_y1 = base1_pose_.position.y - base1_actual_pose_.position.y;
-    double desired_theta1 = 2.0 * std::atan2(
-      base1_pose_.orientation.z,
-      base1_pose_.orientation.w
-    );
-    double actual_theta1 = 2.0 * std::atan2(
-      base1_actual_pose_.orientation.z,
-      base1_actual_pose_.orientation.w
-    );
+    double desired_theta1 = get_yaw(base1_pose_.orientation);
+    double actual_theta1 = get_yaw(base1_actual_pose_.orientation);
     // Normalize angles to [-pi, pi]
     while (desired_theta1 > M_PI) desired_theta1 -= 2 * M_PI;
     while (desired_theta1 < -M_PI) desired_theta1 += 2 * M_PI;
@@ -186,18 +189,13 @@ private:
     cmd_vel1.angular.z = control_theta1;
 
     // ----------------------------------------------------------------------
-    //                                BASE 2
+    //                           BASE 2 (Monica)
     // ----------------------------------------------------------------------
     double error_x2 = base2_pose_.position.x - base2_actual_pose_.position.x;
     double error_y2 = base2_pose_.position.y - base2_actual_pose_.position.y;
-    double desired_theta2 = 2.0 * std::atan2(
-      base2_pose_.orientation.z,
-      base2_pose_.orientation.w
-    );
-    double actual_theta2 = 2.0 * std::atan2(
-      base2_actual_pose_.orientation.z,
-      base2_actual_pose_.orientation.w
-    );
+    double desired_theta2 = get_yaw(base2_pose_.orientation);
+    // Add pi to make the PID controller think the heading is behind monica
+    double actual_theta2 = get_yaw(base2_actual_pose_.orientation) + M_PI;
     // Normalize angles to [-pi, pi]
     while (desired_theta2 > M_PI) desired_theta2 -= 2 * M_PI;
     while (desired_theta2 < -M_PI) desired_theta2 += 2 * M_PI;
