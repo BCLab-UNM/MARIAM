@@ -23,7 +23,7 @@ public:
       "/monica/cmd_vel", qos_profile);
 
     bases_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
-      "/bases_pose",
+      "/base_poses",
       qos_profile,
       std::bind(&CoopTrajPID::bases_callback, this, std::placeholders::_1)
     );
