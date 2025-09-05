@@ -22,10 +22,10 @@ public:
     monica_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/monica/cmd_vel", qos_profile);
 
-    bases_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+    bases_sub_ = this->create_subscription<geometry_msgs::msg::PoseArray>(
       "/bases_pose",
       qos_profile,
-      std::bind(&CoopTrajPID::base1_callback, this, std::placeholders::_1)
+      std::bind(&CoopTrajPID::bases_callback, this, std::placeholders::_1)
     );
     
     base1_actual_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
@@ -129,14 +129,12 @@ private:
     base2_actual_pose_ = *msg;
   }
 
-  void base1_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
-    base1_pose_ = *msg;
-    base1_received_ = true;
-  }
-
-  void base2_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
-    base2_pose_ = *msg;
-    base2_received_ = true;
+  void bases_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg) {
+    if (msg->poses.size() >= 2) {
+      base1_pose_ = msg->poses[0];
+      base2_pose_ = msg->poses[1];
+      bases_received_ = true;
+    }
   }
 
   double get_yaw(const geometry_msgs::msg::Quaternion &quat) {
@@ -231,8 +229,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr ross_cmd_vel_pub_;
   // NOTE: base 1 = Ross, base 2 = Monica
   // Subscriptions for desired base poses
-  rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base1_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base2_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr bases_sub_;
   // Subscriptions for actual base poses
   rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base1_actual_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base2_actual_sub_;
@@ -257,8 +254,7 @@ private:
   geometry_msgs::msg::Pose base2_actual_pose_;
 
   double dt_;
-  bool base1_received_ = false;
-  bool base2_received_ = false;
+  bool bases_received_ = false;
 };
 
 int main(int argc, char * argv[]) {
