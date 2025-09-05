@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/pose.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
 #include "pid_controller.hpp"
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -21,16 +22,10 @@ public:
     monica_cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
       "/monica/cmd_vel", qos_profile);
 
-    base1_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
-      "/base1_pose",
+    bases_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+      "/bases_pose",
       qos_profile,
       std::bind(&CoopTrajPID::base1_callback, this, std::placeholders::_1)
-    );
-    
-    base2_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
-      "/base2_pose",
-      qos_profile,
-      std::bind(&CoopTrajPID::base2_callback, this, std::placeholders::_1)
     );
     
     base1_actual_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
@@ -44,6 +39,9 @@ public:
       qos_profile,
       std::bind(&CoopTrajPID::base2_actual_callback, this, std::placeholders::_1)
     );
+
+    this->declare_parameter("max_linear_velocity", 0.2);
+    this->declare_parameter("max_angular_velocity", 0.4);
 
     // Create base 1 PID controllers
     // Declare PID parameters for three controllers
@@ -149,6 +147,12 @@ private:
     return yaw;
   }
 
+  double normalize_angle(double angle) {
+    while (angle > M_PI) angle -= 2 * M_PI;
+    while (angle < -M_PI) angle += 2 * M_PI;
+    return angle;
+  }
+
   void control_loop() {
     // if no data has been received
     if (!base1_received_ || !base2_received_) {
@@ -163,25 +167,25 @@ private:
     // ----------------------------------------------------------------------
     //                           BASE 1 (Ross)
     // ----------------------------------------------------------------------
-    // Calculate errors for base 1
-    double error_x1 = base1_pose_.position.x - base1_actual_pose_.position.x;
-    double error_y1 = base1_pose_.position.y - base1_actual_pose_.position.y;
+    // Calculate errors for base 1 (world frame)
+    double world_error_x1 = base1_pose_.position.x - base1_actual_pose_.position.x;
+    double world_error_y1 = base1_pose_.position.y - base1_actual_pose_.position.y;
     double desired_theta1 = get_yaw(base1_pose_.orientation);
     double actual_theta1 = get_yaw(base1_actual_pose_.orientation);
-    // Normalize angles to [-pi, pi]
-    while (desired_theta1 > M_PI) desired_theta1 -= 2 * M_PI;
-    while (desired_theta1 < -M_PI) desired_theta1 += 2 * M_PI;
-    while (actual_theta1 > M_PI) actual_theta1 -= 2 * M_PI;
-    while (actual_theta1 < -M_PI) actual_theta1 += 2 * M_PI;
+    desired_theta1 = normalize_angle(desired_theta1);
+    actual_theta1 = normalize_angle(actual_theta1);
 
+    // transform errors to the body frame
+    double error_x1 = world_error_x1 * cos(actual_theta1) + world_error_y1 * sin(actual_theta1);
+    double error_y1 = -world_error_x1 * sin(actual_theta1) + world_error_y1 * cos(actual_theta1);
     double error_theta1 = desired_theta1 - actual_theta1;
     
     // Compute control signals for base 1
     double control_x1 = base1_pid_x_->compute(error_x1, dt_);
     // TODO: make this match the desired architecture
     double control_y1 = base1_pid_y_->compute(error_y1, dt_);
-    double control_theta1 = base1_pid_theta_->compute(error_theta1, dt_) + 
-                          0.5 * control_y1;
+    double theta_d1 = error_theta1 + control_y1
+    double control_theta1 = base1_pid_theta_->compute(theta_d1, dt_);
 
     // Create Twist message for base 1
     auto cmd_vel1 = geometry_msgs::msg::Twist();
@@ -191,31 +195,32 @@ private:
     // ----------------------------------------------------------------------
     //                           BASE 2 (Monica)
     // ----------------------------------------------------------------------
-    double error_x2 = base2_pose_.position.x - base2_actual_pose_.position.x;
-    double error_y2 = base2_pose_.position.y - base2_actual_pose_.position.y;
+    // Calculate errors for base 2 (world frame)
+    double world_error_x2 = base2_pose_.position.x - base2_actual_pose_.position.x;
+    double world_error_y2 = base2_pose_.position.y - base2_actual_pose_.position.y;
     double desired_theta2 = get_yaw(base2_pose_.orientation);
     // Add pi to make the PID controller think the heading is behind monica
     double actual_theta2 = get_yaw(base2_actual_pose_.orientation) + M_PI;
     // Normalize angles to [-pi, pi]
-    while (desired_theta2 > M_PI) desired_theta2 -= 2 * M_PI;
-    while (desired_theta2 < -M_PI) desired_theta2 += 2 * M_PI;
-    while (actual_theta2 > M_PI) actual_theta2 -= 2 * M_PI;
-    while (actual_theta2 < -M_PI) actual_theta2 += 2 * M_PI;
+    desired_theta2 = normalize_angle(desired_theta2);
+    actual_theta2 = normalize_angle(actual_theta2);
 
+    // transform errors to the body frame
+    double error_x2 = world_error_x2 * cos(actual_theta2) + world_error_y2 * sin(actual_theta2);
+    double error_y2 = -world_error_x2 * sin(actual_theta2) + world_error_y2 * cos(actual_theta2);
     double error_theta2 = desired_theta2 - actual_theta2;
 
     // Compute control signals for base 2
     double control_x2 = base2_pid_x_->compute(error_x2, dt_);
     // TODO: make this match the desired architecture
     double control_y2 = base2_pid_y_->compute(error_y2, dt_);
-    double control_theta2 = base2_pid_theta_->compute(error_theta2, dt_) +
-                          0.5 * control_y2;
+    double theta_d2 = error_theta2 + control_y2;
+    double control_theta2 = base2_pid_theta_->compute(theta_d2, dt_);
 
     // Create Twist message for base 2
     auto cmd_vel2 = geometry_msgs::msg::Twist();
     cmd_vel2.linear.x = control_x2;
     cmd_vel2.angular.z = control_theta2;
-
 
     // Publish commands
     ross_cmd_vel_pub_->publish(cmd_vel1);
