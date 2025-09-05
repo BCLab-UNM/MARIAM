@@ -13,7 +13,7 @@ class CoopTrajPID : public rclcpp::Node
 public:
   CoopTrajPID() : Node("coop_traj_pid") {
     marker_to_base.setIdentity();
-    marker_to_base.setOrigin(tf2::Vector3(0.23, -0.0-75, -0.06));
+    marker_to_base.setOrigin(tf2::Vector3(0.23, -0.075, -0.06));
     marker_to_base.setRotation(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
 
     // change QoS settings
@@ -40,7 +40,7 @@ public:
     );
     
     base2_actual_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
-      "/world_ross_pose",
+      "/world_monica_pose",
       qos_profile,
       std::bind(&CoopTrajPID::base2_actual_callback, this, std::placeholders::_1)
     );
