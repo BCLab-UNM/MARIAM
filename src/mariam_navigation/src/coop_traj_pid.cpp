@@ -4,6 +4,7 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "pid_controller.hpp"
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Transform.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <chrono>
 
@@ -11,6 +12,10 @@ class CoopTrajPID : public rclcpp::Node
 {
 public:
   CoopTrajPID() : Node("coop_traj_pid") {
+    marker_to_base.setIdentity();
+    marker_to_base.setOrigin(tf2::Vector3(0.23, -0.0-75, -0.06));
+    marker_to_base.setRotation(tf2::Quaternion(0.0, 0.0, 0.0, 1.0));
+
     // change QoS settings
     auto qos_profile = rclcpp::QoS(10);
     qos_profile.best_effort();
@@ -120,13 +125,44 @@ public:
   }
 
 private:
+
+  geometry_msgs::msg::Pose transform_pose(const geometry_msgs::msg::Pose &pose) {
+    // Convert geometry_msgs::msg::Pose to tf2::Transform
+    tf2::Transform pose_tf;
+    pose_tf.setOrigin(
+      tf2::Vector3(
+        pose.position.x, pose.position.y, pose.position.z));
+    pose_tf.setRotation(
+      tf2::Quaternion(
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z,
+        pose.orientation.w));
+
+    // Apply the transformation
+    tf2::Transform transformed_tf = pose_tf * marker_to_base;
+
+    // Convert back to geometry_msgs::msg::Pose
+    geometry_msgs::msg::Pose transformed_pose;
+    transformed_pose.position.x = transformed_tf.getOrigin().x();
+    transformed_pose.position.y = transformed_tf.getOrigin().y();
+    transformed_pose.position.z = transformed_tf.getOrigin().z();
+    tf2::Quaternion q = transformed_tf.getRotation();
+    transformed_pose.orientation.x = q.x();
+    transformed_pose.orientation.y = q.y();
+    transformed_pose.orientation.z = q.z();
+    transformed_pose.orientation.w = q.w();
+
+    return transformed_pose;
+  }
+
   // subscriber callbacks
   void base1_actual_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
-    base1_actual_pose_ = *msg;
+    base1_actual_pose_ = transform_pose(*msg);
   }
 
   void base2_actual_callback(const geometry_msgs::msg::Pose::SharedPtr msg) {
-    base2_actual_pose_ = *msg;
+    base2_actual_pose_ = transform_pose(*msg);
   }
 
   void bases_callback(const geometry_msgs::msg::PoseArray::SharedPtr msg) {
@@ -255,6 +291,8 @@ private:
 
   double dt_;
   bool bases_received_ = false;
+
+  tf2::Transform marker_to_base;
 };
 
 int main(int argc, char * argv[]) {
