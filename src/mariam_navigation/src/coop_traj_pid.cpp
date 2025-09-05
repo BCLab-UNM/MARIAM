@@ -199,6 +199,14 @@ private:
       return;
     }
 
+    // Compute finite difference velocities (not used currently)
+    geometry_msgs::msg::Twist cmd_vel1_ff = compute_feedforward_velocity(base1_pose_, last_base1_desired_pose_, dt_);
+    geometry_msgs::msg::Twist cmd_vel2_ff = compute_feedforward_velocity(base2_pose_, last_base2_desired_pose_, dt_);
+
+    // Store last desired poses
+    last_base1_desired_pose_ = base1_pose_;
+    last_base2_desired_pose_ = base2_pose_;
+
     // ----------------------------------------------------------------------
     //                           BASE 1 (Ross)
     // ----------------------------------------------------------------------
@@ -263,15 +271,42 @@ private:
     RCLCPP_INFO(this->get_logger(), "Base 1 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base1_actual_pose_.position.x, base1_actual_pose_.position.y, actual_theta1);
     RCLCPP_INFO(this->get_logger(), "Base 1 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x1, error_y1, error_theta1);
     RCLCPP_INFO(this->get_logger(), "Base 1 Controls: x: %.3f, theta: %.3f", control_x1, control_theta1);
+    RCLCPP_INFO(this->get_logger(), "Base 1 Feedforward: x: %.3f, theta: %.3f", cmd_vel1_ff.linear.x, cmd_vel1_ff.angular.z);
     RCLCPP_INFO(this->get_logger(), "");
     RCLCPP_INFO(this->get_logger(), "Base 2 Desired Pose: x: %.3f, y: %.3f, theta: %.3f", base2_pose_.position.x, base2_pose_.position.y, desired_theta2);
     RCLCPP_INFO(this->get_logger(), "Base 2 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base2_actual_pose_.position.x, base2_actual_pose_.position.y, actual_theta2);
     RCLCPP_INFO(this->get_logger(), "Base 2 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x2, error_y2, error_theta2);
     RCLCPP_INFO(this->get_logger(), "Base 2 Controls: x: %.3f, theta: %.3f", control_x2, control_theta2);
+    RCLCPP_INFO(this->get_logger(), "Base 2 Feedforward: x: %.3f, theta: %.3f", cmd_vel2_ff.linear.x, cmd_vel2_ff.angular.z);
+
+    // Reverse linear velocity for monica
+    cmd_vel2.linear.x = -cmd_vel2.linear.x;
+    cmd_vel2_ff.linear.x = -cmd_vel2_ff.linear.x;
 
     // Publish commands
-    ross_cmd_vel_pub_->publish(cmd_vel1);
-    monica_cmd_vel_pub_->publish(cmd_vel2);
+    ross_cmd_vel_pub_->publish(cmd_vel1_ff);
+    monica_cmd_vel_pub_->publish(cmd_vel2_ff);
+  }
+
+  // Calculates feed forward cmd velocity based on finite differences
+  geometry_msgs::msg::Twist compute_feedforward_velocity(
+      const geometry_msgs::msg::Pose &current_pose,
+      const geometry_msgs::msg::Pose &last_pose, double dt) 
+  {
+      if (last_pose == geometry_msgs::msg::Pose()) return geometry_msgs::msg::Twist();
+      
+      double v_x = (current_pose.position.x - last_pose.position.x) / dt;
+      
+      // Fix angle wrapping
+      double current_yaw = get_yaw(current_pose.orientation);
+      double last_yaw = get_yaw(last_pose.orientation);
+      double angle_diff = normalize_angle(current_yaw - last_yaw);  // Add this line
+      double v_theta = angle_diff / dt;
+      
+      geometry_msgs::msg::Twist twist;
+      twist.linear.x = v_x;
+      twist.angular.z = v_theta;
+      return twist;
   }
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr monica_cmd_vel_pub_;
@@ -304,6 +339,10 @@ private:
 
   double dt_;
   bool bases_received_ = false;
+
+  // Store last poses for finite difference
+  geometry_msgs::msg::Pose last_base1_desired_pose_;
+  geometry_msgs::msg::Pose last_base2_desired_pose_;
 
   tf2::Transform marker_to_base;
 };
