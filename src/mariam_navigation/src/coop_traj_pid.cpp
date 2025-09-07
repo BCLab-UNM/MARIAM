@@ -6,7 +6,51 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Transform.hpp>
 #include <tf2/LinearMath/Quaternion.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <chrono>
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <rcpputils/filesystem_helper.hpp>
+#include <memory>
+#include <sstream>
+#include <fstream>
+#include <iomanip>  // Added for std::setprecision
+#include <cstdlib>
+
+
+struct DataPoint {
+  double des_ross_x;
+  double des_ross_y;
+  double des_ross_theta;
+
+  double act_ross_x;
+  double act_ross_y;
+  double act_ross_theta;
+  
+  double des_mon_x;
+  double des_mon_y;
+  double des_mon_theta;
+  
+  double act_mon_x;
+  double act_mon_y;
+  double act_mon_theta;
+  
+  double act_payload_x;
+  double act_payload_y;
+  double act_payload_theta;
+  
+  // TODO: add desired payload pose?
+
+  double ross_cmd_vel_linear_x;
+  double ross_cmd_vel_angular_z;
+  double monica_cmd_vel_linear_x;
+  double monica_cmd_vel_angular_z;
+  double dt;
+  rclcpp::Time ros_time;
+};
+
 
 class CoopTrajPID : public rclcpp::Node
 {
@@ -44,6 +88,9 @@ public:
       qos_profile,
       std::bind(&CoopTrajPID::base2_actual_callback, this, std::placeholders::_1)
     );
+
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     this->declare_parameter("max_linear_velocity", 0.2);
     this->declare_parameter("max_angular_velocity", 0.4);
@@ -126,6 +173,130 @@ public:
 
 private:
 
+  void write_to_csv() {
+    // Check if trial_name is empty, if so, skip writing CSV
+    std::string trial_name = this->get_parameter("trial_name").as_string();
+    if (trial_name.empty()) {
+      RCLCPP_INFO(this->get_logger(), "Trial name is empty, skipping CSV write. Collected %zu data points.", data_points_.size());
+      return;
+    }
+    
+    try {
+      rcpputils::fs::path file_path;
+      
+      // Check if trial_name contains a path separator (/ or ~)
+      if (trial_name.find('/') != std::string::npos || trial_name.front() == '~') {
+        // trial_name is a full or relative path
+        if (trial_name.front() == '~') {
+          // Expand ~ to home directory
+          const char* home_dir = std::getenv("HOME");
+          if (home_dir) {
+            trial_name = std::string(home_dir) + trial_name.substr(1);
+          }
+        }
+        
+        // Use trial_name as the complete directory path
+        rcpputils::fs::path data_dir = rcpputils::fs::path(trial_name);
+        
+        // Create the directory if it doesn't exist
+        if (!rcpputils::fs::create_directories(data_dir)) {
+          // create_directories returns false if directory already exists, check if it actually exists
+          if (!rcpputils::fs::exists(data_dir)) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to create directory: %s", data_dir.string().c_str());
+            return;
+          }
+        }
+        RCLCPP_INFO(this->get_logger(), "Using directory: %s", data_dir.string().c_str());
+        
+        // Construct the full file path - Fixed string concatenation
+        std::string robot_name_str = this->get_parameter("robot_name").as_string();
+        std::string filename = robot_name_str + "_admittance_data.csv";
+        file_path = data_dir / filename;
+      } else {
+        // trial_name is just a name, use with data_directory parameter
+        // Check if data_directory parameter exists, if not create a default
+        if (!this->has_parameter("data_directory")) {
+          const char* home_dir = std::getenv("HOME");
+          std::string default_data_dir = std::string(home_dir ? home_dir : "/tmp") + "/.arm_controller/data/";
+          this->declare_parameter("data_directory", default_data_dir);
+        }
+        
+        std::string data_directory = this->get_parameter("data_directory").as_string();
+        rcpputils::fs::path data_dir = rcpputils::fs::path(data_directory) / trial_name;
+        
+        // Create the directory if it doesn't exist
+        if (!rcpputils::fs::create_directories(data_dir)) {
+          // create_directories returns false if directory already exists, check if it actually exists
+          if (!rcpputils::fs::exists(data_dir)) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to create directory: %s", data_dir.string().c_str());
+            return;
+          }
+        }
+        RCLCPP_INFO(this->get_logger(), "Using directory: %s", data_dir.string().c_str());
+        
+        // Construct the full file path
+        file_path = data_dir / "admittance_data.csv";
+      }
+      
+      std::string file_name = file_path.string();
+      RCLCPP_INFO(this->get_logger(), "Writing CSV to: %s", file_name.c_str());
+    
+    // Create ofstream object with the filename
+    std::ofstream file(file_name);
+
+    // Don't call file.open() - constructor already opened it
+    // file.open();  // REMOVED - this was causing the issue
+
+    if (!file.is_open()) {
+      RCLCPP_ERROR(this->get_logger(), "Failed to open CSV file for writing: %s", file_name.c_str());
+      return;
+    }
+      
+    // Write header
+    file << "des_ross_x,des_ross_y,des_ross_theta,des_mon_x,des_mon_y,des_mon_theta,act_ross_x,act_ross_y,act_ross_theta,act_mon_x,act_mon_y,act_mon_theta,act_payload_x,act_payload_y,act_payload_theta,ross_cmd_vel_linear_x,ross_cmd_vel_angular_z,monica_cmd_vel_linear_x,monica_cmd_vel_angular_z,dt,ros_time_sec,ros_time_ns\n";
+
+    // Write data with proper precision
+    file << std::fixed << std::setprecision(6);
+    for (const auto& point : data_points_) {
+      file << point.des_ross_x << "," 
+            << point.des_ross_y << "," 
+            << point.des_ross_theta << "," 
+            
+            << point.des_mon_x << "," 
+            << point.des_mon_y << "," 
+            << point.des_mon_theta << "," 
+            
+            << point.act_ross_x << "," 
+            << point.act_ross_y << "," 
+            << point.act_ross_theta << "," 
+            
+            << point.act_mon_x << "," 
+            << point.act_mon_y << "," 
+            << point.act_mon_theta << "," 
+            
+            << point.act_payload_x << "," 
+            << point.act_payload_y << "," 
+            << point.act_payload_theta << "," 
+            
+            << point.ross_cmd_vel_linear_x << "," 
+            << point.ross_cmd_vel_angular_z << "," 
+            
+            << point.monica_cmd_vel_linear_x << "," 
+            << point.monica_cmd_vel_angular_z << "," 
+            
+            << point.dt << "," 
+            << point.ros_time.seconds() << "," 
+            << point.ros_time.nanoseconds() << "\n";
+    }
+    
+    file.close();
+    RCLCPP_INFO(this->get_logger(), "Data written to %s (%zu points)", file_name.c_str(), data_points_.size());
+    
+    } catch (const std::exception& e) {
+      RCLCPP_ERROR(this->get_logger(), "Error writing CSV file: %s", e.what());
+    }
+  }
+
   geometry_msgs::msg::Pose transform_pose(const geometry_msgs::msg::Pose &pose) {
     // Convert geometry_msgs::msg::Pose to tf2::Transform
     tf2::Transform pose_tf;
@@ -154,6 +325,18 @@ private:
     transformed_pose.orientation.w = q.w();
 
     return transformed_pose;
+  }
+
+  geometry_msgs::msg::TransformStamped lookup_transform(const std::string& target_frame,
+                                                        const std::string& source_frame) {
+    try {
+      // Wait for up to 0.5 seconds for the transform
+      return tf_buffer_->lookupTransform(target_frame, source_frame, tf2::TimePointZero, std::chrono::milliseconds(500));
+    } catch (const tf2::TransformException& ex) {
+      RCLCPP_WARN(this->get_logger(), "Could not transform %s to %s: %s", source_frame.c_str(), target_frame.c_str(), ex.what());
+      geometry_msgs::msg::TransformStamped empty;
+      return empty;
+    }
   }
 
   // subscriber callbacks
@@ -286,6 +469,42 @@ private:
     // Publish commands
     ross_cmd_vel_pub_->publish(cmd_vel1_ff);
     monica_cmd_vel_pub_->publish(cmd_vel2_ff);
+
+    // Save data point
+    DataPoint point;
+    point.des_ross_x = base1_pose_.position.x;
+    point.des_ross_y = base1_pose_.position.y;
+    point.des_ross_theta = desired_theta1;
+
+    point.act_ross_x = base1_actual_pose_.position.x;
+    point.act_ross_y = base1_actual_pose_.position.y;
+    point.act_ross_theta = actual_theta1;
+
+    point.des_mon_x = base2_pose_.position.x;
+    point.des_mon_y = base2_pose_.position.y;
+    point.des_mon_theta = desired_theta2;
+
+    point.act_mon_x = base2_actual_pose_.position.x;
+    point.act_mon_y = base2_actual_pose_.position.y;
+    point.act_mon_theta = actual_theta2;
+
+    geometry_msgs::msg::TransformStamped transform_stamped =
+                              lookup_transform("world", "payload");
+
+    point.act_payload_x = transform_stamped.transform.translation.x;
+    point.act_payload_y = transform_stamped.transform.translation.y;
+    point.act_payload_theta = get_yaw(transform_stamped.transform.rotation);
+
+    point.dt = dt_;
+
+    point.ross_cmd_vel_linear_x = cmd_vel1_ff.linear.x;
+    point.ross_cmd_vel_angular_z = cmd_vel1_ff.angular.z;
+    point.monica_cmd_vel_linear_x = cmd_vel2_ff.linear.x;
+    point.monica_cmd_vel_angular_z = cmd_vel2_ff.angular.z;
+
+    point.ros_time = this->now();
+
+    data_points_.push_back(point);
   }
 
   // Calculates feed forward cmd velocity based on finite differences
@@ -319,6 +538,8 @@ private:
   rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr base2_actual_sub_;
 
   rclcpp::TimerBase::SharedPtr timer_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   // PID controllers for base 1
   std::unique_ptr<PIDController> base1_pid_x_;
@@ -345,6 +566,7 @@ private:
   geometry_msgs::msg::Pose last_base2_desired_pose_;
 
   tf2::Transform marker_to_base;
+  std::vector<DataPoint> data_points_;
 };
 
 int main(int argc, char * argv[]) {
