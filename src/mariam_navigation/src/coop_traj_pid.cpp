@@ -39,6 +39,7 @@ struct DataPoint {
   
   double act_payload_x;
   double act_payload_y;
+  double act_payload_z;
   double act_payload_theta;
   
   // TODO: add desired payload pose?
@@ -169,7 +170,17 @@ public:
       std::chrono::duration<double>(dt_),
       std::bind(&CoopTrajPID::control_loop, this)
     );
+
+    this->declare_parameter("trial_name", "test_trial");
+    std::string trial_name = this->get_parameter("trial_name").as_string();
   }
+
+  // Add this destructor
+  ~CoopTrajPID() {
+    RCLCPP_INFO(this->get_logger(), "Node shutting down, writing CSV data...");
+    write_to_csv();
+  }
+
 
 private:
 
@@ -280,6 +291,7 @@ private:
             
             << point.act_payload_x << "," 
             << point.act_payload_y << "," 
+            << point.act_payload_z << "," 
             << point.act_payload_theta << "," 
             
             << point.ross_cmd_vel_linear_x << "," 
@@ -497,6 +509,7 @@ private:
 
     point.act_payload_x = transform_stamped.transform.translation.x;
     point.act_payload_y = transform_stamped.transform.translation.y;
+    point.act_payload_z = transform_stamped.transform.translation.z;
     point.act_payload_theta = get_yaw(transform_stamped.transform.rotation);
 
     point.dt = dt_;
