@@ -484,7 +484,7 @@ private:
 
     // Publish commands
     ross_cmd_vel_pub_->publish(cmd_vel1_ff);
-    monica_cmd_vel_pub_->publish(cmd_vel2_ff);
+    monica_cmd_vel_pub_->publish(cmd_vel2);
 
     // Save data point
     DataPoint point;

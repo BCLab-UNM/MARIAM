@@ -1,6 +1,6 @@
 coop_traj_pid:
   ros__parameters:
-    # Base 1 PID parameters
+    # Base 1 (Ross) PID parameters
     base1_pid_x_kp: 1.0
     base1_pid_x_ki: 0.0
     base1_pid_x_kd: 0.0
@@ -13,7 +13,7 @@ coop_traj_pid:
     base1_pid_theta_ki: 0.0
     base1_pid_theta_kd: 0.0
 
-    # Base 2 PID parameters
+    # Base 2 (Monica) PID parameters
     base2_pid_x_kp: 1.0
     base2_pid_x_ki: 0.0
     base2_pid_x_kd: 0.0
