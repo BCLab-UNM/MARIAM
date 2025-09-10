@@ -174,9 +174,11 @@ public:
 private:
 
   void write_to_csv() {
-    // Check if trial_name is empty, if so, skip writing CSV
     std::string trial_name = this->get_parameter("trial_name").as_string();
+
+    // Check if trial_name is empty
     if (trial_name.empty()) {
+      // if so, skip writing CSV
       RCLCPP_INFO(this->get_logger(), "Trial name is empty, skipping CSV write. Collected %zu data points.", data_points_.size());
       return;
     }
@@ -202,6 +204,7 @@ private:
         if (!rcpputils::fs::create_directories(data_dir)) {
           // create_directories returns false if directory already exists, check if it actually exists
           if (!rcpputils::fs::exists(data_dir)) {
+            // if it does not exist, log error and return
             RCLCPP_ERROR(this->get_logger(), "Failed to create directory: %s", data_dir.string().c_str());
             return;
           }
@@ -209,10 +212,11 @@ private:
         RCLCPP_INFO(this->get_logger(), "Using directory: %s", data_dir.string().c_str());
         
         // Construct the full file path - Fixed string concatenation
-        std::string robot_name_str = this->get_parameter("robot_name").as_string();
-        std::string filename = robot_name_str + "_admittance_data.csv";
+        std::string filename = "trajectory_data.csv";
         file_path = data_dir / filename;
-      } else {
+      }
+      
+      else {
         // trial_name is just a name, use with data_directory parameter
         // Check if data_directory parameter exists, if not create a default
         if (!this->has_parameter("data_directory")) {
@@ -235,7 +239,7 @@ private:
         RCLCPP_INFO(this->get_logger(), "Using directory: %s", data_dir.string().c_str());
         
         // Construct the full file path
-        file_path = data_dir / "admittance_data.csv";
+        file_path = data_dir / "trajectory_data.csv";
       }
       
       std::string file_name = file_path.string();

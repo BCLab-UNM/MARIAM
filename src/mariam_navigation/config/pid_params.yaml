@@ -28,4 +28,6 @@ coop_traj_pid:
 
     # Control loop time step (in seconds)
     dt: 0.01
+
+    trial_name: "test_trial"
   
