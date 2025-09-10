@@ -2,7 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, TransformStamped, Pose
+from geometry_msgs.msg import Twist, Pose, PoseArray
 from tf2_ros import TransformListener, Buffer
 import tf_transformations
 import numpy as np
@@ -15,12 +15,12 @@ from scipy.spatial.transform import Rotation as R
 
 # Import the cooperative trajectory planning API
 from coop_traj_api import opt_traj_params, traj
-from coop_traj_viz import plot_summary, animate_carry, plot_trajectories, save_trajectory_csv, plot_trajectory_components
+from coop_traj_viz import plot_summary
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
 # Instructions
 # cd ~/MARIAM/src/mariam_navigation/scripts
-# python3 coop_traj_node.py
+# python3 coop_traj_publisher.py
 
 class CooperativeTrajectoryNode(Node):
     def __init__(self, trial_name=""):
@@ -30,47 +30,16 @@ class CooperativeTrajectoryNode(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        # Name mapping
-        name_mapping = {
-            'ross': 'base1',
-            'monica': 'base2',
-        }
-
-        self.trajectory_over_time = {
-            'desired_ross': [],
-            'desired_monica': [],
-            'actual_ross': [],
-            'actual_monica': [],
-            'actual_payload': [],
-            'ross_cmd_vel_linear_x': [],
-            'ross_cmd_vel_angular_z': [],
-            'monica_cmd_vel_linear_x': [],
-            'monica_cmd_vel_angular_z': [],
-            'dt': [],
-            'ros_time': []
-        }
-
         # Qos profile
         best_effort_qos = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT)
-        
-        # Publishers for cmd_vel, use best effort QoS
-        self.base1_cmd_pub = self.create_publisher(Twist, '/ross/cmd_vel', best_effort_qos)
-        self.base2_cmd_pub = self.create_publisher(Twist, '/monica/cmd_vel', best_effort_qos)
 
-        # Subscribers for pose, use best effort QoS
-        self.base1_pose_sub = self.create_subscription(Pose, '/world_ross_pose', self.base1_pose_callback, best_effort_qos)
-        self.base2_pose_sub = self.create_subscription(Pose, '/world_monica_pose', self.base2_pose_callback, best_effort_qos)
+        # Create a publisher for the pose array
+        self.pose_array_pub = self.create_publisher(PoseArray, '/desired_poses', best_effort_qos)
 
         # Pose tracking [x, y, theta]
         self.base1_pose = None
         self.base2_pose = None
         self.payload_pose = None
-
-        # Transform from vicon to base_link
-        self.T_vm = np.array([  [ 1, 0, 0,  0.23],
-                                [ 0, 1, 0, -0.075],
-                                [ 0, 0, 1, -0.06],
-                                [ 0, 0, 0,  1]])
 
         # Trajectory parameters
         self.trajectory_params = None
@@ -88,96 +57,13 @@ class CooperativeTrajectoryNode(Node):
         self.relative_goal = [2.5, -1.0, 0.0]  # [x, y, theta] - modify as needed
         self.goal = [0.0, 0.0, 0.0]  # Will be set after getting initial transform
 
-        # Closed-loop control gains
-        self.control_gains = {
-            'base1': {
-                # X Controller (e_x -> v_cmd)
-                # KU = 15.5, TU = 0.59
-                'kp_linear_x': 9.3,  # 0.6 * KU
-                'ki_linear_x': 1.5,  # 1.2 * KU / TU
-                'kd_linear_x': 1e-4, # 0.68,  # 0.075 * KU * TU
-                'x_integral_limit': 0.15,
-                
-                # Y->Theta Cascade Controller
-                'kp_y_to_theta': 1.8,  # Cross-track error -> heading correction
-                'kd_y_to_theta': 1e-6, # Cross-track rate -> heading correction rate
-                
-                # Theta Controller (e_theta_total -> omega_cmd)
-                # KU = 14.0, TU = 0.62
-                'kp_angular': 7.0,  # 0.6 * KU
-                'ki_angular': 4.0,   # 1.2 * KU / TU
-                'kd_angular': 1e-6,  # 0.6,  # 0.075 * KU * TU
-                'theta_integral_limit': 0.3,
-
-                # Other existing gains
-                'max_linear_vel': 0.4,
-                'max_angular_vel': 0.4,
-                'heading_gate_threshold': np.pi/4,  # Gate forward motion if heading error > 45°
-                'deadband_linear': 0.00,
-                'deadband_angular': 0.00,
-            },
-            'base2': {
-                # X Controller (e_x -> v_cmd)
-                # KU = 17.0, TU = 0.55
-                'kp_linear_x': 8.2, # 0.6 * KU
-                'ki_linear_x': 1.5,  # 1.2 * KU / TU
-                'kd_linear_x': 1e-4, # 0.075 * KU * TU
-                'x_integral_limit': 0.2, # 0.15,
-                
-                # Y->Theta Cascade Controller
-                'kp_y_to_theta': 1.8,     # Cross-track error -> heading correction
-                'kd_y_to_theta': 1e-6,    # Cross-track rate -> heading correction rate
-                
-                # Theta Controller (e_theta_total -> omega_cmd)
-                # KU = 20.0, TU = 0.55
-                'kp_angular': 10.0,  # 0.6 * KU
-                'ki_angular': 2.0,   # 1.2 * KU / TU
-                'kd_angular': 1e-6,  # 0.075 * KU * TU
-                'theta_integral_limit': 0.3,
-                
-                # Other existing gains
-                'max_linear_vel': 0.3,
-                'max_angular_vel': 0.3,
-                'heading_gate_threshold': np.pi/4,
-                'deadband_linear': 0.00,
-                'deadband_angular': 0.00,
-            }
-        }
-
-        # Add PID state tracking
-        self.pid_state = {
-            'base1': {
-                'error_integral': np.array([0.0, 0.0, 0.0]),  # [x, y, theta]
-                'error_last': np.array([0.0, 0.0, 0.0]),
-                'error_history': []
-            },
-            'base2': {
-                'error_integral': np.array([0.0, 0.0, 0.0]),
-                'error_last': np.array([0.0, 0.0, 0.0]),
-                'error_history': []
-            }
-        }
-
-        # Filter state
-        self.derivative_filter_alpha = 0.7  # 0.7 = less filtering, 0.3 = more filtering
-        self.filtered_derivatives = {
-            'base1': {'x': 0.0, 'y': 0.0, 'theta': 0.0},
-            'base2': {'x': 0.0, 'y': 0.0, 'theta': 0.0}
-        }
-
-        # Track maximum errors for tuning
-        self.max_errors = {
-            'base1': np.array([0.0, 0.0, 0.0]),
-            'base2': np.array([0.0, 0.0, 0.0])
-        }
-
         # State tracking
         self.trajectory_active = False
         self.last_poses = {'base1': None, 'base2': None}
         self.last_time = None
 
         # Control timer
-        self.control_timer = self.create_timer(self.control_dt, self.control_callback)
+        self.traj_pub_timer = self.create_timer(self.control_dt, self.traj_pub_callback)
         
         # Service or trigger to start trajectory (for now, we'll start after getting initial transform)
         self.startup_timer = self.create_timer(1.0, self.startup_callback)
@@ -187,77 +73,6 @@ class CooperativeTrajectoryNode(Node):
         self.get_logger().info("Waiting for payload transform...")
         self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
         self.get_logger().debug("Debugging active")
-
-    def base1_pose_callback(self, msg):
-        """Callback for base 1 pose updates"""
-        # Use convert pose into transform
-        T_wv = np.eye(4)
-        T_wv[:3, :3] = R.from_quat([
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
-        ]).as_matrix()
-        T_wv[0, 3] = msg.position.x
-        T_wv[1, 3] = msg.position.y
-        T_wv[2, 3] = msg.position.z
-
-        # Get world to base_link transform
-        T_wm = T_wv @ self.T_vm
-
-        # Extract [x, y, theta] from the 3D transformation
-        x = T_wm[0, 3]
-        y = T_wm[1, 3]
-        theta = np.arctan2(T_wm[1, 0], T_wm[0, 0])  # Yaw from rotation matrix
-        
-        self.base1_pose = np.array([x, y, theta])
-
-    def base2_pose_callback(self, msg):
-        """Callback for base 2 pose updates"""
-        # Use convert pose into transform
-        T_wv = np.eye(4)
-        T_wv[:3, :3] = R.from_quat([
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
-        ]).as_matrix()
-        T_wv[0, 3] = msg.position.x
-        T_wv[1, 3] = msg.position.y
-        T_wv[2, 3] = msg.position.z
-
-        # Get world to base_link transform
-        T_wm = T_wv @ self.T_vm
-
-        # Extract [x, y, theta] from the 3D transformation
-        x = T_wm[0, 3]
-        y = T_wm[1, 3]
-        theta = np.arctan2(T_wm[1, 0], T_wm[0, 0])  # Yaw from rotation matrix
-
-        self.base2_pose = np.array([x, y, theta])
-
-    def payload_pose_callback(self, msg):
-        """Callback for payload pose updates"""
-        # Use convert pose into transform
-        T_wv = np.eye(4)
-        T_wv[:3, :3] = R.from_quat([
-            msg.orientation.x,
-            msg.orientation.y,
-            msg.orientation.z,
-            msg.orientation.w,
-        ]).as_matrix()
-        T_wv[0, 3] = msg.position.x
-        T_wv[1, 3] = msg.position.y
-        T_wv[2, 3] = msg.position.z
-
-        # Extract [x, y, theta] from the 3D transformation
-        x = T_wv[0, 3]
-        y = T_wv[1, 3]
-        theta = np.arctan2(T_wv[1, 0], T_wv[0, 0])
-
-        self.payload_pose = np.array([x, y, theta])
-
-
 
     def startup_callback(self):
         """Try to get initial payload transform and start trajectory"""
@@ -355,42 +170,9 @@ class CooperativeTrajectoryNode(Node):
         except Exception as e:
             self.get_logger().error(f"Failed to plan trajectory: {str(e)}")
 
-    def get_trajectory_velocities(self, t, dt_small=0.01):
-        """Get analytical velocities from trajectory by sampling nearby points"""
-        if t <= dt_small:
-            # Forward difference at start
-            t_future = min(t + dt_small, self.trajectory_duration)
-            b1_now, b2_now = traj(self.trajectory_params, t, T=self.trajectory_duration)
-            b1_fut, b2_fut = traj(self.trajectory_params, t_future, T=self.trajectory_duration)
-            
-            v1 = (np.array(b1_fut) - np.array(b1_now)) / (t_future - t)
-            v2 = (np.array(b2_fut) - np.array(b2_now)) / (t_future - t)
-            
-        elif t >= self.trajectory_duration - dt_small:
-            # Backward difference at end  
-            t_past = max(t - dt_small, 0.0)
-            b1_past, b2_past = traj(self.trajectory_params, t_past, T=self.trajectory_duration)
-            b1_now, b2_now = traj(self.trajectory_params, t, T=self.trajectory_duration)
-            
-            v1 = (np.array(b1_now) - np.array(b1_past)) / (t - t_past)
-            v2 = (np.array(b2_now) - np.array(b2_past)) / (t - t_past)
-            
-        else:
-            # Central difference in middle
-            b1_past, b2_past = traj(self.trajectory_params, t - dt_small, T=self.trajectory_duration)
-            b1_fut, b2_fut = traj(self.trajectory_params, t + dt_small, T=self.trajectory_duration)
-            
-            v1 = (np.array(b1_fut) - np.array(b1_past)) / (2 * dt_small)
-            v2 = (np.array(b2_fut) - np.array(b2_past)) / (2 * dt_small)
-        
-        return v1, v2
-
-    def control_callback(self):
+    def traj_pub_callback(self):
         """Main control loop - publish cmd_vel for both bases"""
         if not self.trajectory_active or self.trajectory_params is None:
-            # Start a stream of 0 cmd_vel messages 
-            self.publish_cmd_vel(self.base1_cmd_pub, [0, 0, 0])
-            self.publish_cmd_vel(self.base2_cmd_pub, [0, 0, 0])
             return
             
         try:
@@ -403,275 +185,57 @@ class CooperativeTrajectoryNode(Node):
             if t >= self.trajectory_duration:
                 self.stop_trajectory()
                 return
-
-            # Get dt
-            if self.last_time is None:
-                dt = self.control_dt
-            else:
-                dt = current_time - self.last_time
             
             # Sample current poses from trajectory
             base1_pose, base2_pose = traj(self.trajectory_params, t, T=self.trajectory_duration)
-            
-            # Convert to numpy arrays for easier math
-            b1 = np.asarray(base1_pose, dtype=float)  # [x, y, theta]
-            b2 = np.asarray(base2_pose, dtype=float)  # [x, y, theta]
-            
-            # Calculate velocities using simple finite differences
-            # v1, v2 = self.get_trajectory_velocities(t)
-            if self.last_poses['base1'] is None or self.last_poses['base2'] is None:
-                v1 = np.zeros_like(b1)  # <-- ZERO velocity at start!
-                v2 = np.zeros_like(b2)
-            else:
-                v1 = (b1 - self.last_poses['base1']) / dt
-                v2 = (b2 - self.last_poses['base2']) / dt
+
+            # Publish desired poses as PoseArray
+            self.publish_pose_array(base1_pose, base2_pose)
 
             if t < 1.0 or t > (self.trajectory_duration - 1.0):  # First/last second
-                self.get_logger().info(f"t={t:.3f}: v1_ff=[{v1[0]:.3f}, {v1[2]:.3f}], v2_ff=[{v2[0]:.3f}, {v2[2]:.3f}]")
-
-            # Reverse linear.x for base2 (Monica) since it drives backwards
-            v2_reversed = v2.copy()
-            v2_reversed[0] = -v2[0]  # reverse x velocity
-
-            # Add ramping factor based on time
-            ramp_time = 2.0  # seconds to reach full control
-            ramp_factor = min(1.0, t / ramp_time) if t < ramp_time else 1.0
-
-            # Calculate PID corrections
-            v1_corrected = self.calculate_corrected_velocity(v1, 'base1', b1, dt) * ramp_factor
-            v2_corrected = self.calculate_corrected_velocity(v2, 'base2', b2, dt) * ramp_factor
-
-            # Combine feedforward + correction
-            v1_final = v1 + v1_corrected
-            v2_final = v2 + v2_corrected
-
-            # Reverse values for Monica
-            v2_final_reversed = v2_final.copy()
-            v2_final_reversed[0] = -v2_final[0]  # reverse x velocity
-
-            # Publish the corrected velocities
-            self.publish_cmd_vel(self.base1_cmd_pub, v1_final)
-            self.publish_cmd_vel(self.base2_cmd_pub, v2_final_reversed)
-
-            # Reverse the pose for Monica
-            base2_pose_reversed = self.base2_pose.copy()
-            base2_pose_reversed[2] = self.wrap_angle(base2_pose_reversed[2] + np.pi)
+                self.get_logger().info(f"Desired poses: Base1: [{base1_pose[0]:.3f}, {base1_pose[1]:.3f}, {base1_pose[2]:.3f}], ")
+                self.get_logger().info(f"               Base2: [{base2_pose[0]:.3f}, {base2_pose[1]:.3f}, {base2_pose[2]:.3f}]")
 
             # Store poses and time for next iteration
-            self.last_poses['base1'] = b1.copy()
-            self.last_poses['base2'] = b2.copy()
+            self.last_poses['base1'] = base1_pose.copy()
+            self.last_poses['base2'] = base2_pose.copy()
             self.last_time = current_time
-
-            # save desired base poses
-            self.trajectory_over_time['desired_ross'].append(b1)
-            self.trajectory_over_time['desired_monica'].append(b2)
-            # save actual base poses
-            self.trajectory_over_time['actual_ross'].append(self.base1_pose)
-            self.trajectory_over_time['actual_monica'].append(base2_pose_reversed)
-            # save actual payload poses
-            self.trajectory_over_time['actual_payload'].append(self.get_transform('payload'))
-            # save timing data
-            self.trajectory_over_time['dt'].append(dt)
-            self.trajectory_over_time['ros_time'].append(self.get_clock().now())
-            # save cmd_vel data
-            self.trajectory_over_time['ross_cmd_vel_linear_x'].append(v1_final[0])
-            self.trajectory_over_time['ross_cmd_vel_angular_z'].append(v1_final[2])
-            self.trajectory_over_time['monica_cmd_vel_linear_x'].append(v2_final_reversed[0])
-            self.trajectory_over_time['monica_cmd_vel_angular_z'].append(v2_final_reversed[2])
 
         except Exception as e:
             self.get_logger().error(f"Error in control callback: {str(e)}")
             self.stop_trajectory()
 
-    def calculate_corrected_velocity(self, feedforward_vel, base_name, desired_pose, dt=None):
-        """
-        Calculate PID correction for skid-steer robot using cascaded control:
-        1. X error -> PID -> linear velocity
-        2. Y error -> PD -> theta correction -> combined with trajectory theta -> PID -> angular velocity
+
+    def publish_pose_array(self, base1_pose, base2_pose):
+        """Publish desired poses as a PoseArray"""
+        pose_array_msg = PoseArray()
+        pose_array_msg.header.stamp = self.get_clock().now().to_msg()
+        pose_array_msg.header.frame_id = "world"
         
-        Args:
-            feedforward_vel: numpy array [vx, vy, vtheta] (feedforward from trajectory)
-            base_name: 'base1' or 'base2' 
-            desired_pose: numpy array [x, y, theta] desired pose
-            dt: actual time step (if None, uses self.control_dt)
-            
-        Returns:
-            numpy array [v_cmd, 0, omega_cmd] - only v and omega for skid-steer
-        """
-        if dt is None:
-            dt = self.control_dt
-            
-        try:
-            # Get current actual pose of the base
-            if base_name == "base1":
-                actual_pose = self.base1_pose.copy()
-            else:
-                actual_pose = self.base2_pose.copy()
-                actual_pose[2] += np.pi  # base2 is oriented backward
-
-            # Get control gains for this base
-            control_gains = self.control_gains[base_name]
-
-            # 1. Calculate pose errors in WORLD frame first
-            dx = desired_pose[0] - actual_pose[0]
-            dy = desired_pose[1] - actual_pose[1] 
-            e_theta_traj = self.wrap_angle(desired_pose[2] - actual_pose[2])
-
-            # 2. Transform errors to BODY frame
-            theta = actual_pose[2]
-            e_x =  np.cos(theta) * dx + np.sin(theta) * dy   # longitudinal (forward/back)
-            e_y = -np.sin(theta) * dx + np.cos(theta) * dy   # lateral (left/right)
-            
-            self.get_logger().debug(f"{base_name} world errors: dx={dx:.3f}, dy={dy:.3f}, dtheta={e_theta_traj:.3f}")
-            self.get_logger().debug(f"{base_name} body errors: ex={e_x:.3f}, ey={e_y:.3f}")
-
-            # Apply deadbands
-            e_x = 0.0 if abs(e_x) < control_gains['deadband_linear'] else e_x
-            e_y = 0.0 if abs(e_y) < control_gains['deadband_linear'] else e_y  
-
-            # Get PID state for this base
-            pid_state = self.pid_state[base_name]
-
-            # Update maximum errors for tuning
-            self.max_errors[base_name][0] = max(self.max_errors[base_name][0], abs(e_x))
-            self.max_errors[base_name][1] = max(self.max_errors[base_name][1], abs(e_y))
-
-            # ========== CONTROLLER 1: X ERROR -> LINEAR VELOCITY ==========
-            
-            # Update x error integral with windup protection
-            pid_state['x_error_integral'] = pid_state.get('x_error_integral', 0.0) + e_x * dt
-            x_integral_limit = control_gains.get('x_integral_limit', 1.0)
-            pid_state['x_error_integral'] = np.clip(pid_state['x_error_integral'], 
-                                                -x_integral_limit, x_integral_limit)
-            
-            # Calculate x error derivative with filtering
-            x_error_last = pid_state.get('x_error_last', 0.0)
-            x_error_derivative = (e_x - x_error_last) / dt
-
-            # # Apply exponential filter to x derivative
-            # self.filtered_derivatives[base_name]['x'] = (
-            #     self.derivative_filter_alpha * raw_x_derivative + 
-            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['x']
-            # )
-            # x_error_derivative = self.filtered_derivatives[base_name]['x']
-
-            # Calculate x error derivative normally
-            x_error_last = pid_state.get('x_error_last', 0.0)
-            x_error_derivative = (e_x - x_error_last) / dt
-
-            # X PID controller: e_x -> v_feedback
-            v_feedback = (control_gains['kp_linear_x'] * e_x + 
-                        control_gains['ki_linear_x'] * pid_state['x_error_integral'] + 
-                        control_gains['kd_linear_x'] * x_error_derivative)
-            
-            # Print values of each PID component
-            self.get_logger().debug(f"{base_name} PID components: "
-                                    f"P Correction={control_gains['kp_linear_x'] * e_x:.3f}, "
-                                    f"I Correction={control_gains['ki_linear_x'] * pid_state['x_error_integral']:.3f}, "
-                                    f"D Correction={control_gains['kd_linear_x'] * x_error_derivative:.3f}")
-
-            # ========== CONTROLLER 2: CASCADED Y ERROR -> THETA -> ANGULAR VELOCITY ==========
-            
-            # Step 2a: Y error -> PD controller -> theta correction
-            y_error_last = pid_state.get('y_error_last', 0.0)
-            y_error_derivative = (e_y - y_error_last) / dt
-            
-            # Apply exponential filter to y derivative
-            # self.filtered_derivatives[base_name]['y'] = (
-            #     self.derivative_filter_alpha * raw_y_derivative + 
-            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['y']
-            # )
-            # y_error_derivative = self.filtered_derivatives[base_name]['y']
-            
-            # PD controller for cross-track error -> desired heading correction
-            theta_correction = (control_gains['kp_y_to_theta'] * e_y + 
-                            control_gains['kd_y_to_theta'] * y_error_derivative)
-            
-            # Step 2b: Combine theta correction with trajectory theta to get total desired theta
-            theta_desired_total = desired_pose[2] + theta_correction
-            
-            # Step 2c: Calculate theta error for the main theta PID controller
-            e_theta_total = self.wrap_angle(theta_desired_total - actual_pose[2])
-            
-            # Apply deadband to theta error
-            e_theta_total = 0.0 if abs(e_theta_total) < control_gains['deadband_angular'] else e_theta_total
-            
-            # Update theta error integral with windup protection
-            pid_state['theta_error_integral'] = pid_state.get('theta_error_integral', 0.0) + e_theta_total * dt
-            theta_integral_limit = control_gains.get('theta_integral_limit', 1.0)
-            pid_state['theta_error_integral'] = np.clip(pid_state['theta_error_integral'], 
-                                                    -theta_integral_limit, theta_integral_limit)
-            
-            # Calculate theta error derivative with filtering
-            theta_error_last = pid_state.get('theta_error_last', 0.0)
-            theta_error_derivative = (e_theta_total - theta_error_last) / dt
-            
-            # Apply exponential filter to theta derivative
-            # self.filtered_derivatives[base_name]['theta'] = (
-            #     self.derivative_filter_alpha * raw_theta_derivative + 
-            #     (1 - self.derivative_filter_alpha) * self.filtered_derivatives[base_name]['theta']
-            # )
-            # theta_error_derivative = self.filtered_derivatives[base_name]['theta']
-
-            # Theta PID controller: e_theta_total -> omega_feedback
-            omega_feedback = (control_gains['kp_angular'] * e_theta_total + 
-                            control_gains['ki_angular'] * pid_state['theta_error_integral'] + 
-                            control_gains['kd_angular'] * theta_error_derivative)
-            
-            # Update controller states
-            pid_state['y_error_last'] = e_y
-            pid_state['theta_error_last'] = e_theta_total
-
-            # Update max theta error for tuning
-            self.max_errors[base_name][2] = max(self.max_errors[base_name][2], abs(e_theta_total))
-
-            # ========== COMBINE FEEDFORWARD + FEEDBACK ==========
-            
-            # Extract feedforward v and omega (ignore vy for skid-steer)
-            v_ff = feedforward_vel[0]
-            omega_ff = feedforward_vel[2]
-            
-            v_cmd = v_feedback
-            omega_cmd = omega_feedback
-            
-            # Apply velocity limits
-            v_cmd = np.clip(v_cmd, -control_gains['max_linear_vel'], 
-                                control_gains['max_linear_vel'])
-            omega_cmd = np.clip(omega_cmd, -control_gains['max_angular_vel'], 
-                                        control_gains['max_angular_vel'])
-
-            # Optional: Gating to avoid "driving sideways"
-            # if abs(e_theta_total) > control_gains.get('heading_gate_threshold', np.pi/3):
-            #     gate_factor = max(0.0, np.cos(e_theta_total))
-            #     v_cmd *= gate_factor
-            #     self.get_logger().debug(f"{base_name} gating applied: factor={gate_factor:.2f}")
-
-            # Debug logging
-            self.get_logger().debug(f"{base_name} cascaded control:")
-            self.get_logger().debug(f"  y_error={e_y:.3f} -> theta_correction={theta_correction:.3f}")
-            self.get_logger().debug(f"  theta_desired_total={theta_desired_total:.3f}, e_theta_total={e_theta_total:.3f}")
-            self.get_logger().debug(f"  feedforward: v={v_ff:.3f}, omega={omega_ff:.3f}")
-            self.get_logger().debug(f"  feedback: v={v_feedback:.3f}, omega={omega_feedback:.3f}")
-            self.get_logger().debug(f"  final cmd: v={v_cmd:.3f}, omega={omega_cmd:.3f}")
-
-            # Return as [v_cmd, 0, omega_cmd] - no vy for skid-steer
-            return np.array([v_cmd, 0.0, omega_cmd])
+        pose1 = Pose()
+        pose1.position.x = base1_pose[0]
+        pose1.position.y = base1_pose[1]
+        pose1.position.z = 0.0
+        # TODO: make sure this order is correct
+        quat1 = tf_transformations.quaternion_from_euler(0, 0, base1_pose[2])
+        pose1.orientation.x = quat1[0]
+        pose1.orientation.y = quat1[1]
+        pose1.orientation.z = quat1[2]
+        pose1.orientation.w = quat1[3]
         
-        except Exception as e:
-            self.get_logger().error(f"Error calculating PID correction for {base_name}: {str(e)}")
-            return np.zeros(3)
-
-    def publish_cmd_vel(self, publisher, vel_array):
-        """Publish a Twist message from numpy array [vx, vy, vtheta]"""
-        msg = Twist()
-        msg.linear.x = float(vel_array[0])
-        msg.linear.y = float(vel_array[1])  # Should be 0.0 already
-        msg.linear.z = 0.0
-        msg.angular.x = 0.0
-        msg.angular.y = 0.0
-        msg.angular.z = float(vel_array[2])
+        pose2 = Pose()
+        pose2.position.x = base2_pose[0]
+        pose2.position.y = base2_pose[1]
+        pose2.position.z = 0.0
+        quat2 = tf_transformations.quaternion_from_euler(0, 0, base2_pose[2])
+        pose2.orientation.x = quat2[0]
+        pose2.orientation.y = quat2[1]
+        pose2.orientation.z = quat2[2]
+        pose2.orientation.w = quat2[3]
         
-        publisher.publish(msg)
+        pose_array_msg.poses = [pose1, pose2]
+        
+        self.pose_array_pub.publish(pose_array_msg)
 
     def wrap_angle(self, angle):
         """Wrap angle to [-pi, pi]"""
@@ -718,30 +282,6 @@ def main(args=None):
     except Exception as e:
         print(f"Error: {e}")
     finally:
-        # This block runs regardless of how the node exits
-        try:
-            # Plot trajectories
-            plot_trajectories(
-                np.array(node.trajectory_over_time['desired_ross']),
-                np.array(node.trajectory_over_time['desired_monica']),
-                np.array(node.trajectory_over_time['actual_ross']),
-                np.array(node.trajectory_over_time['actual_monica']),
-                trial_name
-            )
-            plot_trajectory_components(
-                np.array(node.trajectory_over_time['desired_ross']),
-                np.array(node.trajectory_over_time['desired_monica']),
-                np.array(node.trajectory_over_time['actual_ross']),
-                np.array(node.trajectory_over_time['actual_monica']),
-                trial_name
-            )
-            save_trajectory_csv(node.trajectory_over_time, trial_name)
-            print("Trajectories plotted and data saved successfully")
-            print(f"Base 1 max errors: {node.max_errors['base1']}")
-            print(f"Base 2 max errors: {node.max_errors['base2']}")
-        except Exception as plot_error:
-            print(f"Error creating plots or saving data: {plot_error}")
-        
         try:
             node.destroy_node()
         except:
