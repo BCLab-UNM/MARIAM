@@ -268,7 +268,7 @@ private:
     }
       
     // Write header
-    file << "des_ross_x,des_ross_y,des_ross_theta,des_mon_x,des_mon_y,des_mon_theta,act_ross_x,act_ross_y,act_ross_theta,act_mon_x,act_mon_y,act_mon_theta,act_payload_x,act_payload_y,act_payload_theta,ross_cmd_vel_linear_x,ross_cmd_vel_angular_z,monica_cmd_vel_linear_x,monica_cmd_vel_angular_z,dt,ros_time_sec,ros_time_ns\n";
+    file << "des_ross_x,des_ross_y,des_ross_theta,des_mon_x,des_mon_y,des_mon_theta,act_ross_x,act_ross_y,act_ross_theta,act_mon_x,act_mon_y,act_mon_theta,act_payload_x,act_payload_y,act_payload_z,act_payload_theta,ross_cmd_vel_linear_x,ross_cmd_vel_angular_z,monica_cmd_vel_linear_x,monica_cmd_vel_angular_z,dt,ros_time_sec,ros_time_ns\n";
 
     // Write data with proper precision
     file << std::fixed << std::setprecision(6);
@@ -483,7 +483,7 @@ private:
     cmd_vel2_ff.linear.x = -cmd_vel2_ff.linear.x;
 
     // Publish commands
-    ross_cmd_vel_pub_->publish(cmd_vel1_ff);
+    ross_cmd_vel_pub_->publish(cmd_vel1);
     monica_cmd_vel_pub_->publish(cmd_vel2);
 
     // Save data point
