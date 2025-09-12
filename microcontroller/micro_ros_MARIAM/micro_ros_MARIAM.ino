@@ -1,6 +1,6 @@
 // Topic defines
-// #define NAMESPACE "monica"
-#define NAMESPACE "ross"
+#define NAMESPACE "monica"
+// #define NAMESPACE "ross"
 #define NODE_NAME "micro_ros_arduino_node_on_" NAMESPACE
 #define CMD_VEL_TOPIC_NAME NAMESPACE "/cmd_vel"
 #define ODOM_TOPIC_NAME NAMESPACE "/wheel/odom"
@@ -12,8 +12,8 @@
 #define PID_TOPIC_NAME NAMESPACE "/pid"
 #define WHEEL_ANALOG_TOPIC_NAME NAMESPACE "/wheel_analog"
 #define JOINT_STATES_TOPIC_NAME NAMESPACE "/joint_states"
-// #define DOMAIN_ID 1 // for MONICA
-#define DOMAIN_ID 2 // for ROSS
+#define DOMAIN_ID 1 // for MONICA
+// #define DOMAIN_ID 2 // for ROSS
 
 #define EXECUTE_EVERY_N_MS(MS, X)  do { \
   static volatile int64_t init = -1; \
@@ -132,6 +132,7 @@ double left_back_wheel_position = 0.0;    // Cumulative rotation in radians
 double right_back_wheel_position = 0.0;   // Cumulative rotation in radians
 
 bool estop = true;
+const unsigned int timer_timeout = 5; // In miliseconds
 
 // Indicator light
 #define LED_PIN 13
@@ -450,10 +451,10 @@ void create_entities() {
   //                    Create publishers
   // --------------------------------------------------------------------------
   // Left PID output publisher
-  RCCHECK(rclc_publisher_init_best_effort(
-    &left_pid_output_publisher, 
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
+  // RCCHECK(rclc_publisher_init_best_effort(
+  //   &left_pid_output_publisher, 
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_PID_OUTPUT_TOPIC_NAME));
 
   // Left set point publisher
   // RCCHECK(rclc_publisher_init_default(
@@ -462,10 +463,10 @@ void create_entities() {
   //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), LEFT_SET_POINT_TOPIC_NAME));
 
   // Right PID output publisher
-  RCCHECK(rclc_publisher_init_best_effort(
-    &right_pid_output_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_PID_OUTPUT_TOPIC_NAME));
+  // RCCHECK(rclc_publisher_init_best_effort(
+  //   &right_pid_output_publisher,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), RIGHT_PID_OUTPUT_TOPIC_NAME));
 
   // Right set point publisher
   // RCCHECK(rclc_publisher_init_default(
@@ -501,24 +502,24 @@ void create_entities() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), CMD_VEL_TOPIC_NAME));
 
   // PID parameter subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &subscriber_pid,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));
+  // RCCHECK(rclc_subscription_init_best_effort(
+  //   &subscriber_pid,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Point), PID_TOPIC_NAME));
 
   // Wheel analog subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &subscriber_wheel_analog,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), WHEEL_ANALOG_TOPIC_NAME));
+  // RCCHECK(rclc_subscription_init_best_effort(
+  //   &subscriber_wheel_analog,
+  //   &node,
+  //   ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), WHEEL_ANALOG_TOPIC_NAME));
 
   // Create timer,
-  const unsigned int timer_timeout = 30; // In miliseconds /// @TODO update this to slow down the publishers and test this `ros2 topic hz /Monica/right_ticks`
   RCCHECK(rclc_timer_init_default(
     &timer,
     &support,
     RCL_MS_TO_NS(timer_timeout),
-    timer_callback));
+    timer_callback)
+  );
 
   // Initiate tick data
   left_ticks.data = 0;
@@ -566,12 +567,12 @@ void create_entities() {
   // Create executors
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_init(&executor_sub_cmd_vel, &support.context, 1, &allocator));
-  RCCHECK(rclc_executor_init(&executor_sub_pid, &support.context, 1, &allocator));
-  RCCHECK(rclc_executor_init(&executor_sub_wheel_analog, &support.context, 1, &allocator));
+  // RCCHECK(rclc_executor_init(&executor_sub_pid, &support.context, 1, &allocator));
+  // RCCHECK(rclc_executor_init(&executor_sub_wheel_analog, &support.context, 1, &allocator));
   RCCHECK(rclc_executor_add_timer(&executor, &timer)); 
   RCCHECK(rclc_executor_add_subscription(&executor_sub_cmd_vel, &subscriber_cmd_vel, &twist_msg, &subscription_cmd_vel_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor_sub_pid, &subscriber_pid, &twist_msg, &subscription_pid_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor_sub_wheel_analog, &subscriber_wheel_analog, &twist_msg, &subscription_wheel_analog_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor_sub_pid, &subscriber_pid, &twist_msg, &subscription_pid_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_subscription(&executor_sub_wheel_analog, &subscriber_wheel_analog, &twist_msg, &subscription_wheel_analog_callback, ON_NEW_DATA));
 }
 
 /**
@@ -584,16 +585,16 @@ void destroy_entities() {
   // destroy publishers
   rcl_publisher_fini(&odom_publisher,             &node);
   rcl_publisher_fini(&force_publisher,            &node);
-  rcl_publisher_fini(&left_pid_output_publisher,  &node);
+  // rcl_publisher_fini(&left_pid_output_publisher,  &node);
   // rcl_publisher_fini(&left_set_point_publisher,   &node);
-  rcl_publisher_fini(&right_pid_output_publisher, &node);
+  // rcl_publisher_fini(&right_pid_output_publisher, &node);
   // rcl_publisher_fini(&right_set_point_publisher,  &node);
   rcl_publisher_fini(&joint_state_publisher,      &node);
 
   // destroy subscribers
   rcl_subscription_fini(&subscriber_cmd_vel,      &node);
-  rcl_subscription_fini(&subscriber_pid,          &node);
-  rcl_subscription_fini(&subscriber_wheel_analog, &node);
+  // rcl_subscription_fini(&subscriber_pid,          &node);
+  // rcl_subscription_fini(&subscriber_wheel_analog, &node);
   
   // destroy timer
   rcl_timer_fini(&timer);
@@ -601,8 +602,8 @@ void destroy_entities() {
   // destroy executors
   rclc_executor_fini(&executor);
   rclc_executor_fini(&executor_sub_cmd_vel);
-  rclc_executor_fini(&executor_sub_pid);
-  rclc_executor_fini(&executor_sub_wheel_analog);
+  // rclc_executor_fini(&executor_sub_pid);
+  // rclc_executor_fini(&executor_sub_wheel_analog);
   
   // destroy the node
   rcl_node_fini(&node);
@@ -655,13 +656,13 @@ void loop() {
       EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED);
       if (state == AGENT_CONNECTED) {
           // Spin for in ns
-          RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+          RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(timer_timeout)));
 
           // Read cmd vel for 1ns then swich back
-          RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_cmd_vel, RCL_MS_TO_NS(1)));
+          RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_cmd_vel, RCL_MS_TO_NS(timer_timeout)));
 
           // Read pid values for 1ns then swich back
-          RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(10)));
+          // RCSOFTCHECK(rclc_executor_spin_some(&executor_sub_pid, RCL_MS_TO_NS(1000)));
       }
       break;
     
