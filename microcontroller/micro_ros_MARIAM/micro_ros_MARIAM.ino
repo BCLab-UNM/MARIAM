@@ -121,7 +121,7 @@ sensor_msgs__msg__JointState joint_state_msg;
 
 // Physical measurements in meters
 const double wheel_base = 0.3397; // Distance between left and right wheels
-const double wheel_circumference = 0.3613;
+const double wheel_circumference = 0.12;
 const double ticks_per_rotation = 8400; 
 double theta_heading = 0;
 double previous_x_pos = 0.0;
@@ -133,6 +133,7 @@ double right_back_wheel_position = 0.0;   // Cumulative rotation in radians
 
 bool estop = true;
 const unsigned int timer_timeout = 5; // In miliseconds
+unsigned int count = 0;
 
 // Indicator light
 #define LED_PIN 13
@@ -330,21 +331,27 @@ void timer_callback(rcl_timer_t * timer, int64_t last_call_time){
   odom_msg.header.stamp = synchronized_timestamp;
 
   // Publish joint states
-  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+  if (count == 20) {
+    RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+    RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+    count = 0;
+  }
+  else {
+    count++;
+  }
 
   // Publish force and odom values to ROS2 network
   RCSOFTCHECK(rcl_publish(&force_publisher, &force_msg, NULL));
-  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
   
   // Publish speeds to ROS2 network
-  std_msgs__msg__Float32 left_pid_output_to_publish; left_pid_output_to_publish.data = left_pid_output;
-  RCSOFTCHECK(rcl_publish(&left_pid_output_publisher, &left_pid_output_to_publish, NULL));
+  // std_msgs__msg__Float32 left_pid_output_to_publish; left_pid_output_to_publish.data = left_pid_output;
+  // RCSOFTCHECK(rcl_publish(&left_pid_output_publisher, &left_pid_output_to_publish, NULL));
 
   // std_msgs__msg__Float32 left_set_point_to_publish; left_set_point_to_publish.data = left_set_point;
   // RCSOFTCHECK(rcl_publish(&left_set_point_publisher, &left_set_point_to_publish, NULL)); 
 
-  std_msgs__msg__Float32 right_pid_output_to_publish; right_pid_output_to_publish.data = right_pid_output;
-  RCSOFTCHECK(rcl_publish(&right_pid_output_publisher, &right_pid_output_to_publish, NULL));   
+  // std_msgs__msg__Float32 right_pid_output_to_publish; right_pid_output_to_publish.data = right_pid_output;
+  // RCSOFTCHECK(rcl_publish(&right_pid_output_publisher, &right_pid_output_to_publish, NULL));   
 
   // std_msgs__msg__Float32 right_set_point_to_publish; right_set_point_to_publish.data = right_set_point;
   // RCSOFTCHECK(rcl_publish(&right_set_point_publisher, &right_set_point_to_publish, NULL)); 
