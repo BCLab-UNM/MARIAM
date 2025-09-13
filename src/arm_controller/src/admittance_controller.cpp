@@ -225,7 +225,7 @@ class AdmittanceController : public rclcpp::Node {
     
     // previous desired velocity
     double velocity = 0;
-    double step_size = 0.002;
+    double step_size = 0.005;
 
     double mass;
     double damping;
