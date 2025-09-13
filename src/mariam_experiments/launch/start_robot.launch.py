@@ -2,7 +2,8 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
-    OpaqueFunction
+    OpaqueFunction,
+    TimerAction
 )
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -182,6 +183,26 @@ def launch_setup(context, *args, **kwargs):
     )
 
     return [
+        TimerAction(
+            period=3.0,
+            actions=[px100_controller_desc]
+        ),
+        TimerAction(
+            period=3.0,
+            actions=[micro_ros_desc]
+        ),
+        TimerAction(
+            period=3.0,
+            actions=[mariam_description_launch_desc]
+        ),
+        TimerAction(
+            period=3.0,
+            actions=[dynamic_parameterization_launch_desc]
+        ),
+        TimerAction(
+            period=3.0,
+            actions=[force_listener_node]
+        ),
         px100_controller_desc,
         micro_ros_desc,
         mariam_description_launch_desc,
