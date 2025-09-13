@@ -203,11 +203,12 @@ def launch_setup(context, *args, **kwargs):
             period=3.0,
             actions=[force_listener_node]
         ),
-        px100_controller_desc,
-        micro_ros_desc,
-        mariam_description_launch_desc,
-        dynamic_parameterization_launch_desc,
-        force_listener_node,
+        # px100_controller_desc,
+        # micro_ros_desc,
+        # mariam_description_launch_desc,
+        # dynamic_parameterization_launch_desc,
+        # force_listener_node,
+
         # vicon_tf2_updater_node,
         # realsense_imu_launch_desc,
         # ekf_launch_desc,
