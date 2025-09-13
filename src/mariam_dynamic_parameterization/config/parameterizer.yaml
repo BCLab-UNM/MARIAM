@@ -3,7 +3,7 @@
     mass:       5.0
     damping:   70.0
     stiffness: 60.0
-    frequency: 0.002
+    frequency: 0.005
     x_pos:     0.0
     y_pos:     0.250
     z_pos:     0.1
