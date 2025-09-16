@@ -134,6 +134,17 @@ ament_target_dependencies(coop_traj_pid
   tf2_msgs 
 )
 
+# Create the coop_traj_ff_pid executable
+add_executable(coop_traj_ff_pid src/coop_traj_ff_pid.cpp)
+ament_target_dependencies(coop_traj_ff_pid
+  rclcpp
+  geometry_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  tf2_msgs 
+)
+
 # Install the executables
 install(TARGETS
   dual_waypoint_publisher
@@ -147,6 +158,7 @@ install(TARGETS
   trajectory_follower
   hermite_path_generator
   coop_traj_pid
+  coop_traj_ff_pid
   DESTINATION lib/${PROJECT_NAME}
 )
 

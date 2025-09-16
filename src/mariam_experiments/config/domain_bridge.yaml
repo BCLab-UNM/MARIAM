@@ -5,12 +5,12 @@
 name: my_bridge
 topics:
   # Monica topics output
-  monica/force:
-    type: std_msgs/msg/Float32
-    from_domain: 1
-    to_domain: 0
-    qos:
-      reliability: best_effort
+  # monica/force:
+  #   type: std_msgs/msg/Float32
+  #   from_domain: 1
+  #   to_domain: 0
+  #   qos:
+  #     reliability: best_effort
 
   # monica/wheel/odom:
   #   type: nav_msgs/msg/Odometry
@@ -23,12 +23,12 @@ topics:
   #   to_domain: 0
 
   # Ross topics output
-  ross/force:
-    type: std_msgs/msg/Float32
-    from_domain: 2
-    to_domain: 0
-    qos:
-      reliability: best_effort
+  # ross/force:
+  #   type: std_msgs/msg/Float32
+  #   from_domain: 2
+  #   to_domain: 0
+  #   qos:
+  #     reliability: best_effort
 
   # ross/wheel/odom:
   #   type: nav_msgs/msg/Odometry

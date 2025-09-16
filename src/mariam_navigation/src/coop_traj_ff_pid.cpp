@@ -166,6 +166,10 @@ public:
     this->declare_parameter("dt", 0.01); // default 10ms
     dt_ = this->get_parameter("dt").as_double();
 
+    // Feedforward gain
+    this->declare_parameter("ff_gain", 1.0);
+    double ff_gain = this->get_parameter("ff_gain").as_double();
+
     timer_ = this->create_wall_timer(
       std::chrono::duration<double>(dt_),
       std::bind(&CoopTrajPID::control_loop, this)
@@ -173,6 +177,19 @@ public:
 
     this->declare_parameter("trial_name", "test_trial");
     std::string trial_name = this->get_parameter("trial_name").as_string();
+
+    // Print all parameters for verification
+    RCLCPP_INFO(this->get_logger(), "Node initialized with parameters:");
+    RCLCPP_INFO(this->get_logger(), " Base 1 PID X: Kp=%.3f, Ki=%.3f, Kd=%.3f", base1_kp_x, base1_ki_x, base1_kd_x);
+    RCLCPP_INFO(this->get_logger(), " Base 1 PID Y: Kp=%.3f, Ki=%.3f, Kd=%.3f", base1_kp_y, base1_ki_y, base1_kd_y);
+    RCLCPP_INFO(this->get_logger(), " Base 1 PID Theta: Kp=%.3f, Ki=%.3f, Kd=%.3f", base1_kp_theta, base1_ki_theta, base1_kd_theta);
+    RCLCPP_INFO(this->get_logger(), " Base 2 PID X: Kp=%.3f, Ki=%.3f, Kd=%.3f", base2_kp_x, base2_ki_x, base2_kd_x);
+    RCLCPP_INFO(this->get_logger(), " Base 2 PID Y: Kp=%.3f, Ki=%.3f, Kd=%.3f", base2_kp_y, base2_ki_y, base2_kd_y);
+    RCLCPP_INFO(this->get_logger(), " Base 2 PID Theta: Kp=%.3f, Ki=%.3f, Kd=%.3f", base2_kp_theta, base2_ki_theta, base2_kd_theta);
+    RCLCPP_INFO(this->get_logger(), " Control loop dt: %.4f seconds", dt_);
+    RCLCPP_INFO(this->get_logger(), " Feedforward gain: %.3f", ff_gain);
+    RCLCPP_INFO(this->get_logger(), " Trial name: %s", trial_name.c_str());
+
   }
 
   // Add this destructor
@@ -389,7 +406,7 @@ private:
   void control_loop() {
     // if no data has been received
     if (!bases_received_) {
-      RCLCPP_WARN(this->get_logger(), "No base poses received yet.");
+      // RCLCPP_WARN(this->get_logger(), "No base poses received yet.");
       // Wait until both base poses are getting published
       // publish zero velocities to stop the robots
       auto zero_twist = geometry_msgs::msg::Twist();
@@ -416,22 +433,22 @@ private:
     double actual_theta1 = get_yaw(base1_actual_pose_.orientation);
     desired_theta1 = normalize_angle(desired_theta1);
     actual_theta1 = normalize_angle(actual_theta1);
+    double world_error_theta1 = desired_theta1 - actual_theta1;
 
-    // transform errors to the body frame
-    double error_x1 = world_error_x1 * cos(actual_theta1) + world_error_y1 * sin(actual_theta1);
-    double error_y1 = -world_error_x1 * sin(actual_theta1) + world_error_y1 * cos(actual_theta1);
-    double error_theta1 = desired_theta1 - actual_theta1;
+    // Transform world frame errors to body frame for control
+    double body_error_x1 = world_error_x1 * cos(actual_theta1) + world_error_y1 * sin(actual_theta1);
+    double body_error_y1 = -world_error_x1 * sin(actual_theta1) + world_error_y1 * cos(actual_theta1);
     
-    // Compute control signals for base 1
-    double control_x1 = base1_pid_x_->compute(error_x1, dt_);
-    double control_y1 = base1_pid_y_->compute(error_y1, dt_);
-    double theta_d1 = error_theta1 + control_y1;
+    // Compute control signals for base 1 (using body frame errors)
+    double control_x1 = base1_pid_x_->compute(body_error_x1, dt_);
+    double control_y1 = base1_pid_y_->compute(body_error_y1, dt_);
+    double theta_d1 = world_error_theta1 + control_y1;
     double control_theta1 = base1_pid_theta_->compute(theta_d1, dt_);
 
     // Create Twist message for base 1
     auto cmd_vel1 = geometry_msgs::msg::Twist();
-    cmd_vel1.linear.x = cmd_vel1_ff.linear.x + control_x1;
-    cmd_vel1.angular.z = cmd_vel1_ff.angular.z + control_theta1;
+    cmd_vel1.linear.x = (ff_gain * cmd_vel1_ff.linear.x) + control_x1;
+    cmd_vel1.angular.z = (ff_gain * cmd_vel1_ff.angular.z) + control_theta1;
 
     // ----------------------------------------------------------------------
     //                           BASE 2 (Monica)
@@ -445,36 +462,55 @@ private:
     // Normalize angles to [-pi, pi]
     desired_theta2 = normalize_angle(desired_theta2);
     actual_theta2 = normalize_angle(actual_theta2);
+    double world_error_theta2 = desired_theta2 - actual_theta2;
 
-    // transform errors to the body frame
-    double error_x2 = world_error_x2 * cos(actual_theta2) + world_error_y2 * sin(actual_theta2);
-    double error_y2 = -world_error_x2 * sin(actual_theta2) + world_error_y2 * cos(actual_theta2);
-    double error_theta2 = desired_theta2 - actual_theta2;
+    // Transform world frame errors to body frame for control
+    double body_error_x2 = world_error_x2 * cos(actual_theta2) + world_error_y2 * sin(actual_theta2);
+    double body_error_y2 = -world_error_x2 * sin(actual_theta2) + world_error_y2 * cos(actual_theta2);
 
-    // Compute control signals for base 2
-    double control_x2 = base2_pid_x_->compute(error_x2, dt_);
-    double control_y2 = base2_pid_y_->compute(error_y2, dt_);
-    double theta_d2 = error_theta2 + control_y2;
+    // Compute control signals for base 2 (using body frame errors)
+    double control_x2 = base2_pid_x_->compute(body_error_x2, dt_);
+    double control_y2 = base2_pid_y_->compute(body_error_y2, dt_);
+    double theta_d2 = world_error_theta2 + control_y2;
     double control_theta2 = base2_pid_theta_->compute(theta_d2, dt_);
 
     // Create Twist message for base 2
     auto cmd_vel2 = geometry_msgs::msg::Twist();
-    cmd_vel2.linear.x = cmd_vel2_ff.linear.x + control_x2;
-    cmd_vel2.angular.z = cmd_vel2_ff.angular.z + control_theta2;
+    cmd_vel2.linear.x = (ff_gain * cmd_vel2_ff.linear.x) + control_x2;
+    cmd_vel2.angular.z = (ff_gain * cmd_vel2_ff.angular.z) + control_theta2;
 
-    // Print debug info
-    RCLCPP_INFO(this->get_logger(), "----------------------------------------");
-    RCLCPP_INFO(this->get_logger(), "Base 1 Desired Pose: x: %.3f, y: %.3f, theta: %.3f", base1_pose_.position.x, base1_pose_.position.y, desired_theta1);
-    RCLCPP_INFO(this->get_logger(), "Base 1 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base1_actual_pose_.position.x, base1_actual_pose_.position.y, actual_theta1);
-    RCLCPP_INFO(this->get_logger(), "Base 1 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x1, error_y1, error_theta1);
-    RCLCPP_INFO(this->get_logger(), "Base 1 Controls: x: %.3f, theta: %.3f", control_x1, control_theta1);
-    RCLCPP_INFO(this->get_logger(), "Base 1 Feedforward: x: %.3f, theta: %.3f", cmd_vel1_ff.linear.x, cmd_vel1_ff.angular.z);
+    // Print debug info with clear frame distinctions
+    RCLCPP_INFO(this->get_logger(), "========================================");
+    RCLCPP_INFO(this->get_logger(), "ROSS (Base 1):");
+    RCLCPP_INFO(this->get_logger(), "  World Desired:  x: %.3f, y: %.3f, θ: %.3f", 
+                base1_pose_.position.x, base1_pose_.position.y, desired_theta1);
+    RCLCPP_INFO(this->get_logger(), "  World Actual:   x: %.3f, y: %.3f, θ: %.3f", 
+                base1_actual_pose_.position.x, base1_actual_pose_.position.y, actual_theta1);
+    RCLCPP_INFO(this->get_logger(), "  World Errors:   x: %.3f, y: %.3f, θ: %.3f", 
+                world_error_x1, world_error_y1, world_error_theta1);
+    RCLCPP_INFO(this->get_logger(), "  Body Errors:    x: %.3f, y: %.3f", 
+                body_error_x1, body_error_y1);
+    RCLCPP_INFO(this->get_logger(), "  PID Controls:   x: %.3f, θ: %.3f", control_x1, control_theta1);
+    RCLCPP_INFO(this->get_logger(), "  Feedforward:    x: %.3f, θ: %.3f", 
+                cmd_vel1_ff.linear.x, cmd_vel1_ff.angular.z);
+    RCLCPP_INFO(this->get_logger(), "  Final Command:  x: %.3f, θ: %.3f", 
+                cmd_vel1.linear.x, cmd_vel1.angular.z);
     RCLCPP_INFO(this->get_logger(), "");
-    RCLCPP_INFO(this->get_logger(), "Base 2 Desired Pose: x: %.3f, y: %.3f, theta: %.3f", base2_pose_.position.x, base2_pose_.position.y, desired_theta2);
-    RCLCPP_INFO(this->get_logger(), "Base 2 Actual Pose: x: %.3f, y: %.3f, theta: %.3f", base2_actual_pose_.position.x, base2_actual_pose_.position.y, actual_theta2);
-    RCLCPP_INFO(this->get_logger(), "Base 2 Errors: x: %.3f, y: %.3f, theta: %.3f", error_x2, error_y2, error_theta2);
-    RCLCPP_INFO(this->get_logger(), "Base 2 Controls: x: %.3f, theta: %.3f", control_x2, control_theta2);
-    RCLCPP_INFO(this->get_logger(), "Base 2 Feedforward: x: %.3f, theta: %.3f", cmd_vel2_ff.linear.x, cmd_vel2_ff.angular.z);
+    
+    RCLCPP_INFO(this->get_logger(), "MONICA (Base 2):");
+    RCLCPP_INFO(this->get_logger(), "  World Desired:  x: %.3f, y: %.3f, θ: %.3f", 
+                base2_pose_.position.x, base2_pose_.position.y, desired_theta2);
+    RCLCPP_INFO(this->get_logger(), "  World Actual:   x: %.3f, y: %.3f, θ: %.3f", 
+                base2_actual_pose_.position.x, base2_actual_pose_.position.y, actual_theta2);
+    RCLCPP_INFO(this->get_logger(), "  World Errors:   x: %.3f, y: %.3f, θ: %.3f", 
+                world_error_x2, world_error_y2, world_error_theta2);
+    RCLCPP_INFO(this->get_logger(), "  Body Errors:    x: %.3f, y: %.3f", 
+                body_error_x2, body_error_y2);
+    RCLCPP_INFO(this->get_logger(), "  PID Controls:   x: %.3f, θ: %.3f", control_x2, control_theta2);
+    RCLCPP_INFO(this->get_logger(), "  Feedforward:    x: %.3f, θ: %.3f", 
+                cmd_vel2_ff.linear.x, cmd_vel2_ff.angular.z);
+    RCLCPP_INFO(this->get_logger(), "  Final Command:  x: %.3f, θ: %.3f", 
+                cmd_vel2.linear.x, cmd_vel2.angular.z);
 
     // Reverse linear velocity for monica
     cmd_vel2.linear.x = -cmd_vel2.linear.x;
@@ -484,7 +520,7 @@ private:
     ross_cmd_vel_pub_->publish(cmd_vel1);
     monica_cmd_vel_pub_->publish(cmd_vel2);
 
-    // Save data point
+    // Save data point (using renamed variables for clarity)
     DataPoint point;
     point.des_ross_x = base1_pose_.position.x;
     point.des_ross_y = base1_pose_.position.y;
@@ -574,6 +610,7 @@ private:
   geometry_msgs::msg::Pose base2_actual_pose_;
 
   double dt_;
+  double ff_gain = 1.0;
   bool bases_received_ = false;
 
   // Store last poses for finite difference
