@@ -1,30 +1,30 @@
-coop_traj_pid:
+coop_traj_ff_pid:
   ros__parameters:
     # Base 1 (Ross) PID parameters
-    base1_pid_x_kp: 8.0
-    base1_pid_x_ki: 0.0
-    base1_pid_x_kd: 1e-1
+    base1_pid_x_kp: 4.5
+    base1_pid_x_ki: 0.3
+    base1_pid_x_kd: 1e-3
 
-    base1_pid_y_kp: 1.0
+    base1_pid_y_kp: 2.0
     base1_pid_y_ki: 0.0
     base1_pid_y_kd: 0.0
 
-    base1_pid_theta_kp: 3.5
+    base1_pid_theta_kp: 2.0
     base1_pid_theta_ki: 0.0
-    base1_pid_theta_kd: 0.0
+    base1_pid_theta_kd: 1e-3
 
     # Base 2 (Monica) PID parameters
-    base2_pid_x_kp: 9.0
-    base2_pid_x_ki: 0.0
-    base2_pid_x_kd: 1e-1
+    base2_pid_x_kp: 4.5
+    base2_pid_x_ki: 0.2
+    base2_pid_x_kd: 1e-4
 
-    base2_pid_y_kp: 1.0
+    base2_pid_y_kp: 2.0
     base2_pid_y_ki: 0.0
     base2_pid_y_kd: 0.0
 
-    base2_pid_theta_kp: 5.5
+    base2_pid_theta_kp: 1.5
     base2_pid_theta_ki: 0.0
-    base2_pid_theta_kd: 0.0
+    base2_pid_theta_kd: 1e-3
 
     # Control loop time step (in seconds)
     dt: 0.01
